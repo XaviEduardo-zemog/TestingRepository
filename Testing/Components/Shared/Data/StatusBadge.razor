@@ -1,0 +1,15 @@
+﻿<span class="badge @VariantClass">@Text</span>
+
+@code {
+    [Parameter] public string? Text { get; set; }
+    [Parameter] public Variant Variant { get; set; } = Variant.Neutral;
+
+    private string VariantClass => Variant switch
+    {
+        Variant.Info => "badge-info",
+        Variant.Success => "badge-success",
+        Variant.Warning => "badge-warning",
+        Variant.Danger => "badge-danger",
+        _ => "badge-neutral",
+    };
+}

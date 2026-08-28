@@ -1,0 +1,348 @@
+@page "/"
+@rendermode InteractiveServer
+@using System.Globalization
+@using MediatR
+@using Testing.Application.GetAllViajes
+@using Testing.Features
+@inject ISender Sender
+
+<PageTitle>Consulta de viajes</PageTitle>
+
+<div class="viajes-page">
+    <header class="page-header">
+        <div class="page-header-text">
+            <p class="page-eyebrow">Operaciones · Reportes</p>
+            <h1>Viajes</h1>
+            <p class="page-description">Consulta y seguimiento de los viajes registrados.</p>
+        </div>
+    </header>
+
+    <section class="toolbar" aria-label="Filtros de búsqueda">
+        <div class="toolbar-primary">
+            <div class="field-group">
+                <label for="fechaInicio">Desde</label>
+                <InputDate id="fechaInicio" @bind-Value="filtro.FechaInicio" />
+            </div>
+            <span class="field-separator" aria-hidden="true">–</span>
+            <div class="field-group">
+                <label for="fechaFin">Hasta</label>
+                <InputDate id="fechaFin" @bind-Value="filtro.FechaFin" />
+            </div>
+
+            <button type="button" class="btn btn-ghost" @onclick="ToggleFiltrosAvanzados" aria-expanded="@mostrarFiltrosAvanzados">
+                Más filtros
+                <svg class="chevron @(mostrarFiltrosAvanzados ? "is-open" : "")" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+                    <path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </button>
+
+            <button type="button" class="btn btn-ghost" @onclick="ConsultarAsync" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span class="spinner" aria-hidden="true"></span>
+                }
+                <span>@(isLoading ? "Consultando" : "Buscar")</span>
+            </button>
+        </div>
+
+        @if (mostrarFiltrosAvanzados)
+        {
+            <div class="toolbar-advanced">
+                <div class="field-group">
+                    <label for="tipoFecha">Tipo de fecha</label>
+                    <InputText id="tipoFecha" @bind-Value="filtro.TipoFecha" />
+                </div>
+                <div class="field-group">
+                    <label for="idUnidad">Unidad</label>
+                    <InputText id="idUnidad" @bind-Value="filtro.IdUnidad" />
+                </div>
+                <div class="field-group">
+                    <label for="noRemision">Remisión</label>
+                    <InputText id="noRemision" @bind-Value="filtro.NoRemision" />
+                </div>
+                <div class="field-group">
+                    <label for="areas">Áreas</label>
+                    <InputText id="areas" @bind-Value="filtro.Areas" />
+                </div>
+                <div class="field-group">
+                    <label for="estados">Estados</label>
+                    <InputText id="estados" @bind-Value="filtro.Estados" />
+                </div>
+                <div class="field-group">
+                    <label for="idRuta">Ruta</label>
+                    <InputText id="idRuta" @bind-Value="filtro.IdRuta" />
+                </div>
+                <div class="field-group">
+                    <label for="idOperador">Operador</label>
+                    <InputText id="idOperador" @bind-Value="filtro.IdOperador" />
+                </div>
+            </div>
+        }
+    </section>
+
+    @{
+        var filtrosActivos = ObtenerFiltrosActivos();
+    }
+    @if (seConsulto && filtrosActivos.Count > 0)
+    {
+        <div class="active-filters" aria-label="Filtros activos">
+            @foreach (var f in filtrosActivos)
+            {
+                <span class="filter-chip">
+                    <span>@f.Label: <b>@f.Value</b></span>
+                    <button type="button" @onclick="() => QuitarFiltroAsync(f.Clear)" aria-label="Quitar filtro @f.Label">×</button>
+                </span>
+            }
+        </div>
+    }
+
+    @if (validationErrors.Count > 0)
+    {
+        <DataStateBanner Title="Revisa los filtros" Variant="Variant.Warning">
+            <ul class="validation-list">
+                @foreach (var mensaje in validationErrors)
+                {
+                    <li>@mensaje</li>
+                }
+            </ul>
+        </DataStateBanner>
+    }
+
+    @if (errorMessage is not null)
+    {
+        <DataStateBanner Title="No pudimos consultar los viajes." Variant="Variant.Danger">
+            <ChildContent>
+                <p class="state-subtitle">@errorMessage</p>
+            </ChildContent>
+            <Actions>
+                <button type="button" class="btn btn-secondary" @onclick="ConsultarAsync">Reintentar</button>
+            </Actions>
+        </DataStateBanner>
+    }
+    else if (isLoading)
+    {
+        <LoadingSkeleton Rows="5" />
+    }
+    else if (seConsulto && viajes.Count == 0 && validationErrors.Count == 0)
+    {
+        <DataStateBanner Title="No se encontraron viajes">
+            <ChildContent>
+                <p class="state-subtitle">Prueba modificando los criterios de consulta.</p>
+            </ChildContent>
+            <Actions>
+                <button type="button" class="btn btn-secondary" @onclick="LimpiarFiltros">Limpiar filtros</button>
+            </Actions>
+        </DataStateBanner>
+    }
+    else if (viajes.Count > 0)
+    {
+        <p class="results-count">@viajes.Count viaje@(viajes.Count == 1 ? "" : "s") encontrado@(viajes.Count == 1 ? "" : "s")</p>
+
+        var resultadoGrafica = CalcularViajesPorFecha();
+
+        <ChartPlaceholder Title="Viajes por fecha de ingreso"
+                          Description="@(resultadoGrafica.SinFecha > 0 ? $"{resultadoGrafica.SinFecha} registro(s) sin fecha reconocible no se incluyen" : null)">
+            @if (resultadoGrafica.Serie.Count > 0)
+            {
+                <ApexChart TItem="ViajePorFecha" Options="chartOptions" Height="340">
+                    <ApexPointSeries TItem="ViajePorFecha"
+                                     Items="resultadoGrafica.Serie"
+                                     Name="Viajes"
+                                     SeriesType="SeriesType.Line"
+                                     XValue="e => e.Etiqueta"
+                                     YValue="e => e.Cantidad" />
+                </ApexChart>
+            }
+            else
+            {
+                <p class="chart-panel-empty">No hay fechas reconocibles en los resultados actuales para graficar.</p>
+            }
+        </ChartPlaceholder>
+
+        <div class="viajes-table-wrap">
+            <table class="viajes-table">
+                <thead>
+                    <tr>
+                        <th>Base</th>
+                        <th>No. viaje</th>
+                        <th>Estatus</th>
+                        <th>Unidad</th>
+                        <th>Ruta</th>
+                        <th>Operador</th>
+                        <th>Fecha ingreso</th>
+                        <th class="align-end">Diésel cargado</th>
+                        <th class="align-end">Costo diésel</th>
+                        <th>Factura</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var viaje in viajes)
+                    {
+                        <tr>
+                            <td data-label="Base">@viaje._base</td>
+                            <td data-label="No. viaje">@viaje.no_viaje</td>
+                            <td data-label="Estatus"><StatusBadge Text="@viaje.estatus_viaje" Variant="EstadoVariant(viaje.estatus_viaje)" /></td>
+                            <td data-label="Unidad">@viaje.id_unidad</td>
+                            <td data-label="Ruta">@viaje.ruta</td>
+                            <td data-label="Operador">@viaje.operador1</td>
+                            <td data-label="Fecha ingreso">@viaje.fecha_ingreso</td>
+                            <td data-label="Diésel cargado" class="align-end tabular">@viaje.diesel_cargado</td>
+                            <td data-label="Costo diésel" class="align-end tabular">@viaje.costo_diesel</td>
+                            <td data-label="Factura">@viaje.factura</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private readonly ConsultaViajesFilterModel filtro = new();
+
+    private List<string> validationErrors = [];
+    private List<ViajesDto> viajes = [];
+    private bool isLoading;
+    private bool seConsulto;
+    private bool mostrarFiltrosAvanzados;
+    private string? errorMessage;
+
+    private readonly ApexChartOptions<ViajePorFecha> chartOptions = new()
+    {
+        Chart = new Chart { Toolbar = new Toolbar { Show = false } },
+        Colors = ["#4F46E5"],
+        Stroke = new Stroke { Curve = Curve.Smooth, Width = 2 },
+    };
+
+    private sealed record ActiveFilter(string Label, string Value, Action Clear);
+    private sealed record ViajePorFecha(string Etiqueta, int Cantidad);
+
+    private void ToggleFiltrosAvanzados() => mostrarFiltrosAvanzados = !mostrarFiltrosAvanzados;
+
+    private List<ActiveFilter> ObtenerFiltrosActivos()
+    {
+        var activos = new List<ActiveFilter>();
+
+        if (!string.IsNullOrWhiteSpace(filtro.TipoFecha))
+            activos.Add(new ActiveFilter("Tipo de fecha", filtro.TipoFecha, () => filtro.TipoFecha = ""));
+        if (!string.IsNullOrWhiteSpace(filtro.IdUnidad))
+            activos.Add(new ActiveFilter("Unidad", filtro.IdUnidad!, () => filtro.IdUnidad = null));
+        if (!string.IsNullOrWhiteSpace(filtro.NoRemision))
+            activos.Add(new ActiveFilter("Remisión", filtro.NoRemision!, () => filtro.NoRemision = null));
+        if (!string.IsNullOrWhiteSpace(filtro.Areas))
+            activos.Add(new ActiveFilter("Áreas", filtro.Areas!, () => filtro.Areas = null));
+        if (!string.IsNullOrWhiteSpace(filtro.Estados))
+            activos.Add(new ActiveFilter("Estados", filtro.Estados!, () => filtro.Estados = null));
+        if (!string.IsNullOrWhiteSpace(filtro.IdRuta))
+            activos.Add(new ActiveFilter("Ruta", filtro.IdRuta!, () => filtro.IdRuta = null));
+        if (!string.IsNullOrWhiteSpace(filtro.IdOperador))
+            activos.Add(new ActiveFilter("Operador", filtro.IdOperador!, () => filtro.IdOperador = null));
+
+        return activos;
+    }
+
+    private async Task QuitarFiltroAsync(Action limpiarCampo)
+    {
+        limpiarCampo();
+        await ConsultarAsync();
+    }
+
+    private void LimpiarFiltros()
+    {
+        filtro.FechaInicio = DateTime.Today.AddDays(-7);
+        filtro.FechaFin = DateTime.Today;
+        filtro.TipoFecha = "";
+        filtro.Areas = null;
+        filtro.IdUnidad = null;
+        filtro.Estados = null;
+        filtro.IdRuta = null;
+        filtro.IdOperador = null;
+        filtro.NoRemision = null;
+        viajes = [];
+        seConsulto = false;
+        errorMessage = null;
+    }
+
+    private async Task ConsultarAsync()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+            validationErrors = [];
+
+            var query = new GetViajesQuery(
+                filtro.FechaInicio, filtro.FechaFin, filtro.TipoFecha,
+                filtro.Areas, filtro.IdUnidad, filtro.Estados,
+                filtro.IdRuta, filtro.IdOperador, filtro.NoRemision);
+
+            var resultado = await Sender.Send(query);
+
+            if (resultado.IsFailure)
+            {
+                errorMessage = resultado.Error.Message;
+                viajes = [];
+            }
+            else
+            {
+                viajes = resultado.Value.ToList();
+            }
+        }
+        catch (FluentValidation.ValidationException vex)
+        {
+            validationErrors = vex.Errors.Select(e => e.ErrorMessage).ToList();
+            viajes = [];
+        }
+        catch (Exception)
+        {
+            errorMessage = "Intenta nuevamente en unos segundos.";
+            viajes = [];
+        }
+        finally
+        {
+            isLoading = false;
+            seConsulto = true;
+        }
+    }
+
+    private static readonly string[] FormatosFechaIngreso = ["d/M/yyyy h:mm tt"];
+
+    private (List<ViajePorFecha> Serie, int SinFecha) CalcularViajesPorFecha()
+    {
+        var cultura = CultureInfo.GetCultureInfo("es-MX");
+        var conFecha = new List<DateTime>();
+        var sinFecha = 0;
+
+        foreach (var v in viajes)
+        {
+            var pudoParsear = DateTime.TryParseExact(
+                v.fecha_ingreso, FormatosFechaIngreso, CultureInfo.InvariantCulture,
+                DateTimeStyles.None, out var fecha);
+
+            if (!pudoParsear)
+                pudoParsear = DateTime.TryParse(v.fecha_ingreso, CultureInfo.InvariantCulture, DateTimeStyles.None, out fecha);
+
+            if (pudoParsear)
+                conFecha.Add(fecha.Date);
+            else
+                sinFecha++;
+        }
+
+        var serie = conFecha
+            .GroupBy(f => f)
+            .OrderBy(g => g.Key)
+            .Select(g => new ViajePorFecha(g.Key.ToString("dd MMM", cultura), g.Count()))
+            .ToList();
+
+        return (serie, sinFecha);
+    }
+
+    private static Variant EstadoVariant(string? estatus) => estatus?.Trim().ToUpperInvariant() switch
+    {
+        "ACTIVO" or "EN RUTA" or "EN TRANSITO" or "EN TRÁNSITO" => Variant.Info,
+        "FINALIZADO" or "COMPLETADO" or "ENTREGADO" => Variant.Success,
+        "CANCELADO" or "RECHAZADO" => Variant.Danger,
+        "PENDIENTE" or "EN ESPERA" => Variant.Warning,
+        _ => Variant.Neutral,
+    };
+}

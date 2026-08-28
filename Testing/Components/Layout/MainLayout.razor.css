@@ -1,0 +1,47 @@
+.app-shell {
+    display: flex;
+    align-items: stretch;
+    min-height: 100vh;
+    background: var(--background);
+}
+
+.app-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-content {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: var(--space-8);
+}
+
+#blazor-error-ui {
+    color-scheme: light only;
+    background: var(--danger-soft);
+    color: #7F1D1D;
+    border-top: 1px solid var(--danger);
+    bottom: 0;
+    box-sizing: border-box;
+    display: none;
+    left: 0;
+    padding: .85rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+    font-family: var(--font-sans);
+    font-size: .875rem;
+}
+
+    #blazor-error-ui .reload {
+        color: var(--primary);
+        font-weight: 600;
+        margin-left: .5rem;
+    }
+
+    #blazor-error-ui .dismiss {
+        cursor: pointer;
+        position: absolute;
+        right: 1rem;
+        top: .8rem;
+    }

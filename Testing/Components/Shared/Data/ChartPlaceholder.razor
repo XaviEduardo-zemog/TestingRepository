@@ -1,0 +1,32 @@
+﻿<div class="chart-panel">
+    <div class="chart-panel-header">
+        <div>
+            <p class="chart-panel-title">@Title</p>
+            @if (!string.IsNullOrWhiteSpace(Description))
+            {
+                <p class="chart-panel-description">@Description</p>
+            }
+        </div>
+        @if (Controls is not null)
+        {
+            <div class="chart-panel-controls">@Controls</div>
+        }
+    </div>
+    <div class="chart-panel-body">
+        @if (ChildContent is not null)
+        {
+            @ChildContent
+        }
+        else
+        {
+            <p class="chart-panel-empty">Gráfica pendiente — la librería de visualización todavía no está integrada.</p>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter] public string? Description { get; set; }
+    [Parameter] public RenderFragment? Controls { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

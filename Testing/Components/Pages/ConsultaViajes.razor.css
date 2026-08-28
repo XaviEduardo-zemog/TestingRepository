@@ -1,0 +1,111 @@
+.viajes-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+}
+
+/* ---------- filtros activos (todavía un solo uso real — se queda local) ---------- */
+.active-filters {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: calc(-1 * var(--space-3));
+}
+
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .3rem .5rem .3rem .7rem;
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: .78rem;
+    color: var(--text-secondary);
+}
+
+    .filter-chip b {
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+
+    .filter-chip button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        border: none;
+        background: transparent;
+        color: var(--text-tertiary);
+        cursor: pointer;
+        border-radius: 50%;
+        padding: 0;
+        font-size: .9rem;
+        line-height: 1;
+    }
+
+        .filter-chip button:hover {
+            background: var(--border);
+            color: var(--text-primary);
+        }
+
+/* ---------- results ---------- */
+.results-count {
+    font-size: .8rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* ---------- table (específica de Viajes: columnas y anchos propios) ---------- */
+.viajes-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+}
+
+.viajes-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .85rem;
+}
+
+    .viajes-table th {
+        text-align: left;
+        font-size: .68rem;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        font-weight: 600;
+        color: var(--text-tertiary);
+        padding: var(--space-3) var(--space-4);
+        border-bottom: 1px solid var(--border);
+        white-space: nowrap;
+    }
+
+    .viajes-table td {
+        padding: var(--space-3) var(--space-4);
+        border-bottom: 1px solid var(--border);
+        color: var(--text-primary);
+        white-space: nowrap;
+    }
+
+    .viajes-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .viajes-table tbody tr:hover {
+        background: var(--surface-muted);
+    }
+
+    .viajes-table .align-end {
+        text-align: right;
+    }
+
+    .viajes-table .tabular {
+        font-variant-numeric: tabular-nums;
+    }
+
+.chart-panel {
+    margin: var(--space-2) 0;
+}

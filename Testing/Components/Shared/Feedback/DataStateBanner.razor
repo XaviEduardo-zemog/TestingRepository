@@ -1,0 +1,21 @@
+﻿<div class="state-banner @VariantClass" role="@(Variant is Variant.Danger or Variant.Warning ? "alert" : null)">
+    <div>
+        <p class="state-title">@Title</p>
+        @ChildContent
+    </div>
+    @Actions
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter] public Variant Variant { get; set; } = Variant.Neutral;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? Actions { get; set; }
+
+    private string VariantClass => Variant switch
+    {
+        Variant.Danger => "state-error",
+        Variant.Warning => "state-validation",
+        _ => "",
+    };
+}

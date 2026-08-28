@@ -1,0 +1,29 @@
+﻿<div class="kpi-card">
+    <p class="kpi-title">@Title</p>
+    <p class="kpi-value">@Value</p>
+    @if (!string.IsNullOrWhiteSpace(Delta))
+    {
+        <p class="kpi-delta kpi-delta--@DeltaVariantClass">
+            <span>@Delta</span>
+            @if (!string.IsNullOrWhiteSpace(DeltaLabel))
+            {
+                <span class="kpi-delta-label">@DeltaLabel</span>
+            }
+        </p>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter, EditorRequired] public string Value { get; set; } = "";
+    [Parameter] public string? Delta { get; set; }
+    [Parameter] public string? DeltaLabel { get; set; }
+    [Parameter] public Variant DeltaVariant { get; set; } = Variant.Neutral;
+
+    private string DeltaVariantClass => DeltaVariant switch
+    {
+        Variant.Success => "success",
+        Variant.Danger => "danger",
+        _ => "neutral",
+    };
+}
