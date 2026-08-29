@@ -1,0 +1,81 @@
+﻿<div class="ms-filtro">
+    <label>@Etiqueta</label>
+    <button type="button" class="ms-filtro-btn @(Disponible ? "" : "is-disabled")"
+            disabled="@(!Disponible)"
+            title="@(Disponible ? null : MotivoPendiente)"
+            @onclick="@(() => OnToggle.InvokeAsync())">
+        <span>@Resumen</span>
+        <span class="ms-filtro-caret">▾</span>
+    </button>
+    @if (Disponible && Abierto)
+    {
+        <div class="ms-filtro-panel">
+            <div class="ms-filtro-panel-actions">
+                <button type="button" @onclick="SeleccionarTodoAsync">Todo</button>
+                <button type="button" @onclick="LimpiarAsync">Limpiar</button>
+            </div>
+            @if (ConBuscador)
+            {
+                <input type="text" class="ms-filtro-buscar" placeholder="Buscar..." @bind="busqueda" @bind:event="oninput" />
+            }
+            @foreach (var valor in OpcionesFiltradas)
+            {
+                <label class="ms-filtro-opcion">
+                    <input type="checkbox" checked="@Seleccionados.Contains(valor)"
+                           @onchange="@(e => AlternarAsync(valor, (bool)e.Value!))" />
+                    <span>@valor</span>
+                </label>
+            }
+            @if (OpcionesFiltradas.Count == 0)
+            {
+                <p class="ms-filtro-vacio">Sin coincidencias.</p>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Etiqueta { get; set; } = "";
+    [Parameter, EditorRequired] public IReadOnlyList<string> Opciones { get; set; } = [];
+    [Parameter, EditorRequired] public HashSet<string> Seleccionados { get; set; } = [];
+    [Parameter] public EventCallback<HashSet<string>> SeleccionadosChanged { get; set; }
+    [Parameter] public bool Disponible { get; set; } = true;
+    [Parameter] public string? MotivoPendiente { get; set; }
+    [Parameter] public bool ConBuscador { get; set; }
+    [Parameter] public bool Abierto { get; set; }
+    [Parameter] public EventCallback OnToggle { get; set; }
+
+    private string busqueda = "";
+
+    private List<string> OpcionesFiltradas =>
+        string.IsNullOrWhiteSpace(busqueda)
+            ? Opciones.ToList()
+            : Opciones.Where(o => o.Contains(busqueda, StringComparison.CurrentCultureIgnoreCase)).ToList();
+
+    private string Resumen => Seleccionados.Count switch
+    {
+        0 => "Todos",
+        1 => Seleccionados.First(),
+        _ => $"{Seleccionados.Count} sel.",
+    };
+
+    private Task SeleccionarTodoAsync() => ActualizarAsync(new HashSet<string>(Opciones));
+
+    private Task LimpiarAsync() => ActualizarAsync([]);
+
+    private Task AlternarAsync(string valor, bool marcado)
+    {
+        var nuevo = new HashSet<string>(Seleccionados);
+        if (marcado)
+            nuevo.Add(valor);
+        else
+            nuevo.Remove(valor);
+        return ActualizarAsync(nuevo);
+    }
+
+    private Task ActualizarAsync(HashSet<string> nuevo)
+    {
+        Seleccionados = nuevo;
+        return SeleccionadosChanged.InvokeAsync(nuevo);
+    }
+}

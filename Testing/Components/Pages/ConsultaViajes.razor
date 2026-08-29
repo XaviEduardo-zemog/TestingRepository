@@ -6,161 +6,141 @@
 @using Testing.Features
 @inject ISender Sender
 
-<PageTitle>Consulta de viajes</PageTitle>
+<PageTitle>Viajes Zemog</PageTitle>
 
-<div class="viajes-page">
-    <header class="page-header">
-        <div class="page-header-text">
-            <p class="page-eyebrow">Operaciones · Reportes</p>
-            <h1>Viajes</h1>
-            <p class="page-description">Consulta y seguimiento de los viajes registrados.</p>
+<div class="vz-page">
+
+    <header class="vz-header">
+        <div class="vz-header-text">
+            <h1>Estado de la Operación</h1>
+            <p class="vz-header-sub">@TextoCorte()</p>
         </div>
     </header>
 
-    <section class="toolbar" aria-label="Filtros de búsqueda">
-        <div class="toolbar-primary">
-            <div class="field-group">
-                <label for="fechaInicio">Desde</label>
-                <InputDate id="fechaInicio" @bind-Value="filtro.FechaInicio" />
+    <section class="vz-toolbar" aria-label="Filtros de Viajes Zemog">
+        <div class="vz-toolbar-primary">
+            <div class="vz-field-group">
+                <label for="vzDesde">Desde</label>
+                <InputDate id="vzDesde" class="vz-date" @bind-Value="filtro.FechaInicio" />
             </div>
-            <span class="field-separator" aria-hidden="true">–</span>
-            <div class="field-group">
-                <label for="fechaFin">Hasta</label>
-                <InputDate id="fechaFin" @bind-Value="filtro.FechaFin" />
+            <div class="vz-field-group">
+                <label for="vzHasta">Hasta</label>
+                <InputDate id="vzHasta" class="vz-date" @bind-Value="filtro.FechaFin" />
             </div>
 
-            <button type="button" class="btn btn-ghost" @onclick="ToggleFiltrosAvanzados" aria-expanded="@mostrarFiltrosAvanzados">
-                Más filtros
-                <svg class="chevron @(mostrarFiltrosAvanzados ? "is-open" : "")" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
-                    <path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
+            <div class="vz-field-group">
+                <label for="vzAgrupar">Agrupar por</label>
+                <select id="vzAgrupar" class="vz-select" @bind="agruparPor">
+                    <option value="matriz">Matriz</option>
+                    <option value="expedicion">Expedición</option>
+                    <option value="operador">Operador</option>
+                    <option value="unidad">Unidad</option>
+                    <option value="dia">Día</option>
+                </select>
+            </div>
+
+            @foreach (var f in FiltrosPrimarios)
+            {
+                <MultiSelectFiltro @key="f.Clave"
+                                   Etiqueta="@f.Etiqueta"
+                                   Opciones="@f.OpcionesDisponibles"
+                                   Seleccionados="@f.Seleccionados"
+                                   SeleccionadosChanged="@(nuevo => OnFiltroCambiadoAsync(f, nuevo))"
+                                   Disponible="@f.Disponible"
+                                   MotivoPendiente="@f.MotivoPendiente"
+                                   ConBuscador="@f.ConBuscador"
+                                   Abierto="@(filtroAbierto == f)"
+                                   OnToggle="@(() => ToggleFiltro(f))" />
+            }
+
+            <button type="button" class="vz-btn" @onclick="ToggleMasFiltros" aria-expanded="@mostrarMasFiltros">
+                @(mostrarMasFiltros ? "− Menos filtros" : "+ Más filtros")
             </button>
 
-            <button type="button" class="btn btn-ghost" @onclick="ConsultarAsync" disabled="@isLoading">
+            <button type="button" class="vz-btn vz-btn-primary" @onclick="ConsultarAsync" disabled="@isLoading">
                 @if (isLoading)
                 {
-                    <span class="spinner" aria-hidden="true"></span>
+                    <span class="vz-spinner" aria-hidden="true"></span>
                 }
-                <span>@(isLoading ? "Consultando" : "Buscar")</span>
+                <span>@(isLoading ? "Consultando" : "Actualizar")</span>
             </button>
         </div>
 
-        @if (mostrarFiltrosAvanzados)
+        @if (mostrarMasFiltros)
         {
-            <div class="toolbar-advanced">
-                <div class="field-group">
-                    <label for="tipoFecha">Tipo de fecha</label>
-                    <InputText id="tipoFecha" @bind-Value="filtro.TipoFecha" />
-                </div>
-                <div class="field-group">
-                    <label for="idUnidad">Unidad</label>
-                    <InputText id="idUnidad" @bind-Value="filtro.IdUnidad" />
-                </div>
-                <div class="field-group">
-                    <label for="noRemision">Remisión</label>
-                    <InputText id="noRemision" @bind-Value="filtro.NoRemision" />
-                </div>
-                <div class="field-group">
-                    <label for="areas">Áreas</label>
-                    <InputText id="areas" @bind-Value="filtro.Areas" />
-                </div>
-                <div class="field-group">
-                    <label for="estados">Estados</label>
-                    <InputText id="estados" @bind-Value="filtro.Estados" />
-                </div>
-                <div class="field-group">
-                    <label for="idRuta">Ruta</label>
-                    <InputText id="idRuta" @bind-Value="filtro.IdRuta" />
-                </div>
-                <div class="field-group">
-                    <label for="idOperador">Operador</label>
-                    <InputText id="idOperador" @bind-Value="filtro.IdOperador" />
-                </div>
+            <div class="vz-toolbar-secondary">
+                @foreach (var f in FiltrosSecundarios)
+                {
+                    <MultiSelectFiltro @key="f.Clave"
+                                       Etiqueta="@f.Etiqueta"
+                                       Opciones="@f.OpcionesDisponibles"
+                                       Seleccionados="@f.Seleccionados"
+                                       SeleccionadosChanged="@(nuevo => OnFiltroCambiadoAsync(f, nuevo))"
+                                       Disponible="@f.Disponible"
+                                       MotivoPendiente="@f.MotivoPendiente"
+                                       ConBuscador="@f.ConBuscador"
+                                       Abierto="@(filtroAbierto == f)"
+                                       OnToggle="@(() => ToggleFiltro(f))" />
+                }
             </div>
         }
     </section>
 
-    @{
-        var filtrosActivos = ObtenerFiltrosActivos();
-    }
-    @if (seConsulto && filtrosActivos.Count > 0)
-    {
-        <div class="active-filters" aria-label="Filtros activos">
-            @foreach (var f in filtrosActivos)
-            {
-                <span class="filter-chip">
-                    <span>@f.Label: <b>@f.Value</b></span>
-                    <button type="button" @onclick="() => QuitarFiltroAsync(f.Clear)" aria-label="Quitar filtro @f.Label">×</button>
-                </span>
-            }
-        </div>
-    }
+    <div class="vz-metrics-bar" title="Controla el pivote de la Fase 3 — todavía no aplica a esta tabla de detalle">
+        <label class="vz-metric-disabled"><input type="checkbox" disabled checked /> Viajes</label>
+        <label class="vz-metric-disabled"><input type="checkbox" disabled checked /> KMS</label>
+        <label class="vz-metric-disabled"><input type="checkbox" disabled /> Venta</label>
+        <label class="vz-metric-disabled"><input type="checkbox" disabled /> $/km</label>
+        <label class="vz-metric-disabled"><input type="checkbox" disabled /> km/Viaje</label>
+        <label class="vz-metric-disabled"><input type="checkbox" disabled /> $/Viaje</label>
+        <label class="vz-metric-disabled"><input type="checkbox" disabled /> % Part.</label>
+        <label class="vz-metric-disabled"><input type="checkbox" disabled /> Solo comparativa</label>
+    </div>
 
-    @if (validationErrors.Count > 0)
-    {
-        <DataStateBanner Title="Revisa los filtros" Variant="Variant.Warning">
-            <ul class="validation-list">
-                @foreach (var mensaje in validationErrors)
-                {
-                    <li>@mensaje</li>
-                }
-            </ul>
-        </DataStateBanner>
-    }
+    <div class="vz-kpis">
+        <KpiCard Title="Viajes" Value="@FormatoNumero(kpiViajes)" />
+        <KpiCard Title="KMS" Value="@FormatoNumero(kpiKms)" />
+        <div class="vz-kpi-pending">
+            <KpiCard Title="Venta" Value="Pendiente" />
+            <p class="vz-kpi-pending-note">Fuente no localizada — ver §54.20</p>
+        </div>
+        <KpiCard Title="km/Viaje" Value="@FormatoNumero(kpiKmPorViaje)" />
+        <KpiCard Title="Peaje" Value="@FormatoDinero(kpiPeaje)" />
+    </div>
 
     @if (errorMessage is not null)
     {
-        <DataStateBanner Title="No pudimos consultar los viajes." Variant="Variant.Danger">
+        <DataStateBanner Title="No fue posible consultar los viajes." Variant="Variant.Danger">
             <ChildContent>
-                <p class="state-subtitle">@errorMessage</p>
+                <p class="vz-state-subtitle">@errorMessage</p>
             </ChildContent>
             <Actions>
-                <button type="button" class="btn btn-secondary" @onclick="ConsultarAsync">Reintentar</button>
+                <button type="button" class="vz-btn vz-btn-secondary" @onclick="ConsultarAsync">Reintentar</button>
             </Actions>
         </DataStateBanner>
     }
     else if (isLoading)
     {
-        <LoadingSkeleton Rows="5" />
+        <LoadingSkeleton Rows="6" />
     }
-    else if (seConsulto && viajes.Count == 0 && validationErrors.Count == 0)
+    else if (seConsulto && viajesFiltrados.Count == 0)
     {
-        <DataStateBanner Title="No se encontraron viajes">
+        <DataStateBanner Title="@(viajesCargados.Count == 0 ? "No hay datos para el rango seleccionado." : "No hay viajes con los filtros seleccionados.")">
             <ChildContent>
-                <p class="state-subtitle">Prueba modificando los criterios de consulta.</p>
+                <p class="vz-state-subtitle">@(viajesCargados.Count == 0 ? "Prueba ampliando el rango Desde/Hasta." : "Prueba limpiando algunos filtros.")</p>
             </ChildContent>
             <Actions>
-                <button type="button" class="btn btn-secondary" @onclick="LimpiarFiltros">Limpiar filtros</button>
+                @if (viajesCargados.Count > 0)
+                {
+                    <button type="button" class="vz-btn vz-btn-secondary" @onclick="LimpiarTodosLosFiltros">Limpiar filtros</button>
+                }
             </Actions>
         </DataStateBanner>
     }
-    else if (viajes.Count > 0)
+    else if (viajesFiltrados.Count > 0)
     {
-        <p class="results-count">@viajes.Count viaje@(viajes.Count == 1 ? "" : "s") encontrado@(viajes.Count == 1 ? "" : "s")</p>
-
-        var resultadoGrafica = CalcularViajesPorFecha();
-
-        <ChartPlaceholder Title="Viajes por fecha de ingreso"
-                          Description="@(resultadoGrafica.SinFecha > 0 ? $"{resultadoGrafica.SinFecha} registro(s) sin fecha reconocible no se incluyen" : null)">
-            @if (resultadoGrafica.Serie.Count > 0)
-            {
-                <ApexChart TItem="ViajePorFecha" Options="chartOptions" Height="340">
-                    <ApexPointSeries TItem="ViajePorFecha"
-                                     Items="resultadoGrafica.Serie"
-                                     Name="Viajes"
-                                     SeriesType="SeriesType.Line"
-                                     XValue="e => e.Etiqueta"
-                                     YValue="e => e.Cantidad" />
-                </ApexChart>
-            }
-            else
-            {
-                <p class="chart-panel-empty">No hay fechas reconocibles en los resultados actuales para graficar.</p>
-            }
-        </ChartPlaceholder>
-
-        <div class="viajes-table-wrap">
-            <table class="viajes-table">
+        <div class="vz-table-wrap">
+            <table class="vz-table">
                 <thead>
                     <tr>
                         <th>Base</th>
@@ -176,91 +156,172 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var viaje in viajes)
+                    @foreach (var viaje in viajesFiltrados)
                     {
                         <tr>
-                            <td data-label="Base">@viaje._base</td>
-                            <td data-label="No. viaje">@viaje.no_viaje</td>
-                            <td data-label="Estatus"><StatusBadge Text="@viaje.estatus_viaje" Variant="EstadoVariant(viaje.estatus_viaje)" /></td>
-                            <td data-label="Unidad">@viaje.id_unidad</td>
-                            <td data-label="Ruta">@viaje.ruta</td>
-                            <td data-label="Operador">@viaje.operador1</td>
-                            <td data-label="Fecha ingreso">@viaje.fecha_ingreso</td>
-                            <td data-label="Diésel cargado" class="align-end tabular">@viaje.diesel_cargado</td>
-                            <td data-label="Costo diésel" class="align-end tabular">@viaje.costo_diesel</td>
-                            <td data-label="Factura">@viaje.factura</td>
+                            <td>@viaje._base</td>
+                            <td>@viaje.no_viaje</td>
+                            <td><StatusBadge Text="@viaje.estatus_viaje" Variant="EstadoVariant(viaje.estatus_viaje)" /></td>
+                            <td>@viaje.id_unidad</td>
+                            <td>@viaje.ruta</td>
+                            <td>@viaje.operador1</td>
+                            <td>@viaje.fecha_ingreso</td>
+                            <td class="align-end tabular">@viaje.diesel_cargado</td>
+                            <td class="align-end tabular">@viaje.costo_diesel</td>
+                            <td>@viaje.factura</td>
                         </tr>
                     }
                 </tbody>
+                <tfoot>
+                    <tr class="vz-total">
+                        <td colspan="7">@viajesFiltrados.Count registro@(viajesFiltrados.Count == 1 ? "" : "s")</td>
+                        <td class="align-end tabular">@FormatoDecimal(viajesFiltrados.Sum(v => v.diesel_cargado ?? 0))</td>
+                        <td class="align-end tabular">@FormatoDinero(viajesFiltrados.Sum(v => v.costo_diesel ?? 0))</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     }
+
 </div>
 
 @code {
     private readonly ConsultaViajesFilterModel filtro = new();
 
-    private List<string> validationErrors = [];
-    private List<ViajesDto> viajes = [];
+    private List<ViajesDto> viajesCargados = [];
+    private List<ViajesDto> viajesFiltrados = [];
     private bool isLoading;
     private bool seConsulto;
-    private bool mostrarFiltrosAvanzados;
+    private bool mostrarMasFiltros;
     private string? errorMessage;
+    private string agruparPor = "matriz";
 
-    private readonly ApexChartOptions<ViajePorFecha> chartOptions = new()
+    private List<FiltroZemog> filtros = [];
+    private FiltroZemog? filtroAbierto;
+
+    private IEnumerable<FiltroZemog> FiltrosPrimarios => filtros.Take(5);
+    private IEnumerable<FiltroZemog> FiltrosSecundarios => filtros.Skip(5);
+
+    private int kpiViajes;
+    private decimal kpiKms;
+    private decimal kpiKmPorViaje;
+    private decimal kpiPeaje;
+
+    private sealed class FiltroZemog
     {
-        Chart = new Chart { Toolbar = new Toolbar { Show = false } },
-        Colors = ["#4F46E5"],
-        Stroke = new Stroke { Curve = Curve.Smooth, Width = 2 },
-    };
-
-    private sealed record ActiveFilter(string Label, string Value, Action Clear);
-    private sealed record ViajePorFecha(string Etiqueta, int Cantidad);
-
-    private void ToggleFiltrosAvanzados() => mostrarFiltrosAvanzados = !mostrarFiltrosAvanzados;
-
-    private List<ActiveFilter> ObtenerFiltrosActivos()
-    {
-        var activos = new List<ActiveFilter>();
-
-        if (!string.IsNullOrWhiteSpace(filtro.TipoFecha))
-            activos.Add(new ActiveFilter("Tipo de fecha", filtro.TipoFecha, () => filtro.TipoFecha = ""));
-        if (!string.IsNullOrWhiteSpace(filtro.IdUnidad))
-            activos.Add(new ActiveFilter("Unidad", filtro.IdUnidad!, () => filtro.IdUnidad = null));
-        if (!string.IsNullOrWhiteSpace(filtro.NoRemision))
-            activos.Add(new ActiveFilter("Remisión", filtro.NoRemision!, () => filtro.NoRemision = null));
-        if (!string.IsNullOrWhiteSpace(filtro.Areas))
-            activos.Add(new ActiveFilter("Áreas", filtro.Areas!, () => filtro.Areas = null));
-        if (!string.IsNullOrWhiteSpace(filtro.Estados))
-            activos.Add(new ActiveFilter("Estados", filtro.Estados!, () => filtro.Estados = null));
-        if (!string.IsNullOrWhiteSpace(filtro.IdRuta))
-            activos.Add(new ActiveFilter("Ruta", filtro.IdRuta!, () => filtro.IdRuta = null));
-        if (!string.IsNullOrWhiteSpace(filtro.IdOperador))
-            activos.Add(new ActiveFilter("Operador", filtro.IdOperador!, () => filtro.IdOperador = null));
-
-        return activos;
+        public required string Clave { get; init; }
+        public required string Etiqueta { get; init; }
+        public required Func<ViajesDto, string?> Selector { get; init; }
+        public bool Disponible { get; init; } = true;
+        public string? MotivoPendiente { get; init; }
+        public bool ConBuscador { get; init; }
+        public HashSet<string> Seleccionados { get; set; } = [];
+        public List<string> OpcionesDisponibles { get; set; } = [];
     }
 
-    private async Task QuitarFiltroAsync(Action limpiarCampo)
+    protected override void OnInitialized()
     {
-        limpiarCampo();
-        await ConsultarAsync();
+        // Orden exacto de cascada de viajes_v14.html (KEYS_P.concat(KEYS_S)).
+        filtros =
+        [
+            new() { Clave = "cliente", Etiqueta = "Cliente", Selector = _ => null, Disponible = false, ConBuscador = true,
+                    MotivoPendiente = "Pendiente de backend: requiere columna tipo_operacion, no confirmada en el SP actual — ver §54.20/§54.21" },
+            new() { Clave = "sucursal", Etiqueta = "Sucursal", Selector = _ => null, Disponible = false,
+                    MotivoPendiente = "Pendiente de backend: granularidad más fina que Matriz (_base), sin confirmar — ver §54.21" },
+            new() { Clave = "mes", Etiqueta = "Mes", Selector = ObtenerMesEtiqueta },
+            new() { Clave = "destino", Etiqueta = "Destino", Selector = _ => null, Disponible = false, ConBuscador = true,
+                    MotivoPendiente = "Pendiente: requiere una regla de parseo de Ruta validada en Application, no un parser ad-hoc en Presentation — ver §54.20" },
+            new() { Clave = "expedicion", Etiqueta = "Expedición", Selector = v => v.expedicion },
+            new() { Clave = "zona", Etiqueta = "Zona", Selector = _ => null, Disponible = false,
+                    MotivoPendiente = "Pendiente de backend: requiere columna tipo_operacion — ver §54.20" },
+            new() { Clave = "matriz", Etiqueta = "Matriz", Selector = v => v._base },
+            new() { Clave = "anio", Etiqueta = "Año", Selector = v => ObtenerFecha(v)?.Year.ToString() },
+            new() { Clave = "semana", Etiqueta = "Semana", Selector = ObtenerSemana },
+            new() { Clave = "edestino", Etiqueta = "Edo. Destino", Selector = _ => null, Disponible = false,
+                    MotivoPendiente = "Pendiente: depende de que Destino se resuelva primero en Application — ver §54.20" },
+            new() { Clave = "operador", Etiqueta = "Operador", Selector = v => v.operador1, ConBuscador = true },
+            new() { Clave = "unidad", Etiqueta = "Unidad", Selector = v => v.id_unidad, ConBuscador = true },
+            new() { Clave = "tarifa", Etiqueta = "Tipo de tarifa", Selector = _ => null, Disponible = false,
+                    MotivoPendiente = "Pendiente: tarifaDeRuta() del HTML asume un formato de Ruta distinto al confirmado — ver §54.20" },
+            new() { Clave = "movimiento", Etiqueta = "Movimiento", Selector = _ => null, Disponible = false,
+                    MotivoPendiente = "Pendiente: se derivaría parseando Ruta igual que Destino/Tarifa — mismo riesgo de parser no validado, se resuelve junto con esos" },
+        ];
     }
 
-    private void LimpiarFiltros()
+    private void ToggleMasFiltros() => mostrarMasFiltros = !mostrarMasFiltros;
+
+    private void ToggleFiltro(FiltroZemog f) => filtroAbierto = filtroAbierto == f ? null : f;
+
+    private Task OnFiltroCambiadoAsync(FiltroZemog f, HashSet<string> nuevaSeleccion)
     {
-        filtro.FechaInicio = DateTime.Today.AddDays(-7);
-        filtro.FechaFin = DateTime.Today;
-        filtro.TipoFecha = "";
-        filtro.Areas = null;
-        filtro.IdUnidad = null;
-        filtro.Estados = null;
-        filtro.IdRuta = null;
-        filtro.IdOperador = null;
-        filtro.NoRemision = null;
-        viajes = [];
-        seConsulto = false;
-        errorMessage = null;
+        f.Seleccionados = nuevaSeleccion;
+        RecalcularCascada(f.Clave);
+        viajesFiltrados = ObtenerViajesFiltrados();
+        CalcularKpis();
+        return Task.CompletedTask;
+    }
+
+    private void LimpiarTodosLosFiltros()
+    {
+        foreach (var f in filtros)
+            f.Seleccionados.Clear();
+
+        RecalcularCascada(null);
+        viajesFiltrados = ObtenerViajesFiltrados();
+        CalcularKpis();
+    }
+
+    // TEMPORAL MVP: cascada calculada en memoria sobre viajesCargados (el resultado
+    // ya traído por GetViajesQuery). FINAL: si el volumen de datos crece, mover el
+    // cálculo de opciones disponibles a Application/SQL (ver §54.27).
+    private void RecalcularCascada(string? claveModificada)
+    {
+        if (claveModificada is null)
+        {
+            foreach (var f in filtros.Where(f => f.Disponible))
+            {
+                f.OpcionesDisponibles = CalcularOpciones(viajesCargados, f);
+                f.Seleccionados.IntersectWith(f.OpcionesDisponibles);
+            }
+            return;
+        }
+
+        var pasoElCambio = false;
+        var filtrado = viajesCargados;
+
+        foreach (var f in filtros)
+        {
+            if (f.Disponible && f.Seleccionados.Count > 0)
+                filtrado = filtrado.Where(v => f.Selector(v) is { } val && f.Seleccionados.Contains(val)).ToList();
+
+            if (f.Clave == claveModificada)
+                pasoElCambio = true;
+
+            if (pasoElCambio && f.Clave != claveModificada && f.Disponible)
+            {
+                f.OpcionesDisponibles = CalcularOpciones(filtrado, f);
+                f.Seleccionados.IntersectWith(f.OpcionesDisponibles);
+            }
+        }
+    }
+
+    private static List<string> CalcularOpciones(IEnumerable<ViajesDto> datos, FiltroZemog f) =>
+        datos.Select(f.Selector)
+             .Where(v => !string.IsNullOrWhiteSpace(v))
+             .Select(v => v!)
+             .Distinct()
+             .OrderBy(v => v, StringComparer.CurrentCultureIgnoreCase)
+             .ToList();
+
+    private List<ViajesDto> ObtenerViajesFiltrados()
+    {
+        var resultado = viajesCargados;
+
+        foreach (var f in filtros.Where(f => f.Disponible && f.Seleccionados.Count > 0))
+            resultado = resultado.Where(v => f.Selector(v) is { } val && f.Seleccionados.Contains(val)).ToList();
+
+        return resultado;
     }
 
     private async Task ConsultarAsync()
@@ -269,7 +330,6 @@
         {
             isLoading = true;
             errorMessage = null;
-            validationErrors = [];
 
             var query = new GetViajesQuery(
                 filtro.FechaInicio, filtro.FechaFin, filtro.TipoFecha,
@@ -281,60 +341,90 @@
             if (resultado.IsFailure)
             {
                 errorMessage = resultado.Error.Message;
-                viajes = [];
+                viajesCargados = [];
             }
             else
             {
-                viajes = resultado.Value.ToList();
+                viajesCargados = resultado.Value.ToList();
             }
         }
         catch (FluentValidation.ValidationException vex)
         {
-            validationErrors = vex.Errors.Select(e => e.ErrorMessage).ToList();
-            viajes = [];
+            errorMessage = string.Join(" ", vex.Errors.Select(e => e.ErrorMessage));
+            viajesCargados = [];
         }
         catch (Exception)
         {
             errorMessage = "Intenta nuevamente en unos segundos.";
-            viajes = [];
+            viajesCargados = [];
         }
         finally
         {
             isLoading = false;
             seConsulto = true;
+            RecalcularCascada(null);
+            viajesFiltrados = ObtenerViajesFiltrados();
+            CalcularKpis();
         }
     }
 
+    private void CalcularKpis()
+    {
+        kpiViajes = viajesFiltrados.Count;
+        kpiKms = viajesFiltrados.Sum(v => v.kms_viaje ?? 0);
+        kpiKmPorViaje = kpiViajes > 0 ? kpiKms / kpiViajes : 0;
+        kpiPeaje = viajesFiltrados.Sum(v => (v.peaje_efectivo ?? 0) + (v.peaje_electronico ?? 0));
+    }
+
+    private static string FormatoNumero(decimal v) => Math.Round(v).ToString("N0", Cultura);
+    private static string FormatoNumero(int v) => v.ToString("N0", Cultura);
+    private static string FormatoDinero(decimal v) => v.ToString("C0", Cultura);
+    private static string FormatoDecimal(decimal v) => v.ToString("N1", Cultura);
+
     private static readonly string[] FormatosFechaIngreso = ["d/M/yyyy h:mm tt"];
 
-    private (List<ViajePorFecha> Serie, int SinFecha) CalcularViajesPorFecha()
+    private static DateTime? ObtenerFecha(ViajesDto v)
     {
-        var cultura = CultureInfo.GetCultureInfo("es-MX");
-        var conFecha = new List<DateTime>();
-        var sinFecha = 0;
+        if (string.IsNullOrWhiteSpace(v.fecha_ingreso))
+            return null;
 
-        foreach (var v in viajes)
-        {
-            var pudoParsear = DateTime.TryParseExact(
-                v.fecha_ingreso, FormatosFechaIngreso, CultureInfo.InvariantCulture,
-                DateTimeStyles.None, out var fecha);
+        if (DateTime.TryParseExact(v.fecha_ingreso, FormatosFechaIngreso, CultureInfo.InvariantCulture, DateTimeStyles.None, out var fecha))
+            return fecha;
 
-            if (!pudoParsear)
-                pudoParsear = DateTime.TryParse(v.fecha_ingreso, CultureInfo.InvariantCulture, DateTimeStyles.None, out fecha);
+        if (DateTime.TryParse(v.fecha_ingreso, CultureInfo.InvariantCulture, DateTimeStyles.None, out fecha))
+            return fecha;
 
-            if (pudoParsear)
-                conFecha.Add(fecha.Date);
-            else
-                sinFecha++;
-        }
+        return null;
+    }
 
-        var serie = conFecha
-            .GroupBy(f => f)
-            .OrderBy(g => g.Key)
-            .Select(g => new ViajePorFecha(g.Key.ToString("dd MMM", cultura), g.Count()))
-            .ToList();
+    private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-MX");
 
-        return (serie, sinFecha);
+    private static string? ObtenerMesEtiqueta(ViajesDto v)
+    {
+        var fecha = ObtenerFecha(v);
+        return fecha is null ? null : Cultura.TextInfo.ToTitleCase(fecha.Value.ToString("MMM yyyy", Cultura));
+    }
+
+    private static string? ObtenerSemana(ViajesDto v)
+    {
+        var fecha = ObtenerFecha(v);
+        return fecha is null ? null : ISOWeek.GetWeekOfYear(fecha.Value).ToString();
+    }
+
+    private string TextoCorte()
+    {
+        var cultura = Cultura;
+
+        if (!seConsulto)
+            return $"Rango a consultar: {filtro.FechaInicio.ToString("dd MMM yyyy", cultura)} – {filtro.FechaFin.ToString("dd MMM yyyy", cultura)}";
+
+        if (viajesCargados.Count == 0)
+            return "Sin viajes en el rango consultado";
+
+        var fechas = viajesCargados.Select(ObtenerFecha).Where(f => f is not null).Select(f => f!.Value).ToList();
+        var corte = fechas.Count > 0 ? fechas.Max().ToString("dd MMM yyyy", cultura) : "sin fecha reconocible";
+
+        return $"Corte: {corte} · {viajesCargados.Count} viajes cargados en el rango consultado";
     }
 
     private static Variant EstadoVariant(string? estatus) => estatus?.Trim().ToUpperInvariant() switch
