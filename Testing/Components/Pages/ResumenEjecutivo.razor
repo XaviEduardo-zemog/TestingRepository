@@ -1,0 +1,89 @@
+﻿@using Testing.Application.GetAllViajes
+
+<div class="re-page">
+    <div class="re-toolbar">
+        <h2>Resumen Ejecutivo</h2>
+        <p class="re-subtitle">@Subtitulo()</p>
+    </div>
+
+    @if (resumen is null)
+    {
+        <p class="re-vacio">Sin datos cargados.</p>
+    }
+    else if (resumen.MesesCerrados.Count == 0)
+    {
+        <p class="re-vacio">No hay meses cerrados en el rango consultado — el Resumen Ejecutivo necesita al menos un mes completo (ver §54.119).</p>
+    }
+    else
+    {
+        <ResumenSemaforo Alertas="resumen.Semaforo" />
+
+        @if (resumen.NivelZemog is not null)
+        {
+            <ResumenBloqueNivel Titulo="Zemog · Nivel general" Bloque="resumen.NivelZemog" />
+        }
+
+        @if (resumen.PorCliente.Count > 0)
+        {
+            <ResumenPorCliente PorCliente="resumen.PorCliente" />
+        }
+
+        @if (resumen.ArbolComparativo is not null)
+        {
+            <ResumenArbolComparativo Raiz="resumen.ArbolComparativo" MesUltimo="@MesUltimoEtiqueta()" MesAnterior="@MesAnteriorEtiqueta()" />
+        }
+
+        <ResumenDestinosCayendo />
+
+        <ResumenAgenciasDesaparecidas Agencias="resumen.AgenciasDesaparecidas" MesUltimo="@MesUltimoEtiqueta()" />
+
+        <ResumenOperadores Datos="resumen.Operadores" />
+
+        <ResumenRotacionOperadores Rotacion="resumen.Rotacion" MesUltimo="@MesUltimoEtiqueta()" />
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<ViajesDto> Viajes { get; set; } = [];
+    [Parameter] public CorteMensual? Corte { get; set; }
+
+    private ResumenEjecutivoDto? resumen;
+
+    // Recalcula SIEMPRE que cambien los parámetros (nueva consulta) — a diferencia de la vista
+    // principal, el Resumen Ejecutivo no reacciona a los 14 filtros (usa Viajes = viajesCargados
+    // completo, nunca viajesFiltrados — mismo comportamiento que RE_render() en viajes_v14.html,
+    // que nunca llama a getFilt()). Ver Fase 8 / §54.119.
+    protected override void OnParametersSet() => resumen = ResumenEjecutivoCalculator.Calcular(Viajes, Corte);
+
+    private string? MesUltimoEtiqueta()
+    {
+        if (resumen is null || resumen.MesesCerrados.Count == 0)
+            return null;
+
+        return resumen.MesesCerrados[^1].Etiqueta;
+    }
+
+    private string? MesAnteriorEtiqueta()
+    {
+        if (resumen is null || resumen.MesesCerrados.Count < 2)
+            return null;
+
+        return resumen.MesesCerrados[^2].Etiqueta;
+    }
+
+    private string Subtitulo()
+    {
+        if (resumen is null || resumen.MesesCerrados.Count == 0)
+            return "Sin meses cerrados disponibles";
+
+        var rango = resumen.MesesCerrados.Count == 1
+            ? resumen.MesesCerrados[0].Etiqueta
+            : $"{resumen.MesesCerrados[0].Etiqueta} – {resumen.MesesCerrados[^1].Etiqueta}";
+
+        var nota = resumen.MesAbiertoExcluido
+            ? $" · {resumen.EtiquetaMesAbiertoExcluido} excluido (mes en curso, sin cerrar)"
+            : "";
+
+        return $"Meses cerrados: {rango}{nota}";
+    }
+}

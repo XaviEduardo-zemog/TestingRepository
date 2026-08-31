@@ -1,0 +1,29 @@
+﻿@using Testing.Application.GetAllViajes
+
+<section class="re-bloque re-semaforo">
+    <h3>8.1 · Lo más importante</h3>
+    @if (Alertas.Count == 0)
+    {
+        <p class="re-vacio">Sin datos suficientes para generar el semáforo.</p>
+    }
+    else
+    {
+        <ul class="re-semaforo-lista">
+            @foreach (var alerta in Alertas)
+            {
+                <li class="@ClaseSeveridad(alerta.Severidad)">@alerta.Texto</li>
+            }
+        </ul>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<AlertaSemaforo> Alertas { get; set; } = [];
+
+    private static string ClaseSeveridad(SeveridadAlerta severidad) => severidad switch
+    {
+        SeveridadAlerta.Positiva => "re-sem-pos",
+        SeveridadAlerta.Negativa => "re-sem-neg",
+        _ => "re-sem-neutro",
+    };
+}

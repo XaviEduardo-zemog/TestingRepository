@@ -1,0 +1,114 @@
+﻿@using System.Globalization
+@using Testing.Application.GetAllViajes
+
+<section class="re-bloque re-nivel">
+    <h3>@Titulo</h3>
+
+    @if (Bloque.MesAnterior is not null)
+    {
+        <h4>Comparativo vs mes anterior</h4>
+        <div class="re-tbl-wrap">
+            <table class="re-tabla">
+                <thead>
+                    <tr><th></th><th>@Bloque.MesAnterior.Value.Etiqueta</th><th>@Bloque.MesUltimo.Etiqueta</th><th>Δ</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Viajes</td>
+                        <td class="align-end tabular">@FormatoNumero(Bloque.TotalesAnterior!.Viajes)</td>
+                        <td class="align-end tabular">@FormatoNumero(Bloque.TotalesUltimo.Viajes)</td>
+                        <td class="align-end tabular @ClaseDelta(Bloque.DeltaViajesPctVsAnterior)">@FormatoDeltaPct(Bloque.DeltaViajesPctVsAnterior)</td>
+                    </tr>
+                    <tr>
+                        <td>KMS</td>
+                        <td class="align-end tabular">@FormatoNumero(Bloque.TotalesAnterior.Kms)</td>
+                        <td class="align-end tabular">@FormatoNumero(Bloque.TotalesUltimo.Kms)</td>
+                        <td class="align-end tabular @ClaseDelta(Bloque.DeltaKmsPctVsAnterior)">@FormatoDeltaPct(Bloque.DeltaKmsPctVsAnterior)</td>
+                    </tr>
+                    <tr class="re-fila-pendiente">
+                        <td>Venta</td>
+                        <td class="align-end" colspan="3">Pendiente — @PendienteVenta</td>
+                    </tr>
+                    <tr class="re-fila-pendiente">
+                        <td>$/KM</td>
+                        <td class="align-end" colspan="3">Pendiente — requiere Venta</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    }
+
+    @if (Bloque.HayComparativoVsEnero)
+    {
+        <h4>Comparativo vs @Bloque.PrimerMesDelAnio.Etiqueta (avance del año)</h4>
+        <div class="re-tbl-wrap">
+            <table class="re-tabla">
+                <thead>
+                    <tr><th></th><th>@Bloque.PrimerMesDelAnio.Etiqueta</th><th>@Bloque.MesUltimo.Etiqueta</th><th>Δ</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Viajes</td>
+                        <td class="align-end tabular">@FormatoNumero(Bloque.TotalesPrimerMesDelAnio.Viajes)</td>
+                        <td class="align-end tabular">@FormatoNumero(Bloque.TotalesUltimo.Viajes)</td>
+                        <td class="align-end tabular @ClaseDelta(Bloque.DeltaViajesPctVsEnero)">@FormatoDeltaPct(Bloque.DeltaViajesPctVsEnero)</td>
+                    </tr>
+                    <tr>
+                        <td>KMS</td>
+                        <td class="align-end tabular">@FormatoNumero(Bloque.TotalesPrimerMesDelAnio.Kms)</td>
+                        <td class="align-end tabular">@FormatoNumero(Bloque.TotalesUltimo.Kms)</td>
+                        <td class="align-end tabular @ClaseDelta(Bloque.DeltaKmsPctVsEnero)">@FormatoDeltaPct(Bloque.DeltaKmsPctVsEnero)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <h4>Tendencia mensual</h4>
+    <div class="re-tbl-wrap">
+        <table class="re-tabla">
+            <thead><tr><th>Mes</th><th>Viajes</th><th>KM</th></tr></thead>
+            <tbody>
+                @foreach (var (mes, totales) in Bloque.Tendencia)
+                {
+                    <tr>
+                        <td>@mes.Etiqueta</td>
+                        <td class="align-end tabular">@FormatoNumero(totales.Viajes)</td>
+                        <td class="align-end tabular">@FormatoNumero(totales.Kms)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <p class="re-nota">"Peor mes" (por venta) no se muestra: Pendiente — @PendienteVenta.</p>
+
+    <div class="re-chart-pendiente">
+        <p><strong>Venta mensual</strong> y <strong>$/KM mensual</strong>: Pendiente — @PendienteVenta.</p>
+        <p class="re-nota">
+            La integración de ApexCharts (Blazor-ApexCharts, ya referenciado en Testing.csproj/_Imports.razor/App.razor)
+            queda lista para activarse aquí en cuanto exista una fuente de Venta — ver Fase 8 / §54.128.
+        </p>
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public string Titulo { get; set; } = "";
+    [Parameter, EditorRequired] public BloqueNivelDto Bloque { get; set; } = null!;
+
+    private const string PendienteVenta = ResumenEjecutivoCalculator.PendienteVenta;
+
+    private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-MX");
+
+    private static string FormatoNumero(decimal v) => Math.Round(v).ToString("N0", Cultura);
+    private static string FormatoNumero(int v) => v.ToString("N0", Cultura);
+
+    private static string FormatoDeltaPct(decimal? v) => v is null ? "—" : ResumenEjecutivoCalculator.FormatoPorcentaje(v.Value);
+
+    private static string ClaseDelta(decimal? v) => v switch
+    {
+        null => "re-neutro",
+        > 0 => "re-pos",
+        < 0 => "re-neg",
+        _ => "re-neutro",
+    };
+}

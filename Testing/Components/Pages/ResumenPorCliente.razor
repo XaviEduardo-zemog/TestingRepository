@@ -1,0 +1,32 @@
+﻿@using Testing.Application.GetAllViajes
+
+<section class="re-bloque re-por-cliente">
+    <h3>8.3 · Por Cliente</h3>
+    <div class="re-tabs">
+        @foreach (var c in PorCliente)
+        {
+            <button type="button"
+                    class="re-tab @(c.Cliente == clienteActivo ? "is-active" : "")"
+                    @onclick="() => clienteActivo = c.Cliente">
+                @c.Cliente
+            </button>
+        }
+    </div>
+
+    @{
+        var seleccionado = PorCliente.FirstOrDefault(c => c.Cliente == clienteActivo) ?? PorCliente[0];
+    }
+    <ResumenBloqueNivel Titulo="@seleccionado.Cliente" Bloque="seleccionado.Bloque" />
+</section>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<NivelPorClienteDto> PorCliente { get; set; } = [];
+
+    private string? clienteActivo;
+
+    protected override void OnParametersSet()
+    {
+        if (clienteActivo is null || PorCliente.All(c => c.Cliente != clienteActivo))
+            clienteActivo = PorCliente.Count > 0 ? PorCliente[0].Cliente : null;
+    }
+}

@@ -15,67 +15,48 @@
             <h1>Estado de la Operación</h1>
             <p class="vz-header-sub">@TextoCorte()</p>
         </div>
+        <button type="button" class="vz-btn vz-btn-secondary" @onclick="() => mostrarResumen = !mostrarResumen">
+            @(mostrarResumen ? "← Volver a la consulta" : "Resumen Ejecutivo")
+        </button>
     </header>
 
-    <section class="vz-toolbar" aria-label="Filtros de Viajes Zemog">
-        <div class="vz-toolbar-primary">
-            <div class="vz-field-group">
-                <label for="vzDesde">Desde</label>
-                <InputDate id="vzDesde" class="vz-date" @bind-Value="filtro.FechaInicio" />
-            </div>
-            <div class="vz-field-group">
-                <label for="vzHasta">Hasta</label>
-                <InputDate id="vzHasta" class="vz-date" @bind-Value="filtro.FechaFin" />
-            </div>
+    @if (mostrarResumen)
+    {
+        <ResumenEjecutivo Viajes="viajesCargados" Corte="corte" />
+    }
+    else
+    {
 
-            <div class="vz-field-group">
-                <label for="vzAgrupar">Agrupar por</label>
-                <select id="vzAgrupar" class="vz-select" @bind="agruparPor" @bind:after="RecalcularPivote">
-                    <option value="cliente">Cliente</option>
-                    <option value="zona">Zona</option>
-                    <option value="matriz">Matriz</option>
-                    <option value="expedicion">Expedición</option>
-                    <option value="operador">Operador</option>
-                    <option value="unidad">Unidad</option>
-                    <option value="ruta">Ruta</option>
-                    <option value="destino">Destino</option>
-                    <option value="movimiento">Movimiento</option>
-                    <option value="semana">Semana</option>
-                    <option value="dia">Día</option>
-                </select>
-            </div>
+        <section class="vz-toolbar" aria-label="Filtros de Viajes Zemog">
+            <div class="vz-toolbar-primary">
+                <div class="vz-field-group">
+                    <label for="vzDesde">Desde</label>
+                    <InputDate id="vzDesde" class="vz-date" @bind-Value="filtro.FechaInicio" />
+                </div>
+                <div class="vz-field-group">
+                    <label for="vzHasta">Hasta</label>
+                    <InputDate id="vzHasta" class="vz-date" @bind-Value="filtro.FechaFin" />
+                </div>
 
-            @foreach (var f in FiltrosPrimarios)
-            {
-                <MultiSelectFiltro @key="f.Clave"
-                                   Etiqueta="@f.Etiqueta"
-                                   Opciones="@f.OpcionesDisponibles"
-                                   Seleccionados="@f.Seleccionados"
-                                   SeleccionadosChanged="@(nuevo => OnFiltroCambiadoAsync(f, nuevo))"
-                                   Disponible="@f.Disponible"
-                                   MotivoPendiente="@f.MotivoPendiente"
-                                   ConBuscador="@f.ConBuscador"
-                                   Abierto="@(filtroAbierto == f)"
-                                   OnToggle="@(() => ToggleFiltro(f))" />
-            }
+                <div class="vz-field-group">
+                    <label for="vzAgrupar">Agrupar por</label>
+                    <select id="vzAgrupar" class="vz-select" @bind="agruparPor" @bind:after="RecalcularPivote">
+                        <option value="cliente">Cliente</option>
+                        <option value="zona">Zona</option>
+                        <option value="matriz">Matriz</option>
+                        <option value="expedicion">Expedición</option>
+                        <option value="operador">Operador</option>
+                        <option value="unidad">Unidad</option>
+                        <option value="ruta">Ruta</option>
+                        <option value="destino">Destino</option>
+                        <option value="movimiento">Movimiento</option>
+                        <option value="semana">Semana</option>
+                        <option value="dia">Día</option>
+                        <option value="jerarquia">Jerarquía (Cliente › Zona › Matriz › Sucursal)</option>
+                    </select>
+                </div>
 
-            <button type="button" class="vz-btn" @onclick="ToggleMasFiltros" aria-expanded="@mostrarMasFiltros">
-                @(mostrarMasFiltros ? "− Menos filtros" : "+ Más filtros")
-            </button>
-
-            <button type="button" class="vz-btn vz-btn-primary" @onclick="ConsultarAsync" disabled="@isLoading">
-                @if (isLoading)
-                {
-                    <span class="vz-spinner" aria-hidden="true"></span>
-                }
-                <span>@(isLoading ? "Consultando" : "Actualizar")</span>
-            </button>
-        </div>
-
-        @if (mostrarMasFiltros)
-        {
-            <div class="vz-toolbar-secondary">
-                @foreach (var f in FiltrosSecundarios)
+                @foreach (var f in FiltrosPrimarios)
                 {
                     <MultiSelectFiltro @key="f.Clave"
                                        Etiqueta="@f.Etiqueta"
@@ -88,88 +69,138 @@
                                        Abierto="@(filtroAbierto == f)"
                                        OnToggle="@(() => ToggleFiltro(f))" />
                 }
+
+                <button type="button" class="vz-btn" @onclick="ToggleMasFiltros" aria-expanded="@mostrarMasFiltros">
+                    @(mostrarMasFiltros ? "− Menos filtros" : "+ Más filtros")
+                </button>
+
+                <button type="button" class="vz-btn vz-btn-primary" @onclick="ConsultarAsync" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span class="vz-spinner" aria-hidden="true"></span>
+                    }
+                    <span>@(isLoading ? "Consultando" : "Actualizar")</span>
+                </button>
             </div>
-        }
-    </section>
 
-    <div class="vz-metrics-bar">
-        <label><input type="checkbox" @bind="mostrarViajes" /> Viajes</label>
-        <label><input type="checkbox" @bind="mostrarKms" /> KMS</label>
-        <label><input type="checkbox" @bind="mostrarPeaje" /> Peaje</label>
-        <label class="vz-metric-disabled" title="Fuente no localizada — ver §54.20"><input type="checkbox" disabled /> Venta</label>
-        <label class="vz-metric-disabled" title="Requiere Venta"><input type="checkbox" disabled /> $/km</label>
-        <label><input type="checkbox" @bind="mostrarKmPorViaje" /> km/Viaje</label>
-        <label class="vz-metric-disabled" title="Requiere Venta"><input type="checkbox" disabled /> $/Viaje</label>
-        <label class="vz-metric-sep"><input type="checkbox" @bind="mostrarParticipacion" /> % Part.</label>
-        <label><input type="checkbox" @bind="soloComparativa" /> Solo comparativa</label>
-    </div>
-
-    <div class="vz-kpis">
-        @foreach (var kpi in kpisComparativa)
-        {
-            @if (kpi.Disponible)
+            @if (mostrarMasFiltros)
             {
-                <KpiCard Title="@TituloKpi(kpi)"
-                         Value="@ValorKpi(kpi)"
-                         Delta="@DeltaKpi(kpi)"
-                         DeltaVariant="@VarianteKpi(kpi)" />
-            }
-            else
-            {
-                <div class="vz-kpi-pending">
-                    <KpiCard Title="@kpi.Etiqueta" Value="Pendiente" />
-                    <p class="vz-kpi-pending-note">@kpi.MotivoPendiente</p>
+                <div class="vz-toolbar-secondary">
+                    @foreach (var f in FiltrosSecundarios)
+                    {
+                        <MultiSelectFiltro @key="f.Clave"
+                                           Etiqueta="@f.Etiqueta"
+                                           Opciones="@f.OpcionesDisponibles"
+                                           Seleccionados="@f.Seleccionados"
+                                           SeleccionadosChanged="@(nuevo => OnFiltroCambiadoAsync(f, nuevo))"
+                                           Disponible="@f.Disponible"
+                                           MotivoPendiente="@f.MotivoPendiente"
+                                           ConBuscador="@f.ConBuscador"
+                                           Abierto="@(filtroAbierto == f)"
+                                           OnToggle="@(() => ToggleFiltro(f))" />
+                    }
                 </div>
             }
-        }
-    </div>
+        </section>
 
-    @if (errorMessage is not null)
-    {
-        <DataStateBanner Title="No fue posible consultar los viajes." Variant="Variant.Danger">
-            <ChildContent>
-                <p class="vz-state-subtitle">@errorMessage</p>
-            </ChildContent>
-            <Actions>
-                <button type="button" class="vz-btn vz-btn-secondary" @onclick="ConsultarAsync">Reintentar</button>
-            </Actions>
-        </DataStateBanner>
-    }
-    else if (isLoading)
-    {
-        <LoadingSkeleton Rows="6" />
-    }
-    else if (seConsulto && viajesFiltrados.Count == 0)
-    {
-        <DataStateBanner Title="@(viajesCargados.Count == 0 ? "No hay datos para el rango seleccionado." : "No hay viajes con los filtros seleccionados.")">
-            <ChildContent>
-                <p class="vz-state-subtitle">@(viajesCargados.Count == 0 ? "Prueba ampliando el rango Desde/Hasta." : "Prueba limpiando algunos filtros.")</p>
-            </ChildContent>
-            <Actions>
-                @if (viajesCargados.Count > 0)
+        <div class="vz-metrics-bar">
+            <label><input type="checkbox" @bind="mostrarViajes" /> Viajes</label>
+            <label><input type="checkbox" @bind="mostrarKms" /> KMS</label>
+            <label><input type="checkbox" @bind="mostrarPeaje" /> Peaje</label>
+            <label class="vz-metric-disabled" title="Fuente no localizada — ver §54.20"><input type="checkbox" disabled /> Venta</label>
+            <label class="vz-metric-disabled" title="Requiere Venta"><input type="checkbox" disabled /> $/km</label>
+            <label><input type="checkbox" @bind="mostrarKmPorViaje" /> km/Viaje</label>
+            <label class="vz-metric-disabled" title="Requiere Venta"><input type="checkbox" disabled /> $/Viaje</label>
+            <label class="vz-metric-sep"><input type="checkbox" @bind="mostrarParticipacion" /> % Part.</label>
+            <label><input type="checkbox" @bind="soloComparativa" /> Solo comparativa</label>
+        </div>
+
+        <div class="vz-kpis">
+            @foreach (var kpi in kpisComparativa)
+            {
+                @if (kpi.Disponible)
                 {
-                    <button type="button" class="vz-btn vz-btn-secondary" @onclick="LimpiarTodosLosFiltros">Limpiar filtros</button>
+                    <KpiCard Title="@TituloKpi(kpi)"
+                             Value="@ValorKpi(kpi)"
+                             Delta="@DeltaKpi(kpi)"
+                             DeltaVariant="@VarianteKpi(kpi)" />
                 }
-            </Actions>
-        </DataStateBanner>
-    }
-    else if (viajesFiltrados.Count > 0)
-    {
-        <TablaPivoteViajes Filas="filasPivote"
-                           Meses="mesesPivote"
-                           EtiquetaDimension="@EtiquetaAgrupacionActual"
-                           EsDimensionTemporal="@(agruparPor is "dia" or "semana")"
-                           MostrarViajes="mostrarViajes"
-                           MostrarKms="mostrarKms"
-                           MostrarPeaje="mostrarPeaje"
-                           MostrarKmPorViaje="mostrarKmPorViaje"
-                           MostrarParticipacion="mostrarParticipacion"
-                           SoloComparativa="soloComparativa" />
+                else
+                {
+                    <div class="vz-kpi-pending">
+                        <KpiCard Title="@kpi.Etiqueta" Value="Pendiente" />
+                        <p class="vz-kpi-pending-note">@kpi.MotivoPendiente</p>
+                    </div>
+                }
+            }
+        </div>
+
+        @if (errorMessage is not null)
+        {
+            <DataStateBanner Title="No fue posible consultar los viajes." Variant="Variant.Danger">
+                <ChildContent>
+                    <p class="vz-state-subtitle">@errorMessage</p>
+                </ChildContent>
+                <Actions>
+                    <button type="button" class="vz-btn vz-btn-secondary" @onclick="ConsultarAsync">Reintentar</button>
+                </Actions>
+            </DataStateBanner>
+        }
+        else if (isLoading)
+        {
+            <LoadingSkeleton Rows="6" />
+        }
+        else if (seConsulto && viajesFiltrados.Count == 0)
+        {
+            <DataStateBanner Title="@(viajesCargados.Count == 0 ? "No hay datos para el rango seleccionado." : "No hay viajes con los filtros seleccionados.")">
+                <ChildContent>
+                    <p class="vz-state-subtitle">@(viajesCargados.Count == 0 ? "Prueba ampliando el rango Desde/Hasta." : "Prueba limpiando algunos filtros.")</p>
+                </ChildContent>
+                <Actions>
+                    @if (viajesCargados.Count > 0)
+                    {
+                        <button type="button" class="vz-btn vz-btn-secondary" @onclick="LimpiarTodosLosFiltros">Limpiar filtros</button>
+                    }
+                </Actions>
+            </DataStateBanner>
+        }
+        else if (viajesFiltrados.Count > 0 && agruparPor == "jerarquia" && raizJerarquia is not null)
+        {
+            <div class="vz-arbol-controles">
+                <button type="button" class="vz-btn" @onclick="() => arbolRef?.ExpandirTodo()">Expandir todo</button>
+                <button type="button" class="vz-btn" @onclick="() => arbolRef?.ColapsarTodo()">Colapsar todo</button>
+            </div>
+            <ArbolJerarquiaViajes @ref="arbolRef"
+                                  Raiz="raizJerarquia"
+                                  Meses="mesesPivote"
+                                  MostrarViajes="mostrarViajes"
+                                  MostrarKms="mostrarKms"
+                                  MostrarPeaje="mostrarPeaje"
+                                  MostrarKmPorViaje="mostrarKmPorViaje"
+                                  MostrarParticipacion="mostrarParticipacion"
+                                  SoloComparativa="soloComparativa" />
+        }
+        else if (viajesFiltrados.Count > 0)
+        {
+            <TablaPivoteViajes Filas="filasPivote"
+                               Meses="mesesPivote"
+                               EtiquetaDimension="@EtiquetaAgrupacionActual"
+                               EsDimensionTemporal="@(agruparPor is "dia" or "semana")"
+                               MostrarViajes="mostrarViajes"
+                               MostrarKms="mostrarKms"
+                               MostrarPeaje="mostrarPeaje"
+                               MostrarKmPorViaje="mostrarKmPorViaje"
+                               MostrarParticipacion="mostrarParticipacion"
+                               SoloComparativa="soloComparativa" />
+        }
+
     }
 
 </div>
 
 @code {
+    private bool mostrarResumen;
+
     private readonly ConsultaViajesFilterModel filtro = new();
 
     private List<ViajesDto> viajesCargados = [];
@@ -198,6 +229,22 @@
 
     private List<FilaPivote> filasPivote = [];
     private List<MesColumna> mesesPivote = [];
+    private NodoJerarquia? raizJerarquia;
+    private ArbolJerarquiaViajes? arbolRef;
+
+    // Cliente/Zona: CamposDerivadosViajes.ObtenerCliente/ObtenerZona (Fase 4/§54.78-54.81).
+    // Matriz: v._base. Sucursal: sin columna confirmada en el SP (§54.21) — se usa el mismo
+    // valor de Matriz, replicando el fallback "su=r.suc||mt" de viajes_v14.html cuando el Excel
+    // no trae Sucursal. En la práctica esa cadena Matriz→Sucursal siempre tiene 1 solo hijo, así
+    // que el colapso de cadenas de hijo único (ArbolJerarquiaViajes.Caminar) la oculta sola —
+    // ver Fase 7 / §54.109.
+    private static readonly Func<ViajesDto, string?>[] NivelesJerarquia =
+    [
+        CamposDerivadosViajes.ObtenerCliente,
+        CamposDerivadosViajes.ObtenerZona,
+        v => v._base,
+        v => v._base,
+    ];
 
     private static readonly Dictionary<string, string> EtiquetasAgrupacion = new()
     {
@@ -350,12 +397,20 @@
         _ => null,
     };
 
-    // TEMPORAL MVP: el pivote se arma en memoria sobre viajesFiltrados (el resultado
-    // ya traído por GetViajesQuery, ya reducido por los filtros de la Fase 2).
-    // FINAL: si el volumen real lo justifica, mover esta agregación a SQL/Application
-    // (agrupar por dimensión y mes directo en la query) — ver §54.22-54.23/§54.27.
+    // TEMPORAL MVP: el pivote (y el árbol de jerarquía) se arman en memoria sobre
+    // viajesFiltrados (el resultado ya traído por GetViajesQuery, ya reducido por los
+    // filtros de la Fase 2). FINAL: si el volumen real lo justifica, mover esta
+    // agregación a SQL/Application (agrupar por dimensión y mes directo en la query)
+    // — ver §54.22-54.23/§54.27.
     private void RecalcularPivote()
     {
+        if (agruparPor == "jerarquia")
+        {
+            RecalcularArbol();
+            mesesPivote = CalcularMesesPivote();
+            return;
+        }
+
         var esTemporal = agruparPor is "dia" or "semana";
 
         var grupos = viajesFiltrados
@@ -391,15 +446,94 @@
 
         filasPivote = filas;
 
-        mesesPivote = esTemporal
-            ? []
-            : viajesFiltrados
-                .Select(v => (Clave: CamposDerivadosViajes.ObtenerMesClave(v), Etiqueta: CamposDerivadosViajes.ObtenerMesEtiqueta(v)))
-                .Where(t => t.Clave is not null)
-                .DistinctBy(t => t.Clave)
-                .OrderBy(t => t.Clave)
-                .Select(t => new MesColumna(t.Clave!, t.Etiqueta!))
-                .ToList();
+        mesesPivote = esTemporal ? [] : CalcularMesesPivote();
+    }
+
+    private List<MesColumna> CalcularMesesPivote() =>
+        viajesFiltrados
+            .Select(v => (Clave: CamposDerivadosViajes.ObtenerMesClave(v), Etiqueta: CamposDerivadosViajes.ObtenerMesEtiqueta(v)))
+            .Where(t => t.Clave is not null)
+            .DistinctBy(t => t.Clave)
+            .OrderBy(t => t.Clave)
+            .Select(t => new MesColumna(t.Clave!, t.Etiqueta!))
+            .ToList();
+
+    // Replica la construcción del árbol de tablaJerarquia() en viajes_v14.html: cada viaje
+    // acumula en la RAÍZ y en TODOS sus ancestros (Cliente, Cliente>Zona, ...), no solo en su
+    // nodo hoja — así Raiz.PorMes/Total ya son el gran total de la tabla, sin cálculo aparte
+    // (ver Testing/Features/JerarquiaViajesModels.cs). Reutiliza ContribucionViajeProyectada
+    // (Fase 6): mismo criterio Ida-only y misma proyección del mes abierto que el pivote plano
+    // y las tarjetas KPI — ver Fase 7 / §54.108.
+    private void RecalcularArbol()
+    {
+        var anterior = raizJerarquia;
+        var nuevo = new NodoJerarquia { Id = "", Label = "TOTAL", Nivel = -1 };
+
+        foreach (var viaje in viajesFiltrados)
+        {
+            var fecha = CamposDerivadosViajes.ObtenerFechaNegocio(viaje);
+            if (fecha is null)
+                continue;
+
+            var mesClave = fecha.Value.ToString("yyyy-MM");
+            Acumular(nuevo, mesClave, viaje);
+
+            var nodo = nuevo;
+            foreach (var nivel in NivelesJerarquia)
+            {
+                var clave = nivel(viaje) is { Length: > 0 } valor ? valor : "(sin dato)";
+                nodo = ObtenerOCrearHijo(nodo, clave);
+                Acumular(nodo, mesClave, viaje);
+            }
+        }
+
+        if (anterior is not null)
+            PreservarExpansion(nuevo, anterior);
+
+        raizJerarquia = nuevo;
+    }
+
+    private static NodoJerarquia ObtenerOCrearHijo(NodoJerarquia padre, string clave)
+    {
+        if (padre.Hijos.TryGetValue(clave, out var existente))
+            return existente;
+
+        var nuevoHijo = new NodoJerarquia
+        {
+            Id = $"{padre.Id}>{clave}",
+            Label = clave,
+            Nivel = padre.Nivel + 1,
+            IsExpanded = padre.Nivel + 1 == 0,
+        };
+        padre.Hijos[clave] = nuevoHijo;
+        return nuevoHijo;
+    }
+
+    private void Acumular(NodoJerarquia nodo, string mesClave, ViajesDto viaje)
+    {
+        var metrica = new MetricasMes(
+            (int)Math.Round(ContribucionViajeProyectada.Viajes(viaje, corte)),
+            ContribucionViajeProyectada.Kms(viaje, corte),
+            ContribucionViajeProyectada.Peaje(viaje, corte));
+
+        nodo.PorMes[mesClave] = MetricasMes.Sumar(nodo.ObtenerMes(mesClave), metrica);
+        nodo.Total = MetricasMes.Sumar(nodo.Total, metrica);
+    }
+
+    // Conserva IsExpanded entre reconstrucciones del árbol (nuevos filtros/consulta) para que
+    // el usuario no pierda lo que ya expandió — el HTML no lo necesita porque EXPAND vive
+    // aparte del árbol; aquí IsExpanded vive en el nodo (ver JerarquiaViajesModels.cs), así que
+    // hay que copiarlo explícitamente del árbol viejo al nuevo, emparejando por clave de nivel.
+    private static void PreservarExpansion(NodoJerarquia nuevo, NodoJerarquia anterior)
+    {
+        foreach (var (clave, hijoNuevo) in nuevo.Hijos)
+        {
+            if (anterior.Hijos.TryGetValue(clave, out var hijoAnterior))
+            {
+                hijoNuevo.IsExpanded = hijoAnterior.IsExpanded;
+                PreservarExpansion(hijoNuevo, hijoAnterior);
+            }
+        }
     }
 
     // Viajes cuenta solo tramos de Ida (ContribucionViajeProyectada.Viajes) y aplica el

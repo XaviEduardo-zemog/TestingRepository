@@ -1,13 +1,3 @@
-/* ============================================================
-   Viajes Zemog — paleta propia, aislada del sistema Indigo global.
-   Tokens NO se definen en :root (eso se fugaría a toda la app vía
-   CSS Isolation, ver §47-auditoría) — viven en .vz-page.
-   Valores tomados directo de viajes_v14.html (:root oscuro).
-   Fase 2: el panel de cada filtro (.ms-filtro*) ahora vive en
-   Testing/Components/Shared/Filters/MultiSelectFiltro.razor.css —
-   este archivo ya no define esas clases.
-   ============================================================ */
-
 .vz-page {
     --vz-bg: #0a0a0f;
     --vz-panel: #111111;
@@ -27,6 +17,11 @@
     --vz-acc2: #fbbf24;
     --vz-verde: #4ade80;
     --vz-rojo: #f87171;
+    --vz-lv0: #141a24;
+    --vz-lv1: #12161c;
+    --vz-lv2: #101317;
+    --vz-lv4: #0c0c0c;
+    --vz-gris8: #748095;
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -43,21 +38,33 @@
 
 /* ---------- header ---------- */
 .vz-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
     background: var(--vz-head);
     border-bottom: 2px solid var(--vz-acc);
     padding: 20px 24px 14px;
-    text-align: center;
     margin: 0 -24px;
 }
 
-    .vz-header h1 {
-        margin: 0;
-        color: var(--vz-txt);
-        font-size: 22px;
-        letter-spacing: 2px;
-        font-weight: 700;
-        text-transform: uppercase;
-    }
+.vz-header-text {
+    flex: 1;
+    text-align: center;
+}
+
+.vz-header .vz-btn-secondary {
+    flex-shrink: 0;
+}
+
+.vz-header h1 {
+    margin: 0;
+    color: var(--vz-txt);
+    font-size: 22px;
+    letter-spacing: 2px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
 
 .vz-header-sub {
     margin-top: 4px;
@@ -324,4 +331,15 @@
     100% {
         background-position: 0 0;
     }
+}
+
+/* La tabla de detalle (.vz-table*) de las Fases 1-2 se removió — la Fase 3
+   reemplaza esa vista por <TablaPivoteViajes>, con sus propios estilos
+   aislados en Testing/Components/Pages/TablaPivoteViajes.razor.css (.tp-*). */
+
+/* ---------- Fase 7: controles globales del árbol de jerarquía ---------- */
+.vz-arbol-controles {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
 }

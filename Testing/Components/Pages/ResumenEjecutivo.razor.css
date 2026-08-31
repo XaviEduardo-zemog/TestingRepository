@@ -1,0 +1,321 @@
+/* ResumenEjecutivo — vive dentro de .vz-page (ConsultaViajes.razor.css), hereda --vz-* por
+   cascada normal de CSS custom properties. Un solo archivo de CSS para las 10 componentes de
+   la Fase 8, todas hijas de este orquestador, vía ::deep — mismo criterio de "no 40 archivos
+   CSS minúsculos" que se aplicó a los componentes. Fallbacks var(--token, #hex) por si se usa
+   fuera de ese contexto. */
+
+.re-page {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 8px 0 40px;
+}
+
+.re-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.re-toolbar h2 {
+    margin: 0;
+    color: var(--vz-txt, #e2e8f0);
+    font-size: 18px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.re-toolbar-acciones {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.re-subtitle {
+    margin: 4px 0 0;
+    color: var(--vz-gris, #94a3b8);
+    font-size: 12px;
+}
+
+.re-page ::deep .re-vacio {
+    color: var(--vz-gris2, #64748b);
+    font-size: 12px;
+    padding: 12px;
+    text-align: center;
+    margin: 0;
+}
+
+.re-page ::deep .re-bloque {
+    background: var(--vz-panel, #111111);
+    border: 1px solid var(--vz-line2, #1e1e1e);
+    border-radius: 10px;
+    padding: 16px 18px;
+}
+
+    .re-page ::deep .re-bloque h3 {
+        margin: 0 0 12px;
+        color: var(--vz-acc, #f59e0b);
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+    }
+
+    .re-page ::deep .re-bloque h4 {
+        margin: 16px 0 8px;
+        color: var(--vz-txt, #e2e8f0);
+        font-size: 12px;
+    }
+
+.re-page ::deep .re-nota {
+    margin: 10px 0 0;
+    color: var(--vz-gris2, #64748b);
+    font-size: 10px;
+}
+
+/* ---------- Semáforo (8.1) ---------- */
+.re-page ::deep .re-semaforo-lista {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+    .re-page ::deep .re-semaforo-lista li {
+        padding: 8px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        background: var(--vz-panel2, #161616);
+        border-left: 3px solid var(--vz-line4, #333333);
+    }
+
+.re-page ::deep .re-sem-pos {
+    border-left-color: var(--vz-verde, #4ade80) !important;
+    color: var(--vz-verde, #4ade80);
+}
+
+.re-page ::deep .re-sem-neg {
+    border-left-color: var(--vz-rojo, #f87171) !important;
+    color: var(--vz-rojo, #f87171);
+}
+
+.re-page ::deep .re-sem-neutro {
+    color: var(--vz-txt2, #cbd5e1);
+}
+
+/* ---------- Tablas genéricas (nivel, agencias, operadores, rotación) ---------- */
+.re-page ::deep .re-tbl-wrap {
+    overflow: auto;
+    border-radius: 8px;
+    border: 1px solid var(--vz-line2, #1e1e1e);
+    max-height: 50vh;
+}
+
+.re-page ::deep .re-tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+    .re-page ::deep .re-tabla th {
+        padding: 6px 8px;
+        text-align: right;
+        color: var(--vz-gris2, #64748b);
+        font-weight: 600;
+        font-size: 10px;
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--vz-line2, #1e1e1e);
+        background: var(--vz-head, #0d0d0d);
+        white-space: nowrap;
+        position: sticky;
+        top: 0;
+    }
+
+        .re-page ::deep .re-tabla th:first-child,
+        .re-page ::deep .re-tabla td:first-child {
+            text-align: left;
+        }
+
+    .re-page ::deep .re-tabla td {
+        padding: 6px 8px;
+        text-align: right;
+        border-bottom: 1px solid var(--vz-panel, #111111);
+        color: var(--vz-txt2, #cbd5e1);
+        white-space: nowrap;
+    }
+
+    .re-page ::deep .re-tabla tbody tr:nth-child(even) td {
+        background: var(--vz-zebra, #0f0f0f);
+    }
+
+    .re-page ::deep .re-tabla .align-end {
+        text-align: right;
+    }
+
+    .re-page ::deep .re-tabla .tabular {
+        font-variant-numeric: tabular-nums;
+    }
+
+    .re-page ::deep .re-tabla tfoot tr.re-total td {
+        background: var(--vz-bg, #0a0a0f) !important;
+        border-top: 2px solid var(--vz-line3, #2a2a2a);
+        font-weight: 700;
+        color: #ffffff;
+    }
+
+.re-page ::deep .re-fila-pendiente td,
+.re-page ::deep .re-pendiente {
+    color: var(--vz-gris2, #64748b) !important;
+    font-style: italic;
+}
+
+.re-page ::deep .re-pos {
+    color: var(--vz-verde, #4ade80) !important;
+}
+
+.re-page ::deep .re-neg {
+    color: var(--vz-rojo, #f87171) !important;
+}
+
+.re-page ::deep .re-neutro {
+    color: var(--vz-gris2, #64748b) !important;
+}
+
+.re-page ::deep .re-chart-pendiente {
+    margin-top: 12px;
+    padding: 10px;
+    border: 1px dashed var(--vz-line4, #333333);
+    border-radius: 8px;
+    color: var(--vz-gris2, #64748b);
+    font-size: 11px;
+}
+
+    .re-page ::deep .re-chart-pendiente p {
+        margin: 0 0 4px;
+    }
+
+/* ---------- Tabs (Por Cliente / Árbol comparativo) ---------- */
+.re-page ::deep .re-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.re-page ::deep .re-tab {
+    padding: 5px 10px;
+    background: var(--vz-line, #1a1a1a);
+    border: 1px solid var(--vz-line5, #444444);
+    border-radius: 6px;
+    color: var(--vz-gris, #94a3b8);
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+    .re-page ::deep .re-tab.is-active {
+        border-color: var(--vz-acc, #f59e0b);
+        color: var(--vz-acc, #f59e0b);
+    }
+
+/* ---------- Árbol comparativo (8.4/8.6/8.7) ---------- */
+.re-page ::deep .re-th-dim {
+    text-align: left !important;
+}
+
+.re-page ::deep .re-flecha {
+    display: inline-block;
+    width: 12px;
+    color: var(--vz-acc, #f59e0b);
+    cursor: pointer;
+}
+
+.re-page ::deep .re-flecha-vacia {
+    display: inline-block;
+    width: 12px;
+}
+
+.re-page ::deep .re-lvl-0 {
+    background: var(--vz-lv0, #141a24) !important;
+    color: var(--vz-acc2, #fbbf24) !important;
+    font-weight: 700;
+}
+
+.re-page ::deep .re-lvl-1 {
+    background: var(--vz-lv1, #12161c) !important;
+    color: var(--vz-txt, #e2e8f0) !important;
+    font-weight: 600;
+}
+
+.re-page ::deep .re-lvl-2 {
+    background: var(--vz-lv2, #101317) !important;
+    color: var(--vz-txt2, #cbd5e1) !important;
+}
+
+.re-page ::deep .re-lvl-3 {
+    background: var(--vz-zebra, #0f0f0f) !important;
+    color: var(--vz-gris, #94a3b8) !important;
+}
+
+/* ---------- Operadores (8.9) ---------- */
+.re-page ::deep .re-operadores-controles {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    margin-bottom: 14px;
+}
+
+.re-page ::deep .re-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+    .re-page ::deep .re-field-group > label {
+        font-size: 9px;
+        font-weight: 700;
+        color: var(--vz-gris2, #64748b);
+        text-transform: uppercase;
+        letter-spacing: .6px;
+    }
+
+.re-page ::deep .re-select {
+    padding: 5px 8px;
+    background: var(--vz-panel2, #161616);
+    border: 1px solid var(--vz-acc, #f59e0b);
+    border-radius: 6px;
+    color: var(--vz-acc, #f59e0b);
+    font-size: 11px;
+    font-weight: 600;
+    min-width: 140px;
+}
+
+.re-page ::deep .re-meses-checkbox {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.re-page ::deep .re-mes-check {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    color: var(--vz-txt2, #cbd5e1);
+}
+
+.re-page ::deep .re-btn {
+    padding: 4px 10px;
+    background: var(--vz-line, #1a1a1a);
+    border: 1px solid var(--vz-line5, #444444);
+    border-radius: 6px;
+    color: var(--vz-gris, #94a3b8);
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+}
