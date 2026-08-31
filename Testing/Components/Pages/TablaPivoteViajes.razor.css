@@ -1,0 +1,159 @@
+/* TablaPivoteViajes — vive dentro de .vz-page (ConsultaViajes.razor.css),
+   hereda --vz-* por cascada normal de CSS custom properties (no por CSS
+   Isolation, que no cruza componentes). Fallbacks var(--token, #hex) para
+   que no se rompa si se usa fuera de ese contexto. */
+
+.tp-sin-metricas {
+    color: var(--vz-gris2, #64748b);
+    font-size: 12px;
+    padding: 16px;
+    text-align: center;
+    margin: 0;
+}
+
+.tp-wrap {
+    overflow: auto;
+    border-radius: 10px;
+    border: 1px solid var(--vz-line2, #1e1e1e);
+    max-height: 65vh;
+}
+
+.tp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+    .tp-table th {
+        padding: 6px 8px;
+        text-align: right;
+        color: var(--vz-gris2, #64748b);
+        font-weight: 600;
+        font-size: 10px;
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--vz-line2, #1e1e1e);
+        background: var(--vz-head, #0d0d0d);
+        white-space: nowrap;
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        cursor: pointer;
+        user-select: none;
+    }
+
+        .tp-table th:hover {
+            color: var(--vz-txt, #e2e8f0);
+            background: var(--vz-panel2, #161616);
+        }
+
+        .tp-table th.is-active {
+            color: var(--vz-acc, #f59e0b);
+        }
+
+    /* segunda fila del header: TEMPORAL — 29px asume la altura real de la
+   primera fila con este padding/font-size. FINAL: medir dinámicamente
+   si el header cambia de tamaño (mismo ajuste que ajustarSticky() del HTML). */
+    .tp-table thead tr:nth-child(2) th {
+        top: 29px;
+    }
+
+.tp-th-dim {
+    position: sticky;
+    left: 0;
+    top: 0;
+    z-index: 7;
+    background: var(--vz-head, #0d0d0d);
+    text-align: left !important;
+}
+
+.tp-mes-header {
+    text-align: center !important;
+    color: var(--vz-acc, #f59e0b);
+    border-left: 1px solid var(--vz-line3, #2a2a2a);
+    border-right: 1px solid var(--vz-line3, #2a2a2a);
+}
+
+.tp-mes-colapsado {
+    width: 6px;
+    padding: 0 !important;
+    text-align: center !important;
+    border-left: 1px solid var(--vz-line, #1a1a1a);
+    border-right: 1px solid var(--vz-line, #1a1a1a);
+}
+
+.tp-cmp-header {
+    text-align: center !important;
+    color: var(--vz-acc, #f59e0b);
+    border-left: 2px solid var(--vz-acc, #f59e0b);
+    border-right: 2px solid var(--vz-acc, #f59e0b);
+}
+
+.tp-table td {
+    padding: 6px 8px;
+    text-align: right;
+    border-bottom: 1px solid var(--vz-panel, #111111);
+    color: var(--vz-txt2, #cbd5e1);
+    white-space: nowrap;
+}
+
+    .tp-table td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        font-weight: 600;
+        color: var(--vz-txt, #e2e8f0);
+        text-align: left;
+    }
+
+.tp-table tbody tr:nth-child(even) td {
+    background: var(--vz-zebra, #0f0f0f);
+}
+
+.tp-table tbody tr:nth-child(odd) td {
+    background: var(--vz-panel2, #161616);
+}
+
+.tp-table tbody tr:hover td {
+    background: var(--vz-line, #1a1a1a);
+}
+
+.tp-table .align-end {
+    text-align: right;
+}
+
+.tp-table .tabular {
+    font-variant-numeric: tabular-nums;
+}
+
+.tp-pct {
+    font-size: 9px;
+    color: var(--vz-acc, #f59e0b);
+    margin-left: 4px;
+    font-weight: 600;
+}
+
+.tp-pos {
+    color: var(--vz-verde, #4ade80) !important;
+}
+
+.tp-neg {
+    color: var(--vz-rojo, #f87171) !important;
+}
+
+.tp-neutro {
+    color: var(--vz-gris2, #64748b) !important;
+}
+
+.tp-table tfoot tr.tp-total td {
+    background: var(--vz-bg, #0a0a0f) !important;
+    border-top: 2px solid var(--vz-line3, #2a2a2a);
+    font-weight: 700;
+    color: #ffffff;
+    position: sticky;
+    bottom: 0;
+    z-index: 4;
+}
+
+    .tp-table tfoot tr.tp-total td:first-child {
+        z-index: 6;
+    }

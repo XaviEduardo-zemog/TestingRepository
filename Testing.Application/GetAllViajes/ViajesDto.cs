@@ -70,4 +70,6 @@ public sealed class ViajesDto
     public decimal? subtotal_factura { get; set; }
 
     public string? cargado_vacio { get; set; }
+
+    public string? tipo_operacion { get; set; }
 }

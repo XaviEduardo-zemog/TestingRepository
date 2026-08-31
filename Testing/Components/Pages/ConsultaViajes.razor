@@ -30,11 +30,17 @@
 
             <div class="vz-field-group">
                 <label for="vzAgrupar">Agrupar por</label>
-                <select id="vzAgrupar" class="vz-select" @bind="agruparPor">
+                <select id="vzAgrupar" class="vz-select" @bind="agruparPor" @bind:after="RecalcularPivote">
+                    <option value="cliente">Cliente</option>
+                    <option value="zona">Zona</option>
                     <option value="matriz">Matriz</option>
                     <option value="expedicion">Expedición</option>
                     <option value="operador">Operador</option>
                     <option value="unidad">Unidad</option>
+                    <option value="ruta">Ruta</option>
+                    <option value="destino">Destino</option>
+                    <option value="movimiento">Movimiento</option>
+                    <option value="semana">Semana</option>
                     <option value="dia">Día</option>
                 </select>
             </div>
@@ -86,26 +92,36 @@
         }
     </section>
 
-    <div class="vz-metrics-bar" title="Controla el pivote de la Fase 3 — todavía no aplica a esta tabla de detalle">
-        <label class="vz-metric-disabled"><input type="checkbox" disabled checked /> Viajes</label>
-        <label class="vz-metric-disabled"><input type="checkbox" disabled checked /> KMS</label>
-        <label class="vz-metric-disabled"><input type="checkbox" disabled /> Venta</label>
-        <label class="vz-metric-disabled"><input type="checkbox" disabled /> $/km</label>
-        <label class="vz-metric-disabled"><input type="checkbox" disabled /> km/Viaje</label>
-        <label class="vz-metric-disabled"><input type="checkbox" disabled /> $/Viaje</label>
-        <label class="vz-metric-disabled"><input type="checkbox" disabled /> % Part.</label>
-        <label class="vz-metric-disabled"><input type="checkbox" disabled /> Solo comparativa</label>
+    <div class="vz-metrics-bar">
+        <label><input type="checkbox" @bind="mostrarViajes" /> Viajes</label>
+        <label><input type="checkbox" @bind="mostrarKms" /> KMS</label>
+        <label><input type="checkbox" @bind="mostrarPeaje" /> Peaje</label>
+        <label class="vz-metric-disabled" title="Fuente no localizada — ver §54.20"><input type="checkbox" disabled /> Venta</label>
+        <label class="vz-metric-disabled" title="Requiere Venta"><input type="checkbox" disabled /> $/km</label>
+        <label><input type="checkbox" @bind="mostrarKmPorViaje" /> km/Viaje</label>
+        <label class="vz-metric-disabled" title="Requiere Venta"><input type="checkbox" disabled /> $/Viaje</label>
+        <label class="vz-metric-sep"><input type="checkbox" @bind="mostrarParticipacion" /> % Part.</label>
+        <label><input type="checkbox" @bind="soloComparativa" /> Solo comparativa</label>
     </div>
 
     <div class="vz-kpis">
-        <KpiCard Title="Viajes" Value="@FormatoNumero(kpiViajes)" />
-        <KpiCard Title="KMS" Value="@FormatoNumero(kpiKms)" />
-        <div class="vz-kpi-pending">
-            <KpiCard Title="Venta" Value="Pendiente" />
-            <p class="vz-kpi-pending-note">Fuente no localizada — ver §54.20</p>
-        </div>
-        <KpiCard Title="km/Viaje" Value="@FormatoNumero(kpiKmPorViaje)" />
-        <KpiCard Title="Peaje" Value="@FormatoDinero(kpiPeaje)" />
+        @foreach (var kpi in kpisComparativa)
+        {
+            @if (kpi.Disponible)
+            {
+                <KpiCard Title="@TituloKpi(kpi)"
+                         Value="@ValorKpi(kpi)"
+                         Delta="@DeltaKpi(kpi)"
+                         DeltaVariant="@VarianteKpi(kpi)" />
+            }
+            else
+            {
+                <div class="vz-kpi-pending">
+                    <KpiCard Title="@kpi.Etiqueta" Value="Pendiente" />
+                    <p class="vz-kpi-pending-note">@kpi.MotivoPendiente</p>
+                </div>
+            }
+        }
     </div>
 
     @if (errorMessage is not null)
@@ -139,49 +155,16 @@
     }
     else if (viajesFiltrados.Count > 0)
     {
-        <div class="vz-table-wrap">
-            <table class="vz-table">
-                <thead>
-                    <tr>
-                        <th>Base</th>
-                        <th>No. viaje</th>
-                        <th>Estatus</th>
-                        <th>Unidad</th>
-                        <th>Ruta</th>
-                        <th>Operador</th>
-                        <th>Fecha ingreso</th>
-                        <th class="align-end">Diésel cargado</th>
-                        <th class="align-end">Costo diésel</th>
-                        <th>Factura</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var viaje in viajesFiltrados)
-                    {
-                        <tr>
-                            <td>@viaje._base</td>
-                            <td>@viaje.no_viaje</td>
-                            <td><StatusBadge Text="@viaje.estatus_viaje" Variant="EstadoVariant(viaje.estatus_viaje)" /></td>
-                            <td>@viaje.id_unidad</td>
-                            <td>@viaje.ruta</td>
-                            <td>@viaje.operador1</td>
-                            <td>@viaje.fecha_ingreso</td>
-                            <td class="align-end tabular">@viaje.diesel_cargado</td>
-                            <td class="align-end tabular">@viaje.costo_diesel</td>
-                            <td>@viaje.factura</td>
-                        </tr>
-                    }
-                </tbody>
-                <tfoot>
-                    <tr class="vz-total">
-                        <td colspan="7">@viajesFiltrados.Count registro@(viajesFiltrados.Count == 1 ? "" : "s")</td>
-                        <td class="align-end tabular">@FormatoDecimal(viajesFiltrados.Sum(v => v.diesel_cargado ?? 0))</td>
-                        <td class="align-end tabular">@FormatoDinero(viajesFiltrados.Sum(v => v.costo_diesel ?? 0))</td>
-                        <td></td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
+        <TablaPivoteViajes Filas="filasPivote"
+                           Meses="mesesPivote"
+                           EtiquetaDimension="@EtiquetaAgrupacionActual"
+                           EsDimensionTemporal="@(agruparPor is "dia" or "semana")"
+                           MostrarViajes="mostrarViajes"
+                           MostrarKms="mostrarKms"
+                           MostrarPeaje="mostrarPeaje"
+                           MostrarKmPorViaje="mostrarKmPorViaje"
+                           MostrarParticipacion="mostrarParticipacion"
+                           SoloComparativa="soloComparativa" />
     }
 
 </div>
@@ -203,10 +186,35 @@
     private IEnumerable<FiltroZemog> FiltrosPrimarios => filtros.Take(5);
     private IEnumerable<FiltroZemog> FiltrosSecundarios => filtros.Skip(5);
 
-    private int kpiViajes;
-    private decimal kpiKms;
-    private decimal kpiKmPorViaje;
-    private decimal kpiPeaje;
+    private CorteMensual? corte;
+    private List<KpiComparativo> kpisComparativa = [];
+
+    private bool mostrarViajes = true;
+    private bool mostrarKms = true;
+    private bool mostrarPeaje = true;
+    private bool mostrarKmPorViaje = true;
+    private bool mostrarParticipacion;
+    private bool soloComparativa;
+
+    private List<FilaPivote> filasPivote = [];
+    private List<MesColumna> mesesPivote = [];
+
+    private static readonly Dictionary<string, string> EtiquetasAgrupacion = new()
+    {
+        ["cliente"] = "Cliente",
+        ["zona"] = "Zona",
+        ["matriz"] = "Matriz",
+        ["expedicion"] = "Expedición",
+        ["operador"] = "Operador",
+        ["unidad"] = "Unidad",
+        ["ruta"] = "Ruta",
+        ["destino"] = "Destino",
+        ["movimiento"] = "Movimiento",
+        ["semana"] = "Semana",
+        ["dia"] = "Día",
+    };
+
+    private string EtiquetaAgrupacionActual => EtiquetasAgrupacion.GetValueOrDefault(agruparPor, "Dimensión");
 
     private sealed class FiltroZemog
     {
@@ -223,29 +231,29 @@
     protected override void OnInitialized()
     {
         // Orden exacto de cascada de viajes_v14.html (KEYS_P.concat(KEYS_S)).
+        // Destino/Movimiento pasan a FUNCIONAL en la Fase 4 (CamposDerivadosViajes.ParsearRuta).
+        // Cliente/Zona pasan a FUNCIONAL tras la confirmación del usuario (2026-08-31) de que
+        // tipo_operacion sí lo regresa el SP — ver §54.78 (CamposDerivadosViajes.ParsearClienteZona).
+        // Sucursal/Edo.Destino/Tarifa siguen pendientes — ver §54.20/§54.21 y Fase 4 puntos 4 y 7.
         filtros =
         [
-            new() { Clave = "cliente", Etiqueta = "Cliente", Selector = _ => null, Disponible = false, ConBuscador = true,
-                    MotivoPendiente = "Pendiente de backend: requiere columna tipo_operacion, no confirmada en el SP actual — ver §54.20/§54.21" },
+            new() { Clave = "cliente", Etiqueta = "Cliente", Selector = CamposDerivadosViajes.ObtenerCliente, ConBuscador = true },
             new() { Clave = "sucursal", Etiqueta = "Sucursal", Selector = _ => null, Disponible = false,
                     MotivoPendiente = "Pendiente de backend: granularidad más fina que Matriz (_base), sin confirmar — ver §54.21" },
-            new() { Clave = "mes", Etiqueta = "Mes", Selector = ObtenerMesEtiqueta },
-            new() { Clave = "destino", Etiqueta = "Destino", Selector = _ => null, Disponible = false, ConBuscador = true,
-                    MotivoPendiente = "Pendiente: requiere una regla de parseo de Ruta validada en Application, no un parser ad-hoc en Presentation — ver §54.20" },
+            new() { Clave = "mes", Etiqueta = "Mes", Selector = CamposDerivadosViajes.ObtenerMesEtiqueta },
+            new() { Clave = "destino", Etiqueta = "Destino", Selector = CamposDerivadosViajes.ObtenerDestino, ConBuscador = true },
             new() { Clave = "expedicion", Etiqueta = "Expedición", Selector = v => v.expedicion },
-            new() { Clave = "zona", Etiqueta = "Zona", Selector = _ => null, Disponible = false,
-                    MotivoPendiente = "Pendiente de backend: requiere columna tipo_operacion — ver §54.20" },
+            new() { Clave = "zona", Etiqueta = "Zona", Selector = CamposDerivadosViajes.ObtenerZona, ConBuscador = true },
             new() { Clave = "matriz", Etiqueta = "Matriz", Selector = v => v._base },
-            new() { Clave = "anio", Etiqueta = "Año", Selector = v => ObtenerFecha(v)?.Year.ToString() },
-            new() { Clave = "semana", Etiqueta = "Semana", Selector = ObtenerSemana },
+            new() { Clave = "anio", Etiqueta = "Año", Selector = CamposDerivadosViajes.ObtenerAnio },
+            new() { Clave = "semana", Etiqueta = "Semana", Selector = CamposDerivadosViajes.ObtenerSemana },
             new() { Clave = "edestino", Etiqueta = "Edo. Destino", Selector = _ => null, Disponible = false,
-                    MotivoPendiente = "Pendiente: depende de que Destino se resuelva primero en Application — ver §54.20" },
+                    MotivoPendiente = "Pendiente: el código entre paréntesis de Ruta (CodigoDestino) no está confirmado como EstadoDestino — se dejan separados a propósito, ver Fase 4 punto 4" },
             new() { Clave = "operador", Etiqueta = "Operador", Selector = v => v.operador1, ConBuscador = true },
             new() { Clave = "unidad", Etiqueta = "Unidad", Selector = v => v.id_unidad, ConBuscador = true },
             new() { Clave = "tarifa", Etiqueta = "Tipo de tarifa", Selector = _ => null, Disponible = false,
-                    MotivoPendiente = "Pendiente: tarifaDeRuta() del HTML asume un formato de Ruta distinto al confirmado — ver §54.20" },
-            new() { Clave = "movimiento", Etiqueta = "Movimiento", Selector = _ => null, Disponible = false,
-                    MotivoPendiente = "Pendiente: se derivaría parseando Ruta igual que Destino/Tarifa — mismo riesgo de parser no validado, se resuelve junto con esos" },
+                    MotivoPendiente = "Pendiente: tarifaDeRuta() del HTML asume un formato de Ruta distinto al confirmado — ver §54.20/Fase 4 punto 7" },
+            new() { Clave = "movimiento", Etiqueta = "Movimiento", Selector = CamposDerivadosViajes.ObtenerMovimiento },
         ];
     }
 
@@ -259,6 +267,7 @@
         RecalcularCascada(f.Clave);
         viajesFiltrados = ObtenerViajesFiltrados();
         CalcularKpis();
+        RecalcularPivote();
         return Task.CompletedTask;
     }
 
@@ -270,6 +279,7 @@
         RecalcularCascada(null);
         viajesFiltrados = ObtenerViajesFiltrados();
         CalcularKpis();
+        RecalcularPivote();
     }
 
     // TEMPORAL MVP: cascada calculada en memoria sobre viajesCargados (el resultado
@@ -324,6 +334,87 @@
         return resultado;
     }
 
+    private string? ObtenerValorAgrupacion(ViajesDto v) => agruparPor switch
+    {
+        "cliente" => CamposDerivadosViajes.ObtenerCliente(v),
+        "zona" => CamposDerivadosViajes.ObtenerZona(v),
+        "matriz" => v._base,
+        "expedicion" => v.expedicion,
+        "operador" => v.operador1,
+        "unidad" => v.id_unidad,
+        "ruta" => v.ruta,
+        "destino" => CamposDerivadosViajes.ObtenerDestino(v),
+        "movimiento" => CamposDerivadosViajes.ObtenerMovimiento(v),
+        "semana" => CamposDerivadosViajes.ObtenerSemana(v),
+        "dia" => CamposDerivadosViajes.ObtenerFechaNegocio(v)?.ToString("dd MMM yyyy", Cultura),
+        _ => null,
+    };
+
+    // TEMPORAL MVP: el pivote se arma en memoria sobre viajesFiltrados (el resultado
+    // ya traído por GetViajesQuery, ya reducido por los filtros de la Fase 2).
+    // FINAL: si el volumen real lo justifica, mover esta agregación a SQL/Application
+    // (agrupar por dimensión y mes directo en la query) — ver §54.22-54.23/§54.27.
+    private void RecalcularPivote()
+    {
+        var esTemporal = agruparPor is "dia" or "semana";
+
+        var grupos = viajesFiltrados
+            .Where(v => ObtenerValorAgrupacion(v) is not null)
+            .GroupBy(v => ObtenerValorAgrupacion(v)!)
+            .ToList();
+
+        var filas = new List<FilaPivote>();
+
+        foreach (var grupo in grupos)
+        {
+            var fila = new FilaPivote { Dimension = grupo.Key };
+
+            if (esTemporal)
+            {
+                fila.Total = CalcularMetricas(grupo, corte);
+            }
+            else
+            {
+                foreach (var porMes in grupo.GroupBy(CamposDerivadosViajes.ObtenerMesClave))
+                {
+                    if (porMes.Key is null)
+                        continue;
+
+                    fila.PorMes[porMes.Key] = CalcularMetricas(porMes, corte);
+                }
+
+                fila.Total = fila.PorMes.Values.Aggregate(MetricasMes.Vacio, MetricasMes.Sumar);
+            }
+
+            filas.Add(fila);
+        }
+
+        filasPivote = filas;
+
+        mesesPivote = esTemporal
+            ? []
+            : viajesFiltrados
+                .Select(v => (Clave: CamposDerivadosViajes.ObtenerMesClave(v), Etiqueta: CamposDerivadosViajes.ObtenerMesEtiqueta(v)))
+                .Where(t => t.Clave is not null)
+                .DistinctBy(t => t.Clave)
+                .OrderBy(t => t.Clave)
+                .Select(t => new MesColumna(t.Clave!, t.Etiqueta!))
+                .ToList();
+    }
+
+    // Viajes cuenta solo tramos de Ida (ContribucionViajeProyectada.Viajes) y aplica el
+    // factor de proyección del mes abierto por viaje, no por grupo — un grupo (ej. Semana)
+    // puede mezclar viajes de más de un mes, cada uno con su propio factor. Ver Fase 6 /
+    // §54.99 y CorteMensual.FactorPara(ViajesDto) en Testing.Application.
+    private static MetricasMes CalcularMetricas(IEnumerable<ViajesDto> grupo, CorteMensual? corte)
+    {
+        var lista = grupo as IReadOnlyCollection<ViajesDto> ?? grupo.ToList();
+        var viajes = lista.Sum(v => ContribucionViajeProyectada.Viajes(v, corte));
+        var kms = lista.Sum(v => ContribucionViajeProyectada.Kms(v, corte));
+        var peaje = lista.Sum(v => ContribucionViajeProyectada.Peaje(v, corte));
+        return new MetricasMes((int)Math.Round(viajes), kms, peaje);
+    }
+
     private async Task ConsultarAsync()
     {
         try
@@ -362,77 +453,67 @@
         {
             isLoading = false;
             seConsulto = true;
+            corte = CorteMensual.Calcular(viajesCargados);
             RecalcularCascada(null);
             viajesFiltrados = ObtenerViajesFiltrados();
             CalcularKpis();
+            RecalcularPivote();
         }
     }
 
-    private void CalcularKpis()
+    private void CalcularKpis() => kpisComparativa = KpisComparativaCalculator.Calcular(viajesFiltrados, corte).ToList();
+
+    private static string TituloKpi(KpiComparativo kpi) =>
+        kpi.EtiquetaMesActual is null
+            ? kpi.Etiqueta
+            : $"{kpi.Etiqueta} · {kpi.EtiquetaMesActual}" + (kpi.EtiquetaMesAnterior is null ? "" : $" / {kpi.EtiquetaMesAnterior}");
+
+    private string ValorKpi(KpiComparativo kpi) => kpi.Clave switch
     {
-        kpiViajes = viajesFiltrados.Count;
-        kpiKms = viajesFiltrados.Sum(v => v.kms_viaje ?? 0);
-        kpiKmPorViaje = kpiViajes > 0 ? kpiKms / kpiViajes : 0;
-        kpiPeaje = viajesFiltrados.Sum(v => (v.peaje_efectivo ?? 0) + (v.peaje_electronico ?? 0));
+        "kms" or "kpv" or "viajes" => FormatoNumero(kpi.ValorActual ?? 0),
+        _ => FormatoDinero(kpi.ValorActual ?? 0),
+    };
+
+    private string DeltaKpi(KpiComparativo kpi)
+    {
+        if (kpi.SinMesAnterior) return "sin mes anterior";
+        if (kpi.SinBaseAnterior) return $"sin base en {kpi.EtiquetaMesAnterior}";
+
+        var delta = kpi.DeltaPorcentaje;
+        if (delta is null) return "";
+
+        var signo = delta > 0 ? "▲ +" : delta < 0 ? "▼ " : "";
+        return $"{signo}{delta.Value.ToString("0.0", Cultura)}%";
     }
 
-    private static string FormatoNumero(decimal v) => Math.Round(v).ToString("N0", Cultura);
-    private static string FormatoNumero(int v) => v.ToString("N0", Cultura);
-    private static string FormatoDinero(decimal v) => v.ToString("C0", Cultura);
-    private static string FormatoDecimal(decimal v) => v.ToString("N1", Cultura);
-
-    private static readonly string[] FormatosFechaIngreso = ["d/M/yyyy h:mm tt"];
-
-    private static DateTime? ObtenerFecha(ViajesDto v)
+    private static Variant VarianteKpi(KpiComparativo kpi) => kpi.DeltaPorcentaje switch
     {
-        if (string.IsNullOrWhiteSpace(v.fecha_ingreso))
-            return null;
-
-        if (DateTime.TryParseExact(v.fecha_ingreso, FormatosFechaIngreso, CultureInfo.InvariantCulture, DateTimeStyles.None, out var fecha))
-            return fecha;
-
-        if (DateTime.TryParse(v.fecha_ingreso, CultureInfo.InvariantCulture, DateTimeStyles.None, out fecha))
-            return fecha;
-
-        return null;
-    }
+        > 0 => Variant.Success,
+        < 0 => Variant.Danger,
+        _ => Variant.Neutral,
+    };
 
     private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-MX");
 
-    private static string? ObtenerMesEtiqueta(ViajesDto v)
-    {
-        var fecha = ObtenerFecha(v);
-        return fecha is null ? null : Cultura.TextInfo.ToTitleCase(fecha.Value.ToString("MMM yyyy", Cultura));
-    }
-
-    private static string? ObtenerSemana(ViajesDto v)
-    {
-        var fecha = ObtenerFecha(v);
-        return fecha is null ? null : ISOWeek.GetWeekOfYear(fecha.Value).ToString();
-    }
+    private static string FormatoNumero(decimal v) => Math.Round(v).ToString("N0", Cultura);
+    private static string FormatoDinero(decimal v) => v.ToString("C0", Cultura);
 
     private string TextoCorte()
     {
-        var cultura = Cultura;
-
         if (!seConsulto)
-            return $"Rango a consultar: {filtro.FechaInicio.ToString("dd MMM yyyy", cultura)} – {filtro.FechaFin.ToString("dd MMM yyyy", cultura)}";
+            return $"Rango a consultar: {filtro.FechaInicio.ToString("dd MMM yyyy", Cultura)} – {filtro.FechaFin.ToString("dd MMM yyyy", Cultura)}";
 
         if (viajesCargados.Count == 0)
             return "Sin viajes en el rango consultado";
 
-        var fechas = viajesCargados.Select(ObtenerFecha).Where(f => f is not null).Select(f => f!.Value).ToList();
-        var corte = fechas.Count > 0 ? fechas.Max().ToString("dd MMM yyyy", cultura) : "sin fecha reconocible";
+        if (corte is null)
+            return $"Sin fecha reconocible · {viajesCargados.Count} viajes cargados en el rango consultado";
 
-        return $"Corte: {corte} · {viajesCargados.Count} viajes cargados en el rango consultado";
+        var fechaCorte = new DateTime(corte.Anio, corte.Mes, corte.DiaCorte);
+        var proyeccion = corte.Factor != 1m
+            ? $" · proyectando {fechaCorte.ToString("MMM yyyy", Cultura)} ×{corte.Factor.ToString("0.00", Cultura)}"
+            : "";
+
+        return $"Corte: {fechaCorte.ToString("dd MMM yyyy", Cultura)}{proyeccion} · {viajesCargados.Count} viajes cargados en el rango consultado";
     }
-
-    private static Variant EstadoVariant(string? estatus) => estatus?.Trim().ToUpperInvariant() switch
-    {
-        "ACTIVO" or "EN RUTA" or "EN TRANSITO" or "EN TRÁNSITO" => Variant.Info,
-        "FINALIZADO" or "COMPLETADO" or "ENTREGADO" => Variant.Success,
-        "CANCELADO" or "RECHAZADO" => Variant.Danger,
-        "PENDIENTE" or "EN ESPERA" => Variant.Warning,
-        _ => Variant.Neutral,
-    };
 }

@@ -1,0 +1,314 @@
+﻿@using System.Globalization
+@using Testing.Features
+
+@if (columnas.Count == 0)
+{
+    <p class="tp-sin-metricas">Selecciona al menos una métrica en la barra superior.</p>
+}
+else
+{
+    <div class="tp-wrap">
+        <table class="tp-table">
+            <thead>
+                @if (EsDimensionTemporal)
+                {
+                    <tr>
+                        <th class="tp-th-dim @ClaseOrden("label")" @onclick="@(() => OrdenarPor("label"))">@EtiquetaDimension</th>
+                        @foreach (var col in columnas)
+                        {
+                            <th class="align-end @ClaseOrden($"total|{col.Clave}")" @onclick="@(() => OrdenarPor($"total|{col.Clave}"))">@col.Etiqueta</th>
+                        }
+                    </tr>
+                }
+                else
+                {
+                    <tr>
+                        <th class="tp-th-dim @ClaseOrden("label")" rowspan="2" @onclick="@(() => OrdenarPor("label"))">@EtiquetaDimension</th>
+                        @if (!SoloComparativa)
+                        {
+                            @foreach (var mes in Meses)
+                            {
+                                @if (MesColapsado(mes.Clave))
+                                {
+                                    <th class="tp-mes-colapsado" rowspan="2" @onclick="@(() => ToggleMes(mes.Clave))" title="Mostrar @mes.Etiqueta">▸</th>
+                                }
+                                else
+                                {
+                                    <th class="tp-mes-header" colspan="@columnas.Count" @onclick="@(() => ToggleMes(mes.Clave))" title="Ocultar @mes.Etiqueta">@mes.Etiqueta ▾</th>
+                                }
+                            }
+                        }
+                        @if (MesA is not null && MesB is not null)
+                        {
+                            <th class="tp-cmp-header" colspan="@(columnas.Count * 2)">Δ @EtiquetaMes(MesB) vs @EtiquetaMes(MesA)</th>
+                        }
+                    </tr>
+                    <tr>
+                        @if (!SoloComparativa)
+                        {
+                            @foreach (var mes in Meses)
+                            {
+                                @if (!MesColapsado(mes.Clave))
+                                {
+                                    @foreach (var col in columnas)
+                                    {
+                                        <th class="align-end @ClaseOrden($"{mes.Clave}|{col.Clave}")" @onclick="@(() => OrdenarPor($"{mes.Clave}|{col.Clave}"))">@col.Etiqueta</th>
+                                    }
+                                }
+                            }
+                        }
+                        @if (MesA is not null && MesB is not null)
+                        {
+                            @foreach (var col in columnas)
+                            {
+                                <th class="align-end @ClaseOrden($"cmp|{col.Clave}|delta")" @onclick="@(() => OrdenarPor($"cmp|{col.Clave}|delta"))">Δ @col.Etiqueta</th>
+                                <th class="align-end @ClaseOrden($"cmp|{col.Clave}|pct")" @onclick="@(() => OrdenarPor($"cmp|{col.Clave}|pct"))">%</th>
+                            }
+                        }
+                    </tr>
+                }
+            </thead>
+            <tbody>
+                @foreach (var fila in FilasOrdenadas())
+                {
+                    <tr>
+                        <td>@fila.Dimension</td>
+                        @if (EsDimensionTemporal)
+                        {
+                            @foreach (var col in columnas)
+                            {
+                                <td class="align-end tabular">
+                                    @col.Formato(col.Selector(fila.Total))
+                                    @if (MostrarParticipacion && col.EsSumable)
+                                    {
+                                        <span class="tp-pct">@FormatoPorcentaje(Participacion(col.Selector(fila.Total), col.Selector(totalGeneral)))</span>
+                                    }
+                                </td>
+                            }
+                        }
+                        else
+                        {
+                            @if (!SoloComparativa)
+                            {
+                                @foreach (var mes in Meses)
+                                {
+                                    @if (!MesColapsado(mes.Clave))
+                                    {
+                                        var metricasMes = fila.ObtenerMes(mes.Clave);
+                                        var totalMesActual = totalesPorMes[mes.Clave];
+                                        @foreach (var col in columnas)
+                                        {
+                                            <td class="align-end tabular">
+                                                @col.Formato(col.Selector(metricasMes))
+                                                @if (MostrarParticipacion && col.EsSumable)
+                                                {
+                                                    <span class="tp-pct">@FormatoPorcentaje(Participacion(col.Selector(metricasMes), col.Selector(totalMesActual)))</span>
+                                                }
+                                            </td>
+                                        }
+                                    }
+                                }
+                            }
+                            @if (MesA is not null && MesB is not null)
+                            {
+                                var a = fila.ObtenerMes(MesA);
+                                var b = fila.ObtenerMes(MesB);
+                                @foreach (var col in columnas)
+                                {
+                                    var va = col.Selector(a);
+                                    var vb = col.Selector(b);
+                                    <td class="align-end tabular @ClaseDelta(va, vb)">@FormatoDeltaCelda(va, vb, col.Formato)</td>
+                                    <td class="align-end tabular @ClaseDelta(va, vb)">@FormatoPctCelda(va, vb)</td>
+                                }
+                            }
+                        }
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr class="tp-total">
+                    <td>TOTAL</td>
+                    @if (EsDimensionTemporal)
+                    {
+                        @foreach (var col in columnas)
+                        {
+                            <td class="align-end tabular">@col.Formato(col.Selector(totalGeneral))</td>
+                        }
+                    }
+                    else
+                    {
+                        @if (!SoloComparativa)
+                        {
+                            @foreach (var mes in Meses)
+                            {
+                                @if (!MesColapsado(mes.Clave))
+                                {
+                                    var totalMes = totalesPorMes[mes.Clave];
+                                    @foreach (var col in columnas)
+                                    {
+                                        <td class="align-end tabular">@col.Formato(col.Selector(totalMes))</td>
+                                    }
+                                }
+                            }
+                        }
+                        @if (MesA is not null && MesB is not null)
+                        {
+                            var totalA = totalesPorMes.GetValueOrDefault(MesA, MetricasMes.Vacio);
+                            var totalB = totalesPorMes.GetValueOrDefault(MesB, MetricasMes.Vacio);
+                            @foreach (var col in columnas)
+                            {
+                                var va = col.Selector(totalA);
+                                var vb = col.Selector(totalB);
+                                <td class="align-end tabular">@FormatoDeltaCelda(va, vb, col.Formato)</td>
+                                <td class="align-end tabular">@FormatoPctCelda(va, vb)</td>
+                            }
+                        }
+                    }
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public List<FilaPivote> Filas { get; set; } = [];
+    [Parameter, EditorRequired] public List<MesColumna> Meses { get; set; } = [];
+    [Parameter, EditorRequired] public string EtiquetaDimension { get; set; } = "";
+    [Parameter] public bool EsDimensionTemporal { get; set; }
+    [Parameter] public bool MostrarViajes { get; set; } = true;
+    [Parameter] public bool MostrarKms { get; set; } = true;
+    [Parameter] public bool MostrarPeaje { get; set; } = true;
+    [Parameter] public bool MostrarKmPorViaje { get; set; } = true;
+    [Parameter] public bool MostrarParticipacion { get; set; }
+    [Parameter] public bool SoloComparativa { get; set; }
+
+    private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-MX");
+
+    private sealed record ColumnaMetrica(string Clave, string Etiqueta, Func<MetricasMes, decimal> Selector, Func<decimal, string> Formato, bool EsSumable);
+
+    private List<ColumnaMetrica> columnas = [];
+    private Dictionary<string, MetricasMes> totalesPorMes = [];
+    private MetricasMes totalGeneral = MetricasMes.Vacio;
+
+    private string ordenClave = "label";
+    private bool ordenDescendente;
+    private readonly HashSet<string> mesesColapsados = [];
+
+    // TEMPORAL MVP: se recalculan totales en memoria cada vez que cambian Filas/Meses.
+    // FINAL: si el volumen crece, estos agregados deberían venir ya calculados de
+    // Application/SQL en vez de sumarse aquí (ver §54.27 del Artifact).
+    protected override void OnParametersSet()
+    {
+        columnas = [];
+        if (MostrarViajes) columnas.Add(new("viajes", "Viajes", m => m.Viajes, FormatoNumero, true));
+        if (MostrarKms) columnas.Add(new("kms", "KMS", m => m.Km, FormatoNumero, true));
+        if (MostrarPeaje) columnas.Add(new("peaje", "Peaje", m => m.Peaje, FormatoDinero, true));
+        if (MostrarKmPorViaje) columnas.Add(new("kmv", "km/Viaje", m => m.KmPorViaje, FormatoNumero, false));
+
+        totalesPorMes = Meses.ToDictionary(
+            m => m.Clave,
+            m => Filas.Select(f => f.ObtenerMes(m.Clave)).Aggregate(MetricasMes.Vacio, MetricasMes.Sumar));
+
+        totalGeneral = Filas.Select(f => f.Total).Aggregate(MetricasMes.Vacio, MetricasMes.Sumar);
+    }
+
+    private string? MesA => Meses.Count >= 2 ? Meses[^2].Clave : null;
+    private string? MesB => Meses.Count >= 1 ? Meses[^1].Clave : null;
+
+    private string EtiquetaMes(string clave) => Meses.FirstOrDefault(m => m.Clave == clave)?.Etiqueta ?? clave;
+
+    private bool MesColapsado(string clave) => mesesColapsados.Contains(clave);
+
+    private void ToggleMes(string clave)
+    {
+        if (!mesesColapsados.Remove(clave))
+            mesesColapsados.Add(clave);
+    }
+
+    private void OrdenarPor(string clave)
+    {
+        if (ordenClave == clave)
+        {
+            ordenDescendente = !ordenDescendente;
+        }
+        else
+        {
+            ordenClave = clave;
+            ordenDescendente = clave != "label";
+        }
+    }
+
+    private string ClaseOrden(string clave) => ordenClave == clave ? "is-active" : "";
+
+    private List<FilaPivote> FilasOrdenadas()
+    {
+        IOrderedEnumerable<FilaPivote> query = ordenClave == "label"
+            ? Filas.OrderBy(f => f.Dimension, StringComparer.CurrentCultureIgnoreCase)
+            : Filas.OrderBy(f => ObtenerValorOrdenable(f, ordenClave));
+
+        return (ordenDescendente ? query.Reverse() : query).ToList();
+    }
+
+    private decimal ObtenerValorOrdenable(FilaPivote fila, string clave)
+    {
+        var partes = clave.Split('|');
+
+        if (partes[0] == "total")
+            return ObtenerMetricaPorClave(fila.Total, partes[1]);
+
+        if (partes[0] == "cmp")
+        {
+            var a = MesA is null ? MetricasMes.Vacio : fila.ObtenerMes(MesA);
+            var b = MesB is null ? MetricasMes.Vacio : fila.ObtenerMes(MesB);
+            var va = ObtenerMetricaPorClave(a, partes[1]);
+            var vb = ObtenerMetricaPorClave(b, partes[1]);
+            return partes[2] == "delta" ? vb - va : PorcentajeCambio(va, vb);
+        }
+
+        return ObtenerMetricaPorClave(fila.ObtenerMes(partes[0]), partes[1]);
+    }
+
+    private static decimal ObtenerMetricaPorClave(MetricasMes m, string clave) => clave switch
+    {
+        "viajes" => m.Viajes,
+        "kms" => m.Km,
+        "peaje" => m.Peaje,
+        "kmv" => m.KmPorViaje,
+        _ => 0,
+    };
+
+    private static decimal Participacion(decimal valor, decimal total) => total > 0 ? valor / total * 100 : 0;
+
+    private static decimal PorcentajeCambio(decimal a, decimal b) => a != 0 ? (b - a) / a * 100 : 0;
+
+    private static string FormatoDeltaCelda(decimal a, decimal b, Func<decimal, string> formato)
+    {
+        if (a == 0 && b == 0)
+            return "—";
+
+        var d = b - a;
+        return (d >= 0 ? "+" : "-") + formato(Math.Abs(d));
+    }
+
+    private static string FormatoPctCelda(decimal a, decimal b)
+    {
+        if (a == 0)
+            return b != 0 ? "nuevo" : "—";
+
+        var pct = PorcentajeCambio(a, b);
+        return (pct >= 0 ? "+" : "") + pct.ToString("0.0", Cultura) + "%";
+    }
+
+    private static string ClaseDelta(decimal a, decimal b)
+    {
+        if (a == 0 && b == 0)
+            return "tp-neutro";
+
+        return b >= a ? "tp-pos" : "tp-neg";
+    }
+
+    private static string FormatoPorcentaje(decimal v) => $" {v.ToString("0.0", Cultura)}%";
+
+    private static string FormatoNumero(decimal v) => Math.Round(v).ToString("N0", Cultura);
+    private static string FormatoDinero(decimal v) => v.ToString("C0", Cultura);
+}
