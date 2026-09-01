@@ -5,16 +5,22 @@
 @using Testing.Application.GetAllViajes
 @using Testing.Features
 @inject ISender Sender
+@inject IJSRuntime JS
 
 <PageTitle>Viajes Zemog</PageTitle>
 
-<div class="vz-page">
+<script src="js/vz-interop.js"></script>
+
+<div class="vz-page @(esTemaClaro ? "claro" : "")">
 
     <header class="vz-header">
         <div class="vz-header-text">
             <h1>Estado de la Operación</h1>
             <p class="vz-header-sub">@TextoCorte()</p>
         </div>
+        <button type="button" class="vz-btn vz-btn-secondary" @onclick="AlternarTema" title="Cambiar tema">
+            @(esTemaClaro ? "🌙 Oscuro" : "☀ Claro")
+        </button>
         <button type="button" class="vz-btn vz-btn-secondary" @onclick="() => mostrarResumen = !mostrarResumen">
             @(mostrarResumen ? "← Volver a la consulta" : "Resumen Ejecutivo")
         </button>
@@ -196,10 +202,16 @@
 
     }
 
+    @if (seConsulto && viajesCargados.Count > 0)
+    {
+        <button type="button" id="vzSubir" class="vz-subir" @onclick="Subir" aria-label="Volver arriba">⇧</button>
+    }
+
 </div>
 
 @code {
     private bool mostrarResumen;
+    private bool esTemaClaro;
 
     private readonly ConsultaViajesFilterModel filtro = new();
 
@@ -232,12 +244,6 @@
     private NodoJerarquia? raizJerarquia;
     private ArbolJerarquiaViajes? arbolRef;
 
-    // Cliente/Zona: CamposDerivadosViajes.ObtenerCliente/ObtenerZona (Fase 4/§54.78-54.81).
-    // Matriz: v._base. Sucursal: sin columna confirmada en el SP (§54.21) — se usa el mismo
-    // valor de Matriz, replicando el fallback "su=r.suc||mt" de viajes_v14.html cuando el Excel
-    // no trae Sucursal. En la práctica esa cadena Matriz→Sucursal siempre tiene 1 solo hijo, así
-    // que el colapso de cadenas de hijo único (ArbolJerarquiaViajes.Caminar) la oculta sola —
-    // ver Fase 7 / §54.109.
     private static readonly Func<ViajesDto, string?>[] NivelesJerarquia =
     [
         CamposDerivadosViajes.ObtenerCliente,
@@ -277,11 +283,6 @@
 
     protected override void OnInitialized()
     {
-        // Orden exacto de cascada de viajes_v14.html (KEYS_P.concat(KEYS_S)).
-        // Destino/Movimiento pasan a FUNCIONAL en la Fase 4 (CamposDerivadosViajes.ParsearRuta).
-        // Cliente/Zona pasan a FUNCIONAL tras la confirmación del usuario (2026-08-31) de que
-        // tipo_operacion sí lo regresa el SP — ver §54.78 (CamposDerivadosViajes.ParsearClienteZona).
-        // Sucursal/Edo.Destino/Tarifa siguen pendientes — ver §54.20/§54.21 y Fase 4 puntos 4 y 7.
         filtros =
         [
             new() { Clave = "cliente", Etiqueta = "Cliente", Selector = CamposDerivadosViajes.ObtenerCliente, ConBuscador = true },
@@ -303,6 +304,26 @@
             new() { Clave = "movimiento", Etiqueta = "Movimiento", Selector = CamposDerivadosViajes.ObtenerMovimiento },
         ];
     }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        var temaGuardado = await JS.InvokeAsync<string?>("vzInterop.leerTema");
+        if (temaGuardado == "claro")
+        {
+            esTemaClaro = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task AlternarTema()
+    {
+        esTemaClaro = !esTemaClaro;
+        await JS.InvokeVoidAsync("vzInterop.guardarTema", esTemaClaro ? "claro" : "oscuro");
+    }
+
+    private async Task Subir() => await JS.InvokeVoidAsync("vzInterop.scrollArriba");
 
     private void ToggleMasFiltros() => mostrarMasFiltros = !mostrarMasFiltros;
 

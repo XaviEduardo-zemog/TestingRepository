@@ -1,9 +1,19 @@
 ﻿@using Testing.Application.GetAllViajes
+@inject IJSRuntime JS
 
 <div class="re-page">
     <div class="re-toolbar">
-        <h2>Resumen Ejecutivo</h2>
-        <p class="re-subtitle">@Subtitulo()</p>
+        <div class="re-toolbar-texto">
+            <h2>Resumen Ejecutivo</h2>
+            <p class="re-subtitle">@Subtitulo()</p>
+        </div>
+        @if (resumen?.NivelZemog is not null)
+        {
+            <div class="re-toolbar-acciones">
+                <button type="button" class="vz-btn vz-btn-secondary" @onclick="AbrirPresentacionAsync">▶ Presentación</button>
+                <button type="button" class="vz-btn vz-btn-primary" @onclick="ExportarWordAsync">⬇ Exportar Word</button>
+            </div>
+        }
     </div>
 
     @if (resumen is null)
@@ -41,6 +51,8 @@
 
         <ResumenRotacionOperadores Rotacion="resumen.Rotacion" MesUltimo="@MesUltimoEtiqueta()" />
     }
+
+    <ResumenPresentacion @ref="presentacionRef" Resumen="resumen" />
 </div>
 
 @code {
@@ -48,6 +60,7 @@
     [Parameter] public CorteMensual? Corte { get; set; }
 
     private ResumenEjecutivoDto? resumen;
+    private ResumenPresentacion? presentacionRef;
 
     // Recalcula SIEMPRE que cambien los parámetros (nueva consulta) — a diferencia de la vista
     // principal, el Resumen Ejecutivo no reacciona a los 14 filtros (usa Viajes = viajesCargados
@@ -85,5 +98,18 @@
             : "";
 
         return $"Meses cerrados: {rango}{nota}";
+    }
+
+    private Task AbrirPresentacionAsync() => presentacionRef?.AbrirAsync() ?? Task.CompletedTask;
+
+    private async Task ExportarWordAsync()
+    {
+        if (resumen is null) return;
+
+        var html = ResumenEjecutivoWordExporter.Generar(resumen);
+        var base64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("\uFEFF" + html));
+        var nombre = $"Resumen_Ejecutivo_Zemog_{DateTime.Now:yyyyMMdd}.doc";
+
+        await JS.InvokeVoidAsync("vzInterop.descargarArchivo", nombre, "application/msword", base64);
     }
 }

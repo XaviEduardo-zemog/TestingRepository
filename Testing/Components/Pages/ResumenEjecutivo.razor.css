@@ -1,8 +1,3 @@
-/* ResumenEjecutivo — vive dentro de .vz-page (ConsultaViajes.razor.css), hereda --vz-* por
-   cascada normal de CSS custom properties. Un solo archivo de CSS para las 10 componentes de
-   la Fase 8, todas hijas de este orquestador, vía ::deep — mismo criterio de "no 40 archivos
-   CSS minúsculos" que se aplicó a los componentes. Fallbacks var(--token, #hex) por si se usa
-   fuera de ese contexto. */
 
 .re-page {
     display: flex;
@@ -19,13 +14,13 @@
     gap: 12px;
 }
 
-.re-toolbar h2 {
-    margin: 0;
-    color: var(--vz-txt, #e2e8f0);
-    font-size: 18px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-}
+    .re-toolbar h2 {
+        margin: 0;
+        color: var(--vz-txt, #e2e8f0);
+        font-size: 18px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+    }
 
 .re-toolbar-acciones {
     display: flex;

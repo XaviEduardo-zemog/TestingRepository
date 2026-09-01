@@ -1,0 +1,162 @@
+.pres-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #0a0a0f;
+    z-index: 9999;
+    flex-direction: column;
+    color: #e2e8f0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+    .pres-overlay.pres-abierta {
+        display: flex;
+    }
+
+.pres-top {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 22px;
+}
+
+.pres-btn-salir {
+    background: #16181c;
+    color: #94a3b8;
+    border: 1px solid #2a2a2a;
+    border-radius: 6px;
+    padding: 8px 14px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+    .pres-btn-salir:hover {
+        color: #DEA60A;
+        border-color: #DEA60A;
+    }
+
+.pres-slide {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 0 8vw;
+    gap: 18px;
+    cursor: pointer;
+}
+
+    .pres-slide h2 {
+        font-size: 34px;
+        letter-spacing: 1.5px;
+        color: #e2e8f0;
+        text-transform: uppercase;
+        margin: 0 0 8px;
+    }
+
+.pres-rev {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity .45s, transform .45s;
+    width: 100%;
+    max-width: 900px;
+}
+
+    .pres-rev.pres-rev-on {
+        opacity: 1;
+        transform: none;
+    }
+
+.pres-sub {
+    font-size: 18px;
+    color: #94a3b8;
+    letter-spacing: 1px;
+    margin: 0;
+}
+
+.pres-kpi {
+    background: #141519;
+    border: 1px solid #2a2a2a;
+    border-radius: 10px;
+    padding: 16px 20px;
+    display: inline-block;
+    min-width: 230px;
+    margin: 4px;
+}
+
+.pres-kpi-label {
+    font-size: 12px;
+    color: #94a3b8;
+    letter-spacing: 1.5px;
+    margin: 0 0 4px;
+}
+
+.pres-kpi-valor {
+    font-size: 40px;
+    font-weight: 700;
+    color: #DEA60A;
+    margin: 0;
+}
+
+.pres-row {
+    font-size: 20px;
+    line-height: 1.55;
+    color: #d7dce4;
+    margin: 0;
+}
+
+.pres-acc {
+    color: #DEA60A;
+    font-weight: 700;
+}
+
+.pres-smaller {
+    font-size: 16px;
+    color: #94a3b8;
+    margin: 4px 0 0;
+}
+
+.pres-note {
+    font-size: 15px;
+    color: #8f9aab;
+    border-top: 1px solid #2a2a2a;
+    padding-top: 10px;
+    margin-top: 6px;
+    font-style: italic;
+}
+
+.pres-pendiente {
+    color: #75787E;
+    font-style: italic;
+}
+
+.pres-nav {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 22px;
+    padding: 16px 0 26px;
+}
+
+    .pres-nav button {
+        background: #141519;
+        color: #DEA60A;
+        border: 1px solid #2a2a2a;
+        border-radius: 50%;
+        width: 46px;
+        height: 46px;
+        font-size: 20px;
+        cursor: pointer;
+    }
+
+        .pres-nav button:hover {
+            border-color: #DEA60A;
+        }
+
+.pres-contador {
+    color: #94a3b8;
+    font-size: 14px;
+    min-width: 60px;
+    text-align: center;
+}

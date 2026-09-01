@@ -1,0 +1,228 @@
+﻿@using Testing.Application.GetAllViajes
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="pres-overlay @(abierta ? "pres-abierta" : "")">
+    <div class="pres-top">
+        <button type="button" class="pres-btn-salir" @onclick="Cerrar">✕ Salir (Esc)</button>
+    </div>
+
+    @if (slides is not null)
+    {
+        <div class="pres-slide" @onclick="Siguiente">
+            @if (slideActual == 0)
+            {
+                <h2>ESTADO DE LA OPERACIÓN</h2>
+                <div class="pres-rev @Clase(0)">
+                    <p class="pres-sub">@slides.EstadoOperacion.TextoCorte</p>
+                </div>
+            }
+            else if (slideActual == 1)
+            {
+                <h2>La operación en 3 cifras · @slides.TresCifras.Periodo</h2>
+                <div class="pres-rev @Clase(0)">
+                    <div class="pres-kpi"><p class="pres-kpi-label">VENTA ACUMULADA</p><p class="pres-kpi-valor">Pendiente</p><p class="pres-nota">@slides.TresCifras.VentaPendienteMotivo</p></div>
+                </div>
+                <div class="pres-rev @Clase(1)">
+                    <div class="pres-kpi"><p class="pres-kpi-label">VIAJES</p><p class="pres-kpi-valor">@FormatoN0(slides.TresCifras.ViajesYtd)</p></div>
+                </div>
+                <div class="pres-rev @Clase(2)">
+                    <div class="pres-kpi"><p class="pres-kpi-label">KILÓMETROS</p><p class="pres-kpi-valor">@FormatoN0(slides.TresCifras.KmsYtd)</p></div>
+                </div>
+            }
+            else if (slideActual == 2)
+            {
+                <h2>El año de un vistazo</h2>
+                <div class="pres-rev @Clase(0)">
+                    <p class="pres-pendiente">Pendiente — @slides.AnioVistazo.PendienteMotivo</p>
+                </div>
+            }
+            else if (slideActual == 3)
+            {
+                <h2>@slides.ComparativoMensual.MesActual contra @slides.ComparativoMensual.MesAnterior</h2>
+                <div class="pres-rev @Clase(0)">
+                    <p class="pres-row">VENTA: <span class="pres-pendiente">Pendiente — @slides.ComparativoMensual.VentaPendienteMotivo</span></p>
+                </div>
+                <div class="pres-rev @Clase(1)">
+                    <p class="pres-row">VIAJES: <b class="pres-acc">@FormatoN0(slides.ComparativoMensual.ViajesActual)</b> (@slides.ComparativoMensual.MesAnterior: @FormatoN0(slides.ComparativoMensual.ViajesAnterior)) @FormatoDelta(slides.ComparativoMensual.DeltaViajesPorcentaje)</p>
+                </div>
+                <div class="pres-rev @Clase(2)">
+                    <p class="pres-row">KM: <b class="pres-acc">@FormatoN0(slides.ComparativoMensual.KmsActual)</b> (@slides.ComparativoMensual.MesAnterior: @FormatoN0(slides.ComparativoMensual.KmsAnterior)) @FormatoDelta(slides.ComparativoMensual.DeltaKmsPorcentaje)</p>
+                </div>
+            }
+            else if (slideActual == 4)
+            {
+                <h2>Quién sostiene el crecimiento</h2>
+                @for (var i = 0; i < slides.PorCliente.Filas.Count; i++)
+                {
+                    var f = slides.PorCliente.Filas[i];
+                    <div class="pres-rev @Clase(i)">
+                        <p class="pres-row">@f.Cliente — VENTA: <span class="pres-pendiente">Pendiente</span> · VIAJES: <b class="pres-acc">@FormatoN0(f.Viajes)</b> @FormatoDelta(f.DeltaViajesPorcentaje)</p>
+                    </div>
+                }
+                <div class="pres-rev @Clase(slides.PorCliente.Filas.Count)">
+                    <p class="pres-note">@SlidePorClienteDto.NotaFija</p>
+                </div>
+            }
+            else if (slideActual == 5)
+            {
+                <h2>Primera fuga: la mezcla de expedición</h2>
+                <div class="pres-rev @Clase(0)">
+                    <p class="pres-row">Comodato <b class="pres-acc">@FormatoPct(slides.MezclaExpedicion.PctComodato)</b> · Full @FormatoN0(slides.MezclaExpedicion.Full) · Sencillo @FormatoN0(slides.MezclaExpedicion.Sencillo) · Total @FormatoN0(slides.MezclaExpedicion.Total)</p>
+                    @if (slides.MezclaExpedicion.DeltaPuntosPorcentuales is not null)
+                    {
+                        <p class="pres-smaller">Δ @FormatoPct(slides.MezclaExpedicion.DeltaPuntosPorcentuales.Value) pp vs mes anterior</p>
+                    }
+                </div>
+                <div class="pres-rev @Clase(1)">
+                    <p class="pres-note pres-pendiente">Pendiente — @slides.MezclaExpedicion.NotaCierrePendienteMotivo</p>
+                </div>
+            }
+            else if (slideActual == 6)
+            {
+                <h2>Segunda fuga: destinos y agencias</h2>
+                <div class="pres-rev @Clase(0)">
+                    <p class="pres-row pres-pendiente">Caída de destinos por venta: Pendiente — @slides.Fugas.CaidaDestinoPendienteMotivo</p>
+                </div>
+                <div class="pres-rev @Clase(1)">
+                    <p class="pres-row"><b class="pres-acc">@FormatoN0(slides.Fugas.AgenciasDesaparecidas)</b> agencias ya no aparecen en el último mes cerrado</p>
+                    <p class="pres-smaller pres-pendiente">Venta acumulada perdida: Pendiente — @slides.Fugas.VentaAcumuladaPendienteMotivo</p>
+                </div>
+                <div class="pres-rev @Clase(2)">
+                    <p class="pres-note">@SlideFugasDto.NotaFija</p>
+                </div>
+            }
+            else
+            {
+                <h2>Qué sigue</h2>
+                @for (var i = 0; i < SlideQueSigueDto.Parrafos.Length; i++)
+                {
+                    <div class="pres-rev @Clase(i)">
+                        <p class="pres-row">@SlideQueSigueDto.Parrafos[i]</p>
+                    </div>
+                }
+                <div class="pres-rev @Clase(SlideQueSigueDto.Parrafos.Length)">
+                    <p class="pres-note">@SlideQueSigueDto.Nota</p>
+                </div>
+            }
+        </div>
+
+        <div class="pres-nav">
+            <button type="button" @onclick="Anterior" aria-label="Anterior">‹</button>
+            <span class="pres-contador">@(slideActual + 1) / @PresentacionResumenDto.TotalSlides</span>
+            <button type="button" @onclick="Siguiente" aria-label="Siguiente">›</button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ResumenEjecutivoDto? Resumen { get; set; }
+
+    private PresentacionResumenDto? slides;
+    private bool abierta;
+    private int slideActual;
+    private int pasoActual;
+    private DotNetObjectReference<ResumenPresentacion>? dotNetRef;
+
+    protected override void OnParametersSet() =>
+        slides = Resumen?.NivelZemog is null ? null : SlidesPresentacionCalculator.Construir(Resumen);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        dotNetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("vzInterop.iniciarTeclado", dotNetRef);
+    }
+
+    public Task AbrirAsync()
+    {
+        if (slides is null) return Task.CompletedTask;
+
+        abierta = true;
+        slideActual = 0;
+        pasoActual = 0;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void Cerrar()
+    {
+        abierta = false;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void OnTeclaPresionada(string tecla)
+    {
+        if (!abierta) return;
+
+        switch (tecla)
+        {
+            case "ArrowRight" or " " or "PageDown":
+                Siguiente();
+                break;
+            case "ArrowLeft" or "PageUp":
+                Anterior();
+                break;
+            case "Escape":
+                Cerrar();
+                break;
+        }
+
+        StateHasChanged();
+    }
+
+    private void Siguiente()
+    {
+        if (slides is null) return;
+
+        if (pasoActual < PasosDelSlide(slideActual) - 1)
+        {
+            pasoActual++;
+            return;
+        }
+
+        if (slideActual < PresentacionResumenDto.TotalSlides - 1)
+        {
+            slideActual++;
+            pasoActual = 0;
+        }
+    }
+
+    private void Anterior()
+    {
+        if (slides is null || slideActual == 0) return;
+
+        slideActual--;
+        pasoActual = PasosDelSlide(slideActual) - 1;
+    }
+
+    private int PasosDelSlide(int indice) => indice switch
+    {
+        0 => slides!.EstadoOperacion.PasosRevelado,
+        1 => slides!.TresCifras.PasosRevelado,
+        2 => slides!.AnioVistazo.PasosRevelado,
+        3 => slides!.ComparativoMensual.PasosRevelado,
+        4 => slides!.PorCliente.PasosRevelado,
+        5 => slides!.MezclaExpedicion.PasosRevelado,
+        6 => slides!.Fugas.PasosRevelado,
+        _ => slides!.QueSigue.PasosRevelado,
+    };
+
+    private string Clase(int paso) => paso <= pasoActual ? "pres-rev-on" : "";
+
+    private static readonly System.Globalization.CultureInfo Cultura = System.Globalization.CultureInfo.GetCultureInfo("es-MX");
+    private static string FormatoN0(decimal v) => Math.Round(v).ToString("N0", Cultura);
+    private static string FormatoN0(int v) => v.ToString("N0", Cultura);
+    private static string FormatoPct(decimal v) => ResumenEjecutivoCalculator.FormatoPorcentaje(v);
+    private static string FormatoDelta(decimal? v) => v is null ? "" : $"({ResumenEjecutivoCalculator.FormatoPorcentaje(v.Value)})";
+
+    public async ValueTask DisposeAsync()
+    {
+        if (dotNetRef is null) return;
+
+        await JS.InvokeVoidAsync("vzInterop.removerTeclado");
+        dotNetRef.Dispose();
+    }
+}
