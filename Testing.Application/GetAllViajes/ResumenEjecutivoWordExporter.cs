@@ -3,6 +3,18 @@ using System.Text;
 
 namespace Testing.Application.GetAllViajes;
 
+/// <summary>
+/// Genera el Word del Resumen Ejecutivo con el mismo truco que viajes_v14.html
+/// (RE_exportWord): HTML con namespaces xmlns:o/xmlns:w de Word, servido con mimetype
+/// application/msword. 100% servidor: arma el HTML directo desde el ResumenEjecutivoDto ya
+/// cargado en el circuito de Blazor Server.
+///
+/// ALCANCE (documentado, no un olvido): incluye Semáforo, Nivel general, Por Cliente,
+/// Asignación (resumen a nivel raíz -- la versión jerárquica completa vive en pantalla,
+/// ResumenArbolComparativo.razor), Destinos cayendo (Top 25), Agencias desaparecidas,
+/// Operadores y Rotación. NO incluye el árbol comparativo detallado Cliente›Zona›Matriz
+/// (Bloque 8.4/8.7) -- fuera de proporción para esta fase, extensión futura acotada.
+/// </summary>
 public static class ResumenEjecutivoWordExporter
 {
     private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-MX");
@@ -29,11 +41,12 @@ public static class ResumenEjecutivoWordExporter
             EscribirBloqueNivel(sb, $"Por Cliente — {c.Cliente}", c.Bloque);
         if (resumen.ArbolComparativo is not null)
             EscribirAsignacion(sb, resumen.ArbolComparativo);
+        EscribirDestinosCayendo(sb, resumen);
         EscribirAgenciasDesaparecidas(sb, resumen);
         EscribirOperadores(sb, resumen);
         EscribirRotacion(sb, resumen);
 
-        sb.Append($"<p style=\"color:#75787E;font-size:9pt;margin-top:24px;\">Generado automáticamente desde Viajes Zemog el {DateTime.Now:dd/MM/yyyy HH:mm}. Las líneas marcadas \"Pendiente\" requieren una fuente de Venta que todavía no se ha confirmado (ver Fase 5).</p>");
+        sb.Append($"<p style=\"color:#75787E;font-size:9pt;margin-top:24px;\">Generado automáticamente desde Viajes Zemog el {DateTime.Now:dd/MM/yyyy HH:mm}. TotalVenta = subtotal_factura (fuente temporal, ver §54.85).</p>");
 
         sb.Append("</body></html>");
         return sb.ToString();
@@ -42,14 +55,11 @@ public static class ResumenEjecutivoWordExporter
     private static string Subtitulo(ResumenEjecutivoDto resumen)
     {
         if (resumen.MesesCerrados.Count == 0)
-            return "Sin meses cerrados disponibles";
+            return "Sin datos disponibles";
 
-        var rango = resumen.MesesCerrados.Count == 1
-            ? resumen.MesesCerrados[0].Etiqueta
-            : $"{resumen.MesesCerrados[0].Etiqueta} – {resumen.MesesCerrados[^1].Etiqueta}";
-
-        var nota = resumen.MesAbiertoExcluido ? $" · {resumen.EtiquetaMesAbiertoExcluido} excluido (mes en curso, sin cerrar)" : "";
-        return $"Meses cerrados: {rango}{nota}";
+        return resumen.MesesCerrados.Count == 1
+            ? $"Mes: {resumen.MesesCerrados[0].Etiqueta}"
+            : $"Meses: {resumen.MesesCerrados[0].Etiqueta} – {resumen.MesesCerrados[^1].Etiqueta}";
     }
 
     private static void EscribirSemaforo(StringBuilder sb, ResumenEjecutivoDto resumen)
@@ -70,28 +80,43 @@ public static class ResumenEjecutivoWordExporter
     private static void EscribirBloqueNivel(StringBuilder sb, string titulo, BloqueNivelDto bloque)
     {
         sb.Append($"<h2 style=\"color:{ColorAcento};font-size:13pt;\">{titulo}</h2>");
-        sb.Append(AbrirTabla("Mes", "Viajes", "KM", "Δ% Viajes", "Δ% KM"));
+        sb.Append(AbrirTabla("Mes", "Viajes", "KM", "Venta", "$/KM"));
 
         foreach (var (mes, totales) in bloque.Tendencia)
-        {
-            var esUltimo = mes.Anio == bloque.MesUltimo.Anio && mes.Mes == bloque.MesUltimo.Mes;
-            var deltaV = esUltimo ? FormatoPct(bloque.DeltaViajesPctVsAnterior) : "";
-            var deltaK = esUltimo ? FormatoPct(bloque.DeltaKmsPctVsAnterior) : "";
-            sb.Append(FilaTabla(mes.Etiqueta, FormatoN0(totales.Viajes), FormatoN0(totales.Kms), deltaV, deltaK));
-        }
+            sb.Append(FilaTabla(mes.Etiqueta, FormatoN0(totales.Viajes), FormatoN0(totales.Kms), FormatoDinero(totales.Venta), FormatoDinero(totales.PorKm)));
 
         sb.Append(CerrarTabla());
+
+        if (bloque.PeorMesDelAnio is not null)
+            sb.Append($"<p style=\"font-size:9pt;\">Peor mes (por venta): <b>{bloque.PeorMesDelAnio.Value.Mes.Etiqueta}</b> ({FormatoDinero(bloque.PeorMesDelAnio.Value.Venta)}). Mejor mes: <b>{bloque.MejorMesDelAnio!.Value.Mes.Etiqueta}</b> ({FormatoDinero(bloque.MejorMesDelAnio.Value.Venta)}).</p>");
     }
 
     private static void EscribirAsignacion(StringBuilder sb, NodoComparativo raiz)
     {
         var a = ResumenEjecutivoCalculator.CalcularAsignacion(raiz);
-        sb.Append($"<h2 style=\"color:{ColorAcento};font-size:13pt;\">Asignación Comodato / Full / Sencillo (último mes)</h2>");
-        sb.Append(AbrirTabla("Expedición", "Viajes", "% del total"));
-        sb.Append(FilaTabla("Comodato", FormatoN0(a.Comodato), FormatoPct(a.PctComodato)));
-        sb.Append(FilaTabla("Full", FormatoN0(a.Full), ""));
-        sb.Append(FilaTabla("Sencillo", FormatoN0(a.Sencillo), ""));
-        sb.Append(FilaTabla("Total", FormatoN0(a.Total), a.DeltaPuntosPorcentuales is null ? "" : $"Δ {FormatoPct(a.DeltaPuntosPorcentuales)} pp vs mes anterior"));
+        sb.Append($"<h2 style=\"color:{ColorAcento};font-size:13pt;\">Asignación Comodato / Full / Sencillo (total, último mes)</h2>");
+        sb.Append(AbrirTabla("Expedición", "Viajes", "% del total", "$/viaje"));
+        sb.Append(FilaTabla("Comodato", FormatoN0(a.Comodato), FormatoPct(a.PctComodato), FormatoDinero(a.VentaPorViajeComodato)));
+        sb.Append(FilaTabla("Full", FormatoN0(a.Full), "", FormatoDinero(a.VentaPorViajeFull)));
+        sb.Append(FilaTabla("Sencillo", FormatoN0(a.Sencillo), "", FormatoDinero(a.VentaPorViajeSencillo)));
+        sb.Append(FilaTabla("Total", FormatoN0(a.Total), a.DeltaPuntosPorcentuales is null ? "" : $"Δ {FormatoPct(a.DeltaPuntosPorcentuales)} pp vs mes anterior", ""));
+        sb.Append(CerrarTabla());
+        sb.Append("<p style=\"font-size:9pt;color:#75787E;\">Total a nivel raíz. El desglose por Cliente/Zona/Matriz/Sucursal está disponible en pantalla.</p>");
+    }
+
+    private static void EscribirDestinosCayendo(StringBuilder sb, ResumenEjecutivoDto resumen)
+    {
+        sb.Append($"<h2 style=\"color:{ColorAcento};font-size:13pt;\">Destinos que estamos dejando de dar</h2>");
+        if (resumen.DestinosCayendo is not { TotalConCaida: > 0 } destinos)
+        {
+            sb.Append("<p>Ningún destino con caída de venta en el periodo consultado.</p>");
+            return;
+        }
+
+        sb.Append($"<p style=\"font-size:9pt;\">{destinos.TotalConCaida} destino(s) con caída · impacto total {FormatoDinero(destinos.ImpactoTotal)} · se muestran las {destinos.Top25.Count} mayores caídas</p>");
+        sb.Append(AbrirTabla("Destino", "Matriz", "Venta anterior", "Venta actual", "Δ Venta", "Se dejó de dar"));
+        foreach (var d in destinos.Top25)
+            sb.Append(FilaTabla(d.Destino, d.Matriz, FormatoDinero(d.VentaAnterior), FormatoDinero(d.VentaActual), FormatoDinero(d.DeltaVenta), d.SeDejoDeDar ? "Sí" : "—"));
         sb.Append(CerrarTabla());
     }
 
@@ -104,25 +129,26 @@ public static class ResumenEjecutivoWordExporter
             return;
         }
 
-        sb.Append(AbrirTabla("Destino", "Matriz", "Último mes activo", "Meses activa"));
+        sb.Append(AbrirTabla("Destino", "Matriz", "Último mes activo", "Meses activa", "Venta acumulada"));
         foreach (var ag in resumen.AgenciasDesaparecidas)
-            sb.Append(FilaTabla(ag.Destino, ag.Matriz, ag.UltimoMesActivo.Etiqueta, FormatoN0(ag.MesesActiva)));
+            sb.Append(FilaTabla(ag.Destino, ag.Matriz, ag.UltimoMesActivo.Etiqueta, FormatoN0(ag.MesesActiva), FormatoDinero(ag.VentaAcumulada)));
         sb.Append(CerrarTabla());
     }
 
     private static void EscribirOperadores(StringBuilder sb, ResumenEjecutivoDto resumen)
     {
-        sb.Append($"<h2 style=\"color:{ColorAcento};font-size:13pt;\">Operadores (todos los meses cerrados)</h2>");
+        sb.Append($"<h2 style=\"color:{ColorAcento};font-size:13pt;\">Operadores (todos los meses)</h2>");
 
-        var filas = new List<(string Sucursal, string Operador, int Viajes, decimal Kms)>();
+        var filas = new List<(string Sucursal, string Operador, decimal Viajes, decimal Kms, decimal Venta)>();
         foreach (var (sucursal, porOperador) in resumen.Operadores.PorSucursalOperadorMes)
         {
             foreach (var (operador, porMes) in porOperador)
             {
                 var viajes = porMes.Values.Sum(t => t.Viajes);
                 var kms = porMes.Values.Sum(t => t.Kms);
-                if (viajes > 0 || kms > 0)
-                    filas.Add((sucursal, operador, viajes, kms));
+                var venta = porMes.Values.Sum(t => t.Venta);
+                if (viajes > 0 || kms > 0 || venta > 0)
+                    filas.Add((sucursal, operador, viajes, kms, venta));
             }
         }
 
@@ -132,11 +158,10 @@ public static class ResumenEjecutivoWordExporter
             return;
         }
 
-        sb.Append(AbrirTabla("Sucursal", "Operador", "Viajes", "KM", "KM/Viaje"));
-        foreach (var f in filas.OrderByDescending(f => f.Viajes))
-            sb.Append(FilaTabla(f.Sucursal, f.Operador, FormatoN0(f.Viajes), FormatoN0(f.Kms), FormatoN0(f.Viajes > 0 ? f.Kms / f.Viajes : 0)));
+        sb.Append(AbrirTabla("Sucursal", "Operador", "Viajes", "KM", "Venta", "$/KM"));
+        foreach (var f in filas.OrderByDescending(f => f.Venta))
+            sb.Append(FilaTabla(f.Sucursal, f.Operador, FormatoN0(f.Viajes), FormatoN0(f.Kms), FormatoDinero(f.Venta), FormatoDinero(f.Kms > 0 ? f.Venta / f.Kms : 0)));
         sb.Append(CerrarTabla());
-        sb.Append("<p style=\"font-size:9pt;color:#75787E;\">Venta y $/KM: Pendiente — " + ResumenEjecutivoCalculator.PendienteVenta + "</p>");
     }
 
     private static void EscribirRotacion(StringBuilder sb, ResumenEjecutivoDto resumen)
@@ -144,17 +169,17 @@ public static class ResumenEjecutivoWordExporter
         sb.Append($"<h2 style=\"color:{ColorAcento};font-size:13pt;\">Rotación de operadores</h2>");
         if (resumen.Rotacion.PorSucursal.Count == 0)
         {
-            sb.Append("<p>Sin datos suficientes (se necesitan al menos 2 meses cerrados).</p>");
+            sb.Append("<p>Sin datos suficientes (se necesitan al menos 2 meses).</p>");
             return;
         }
 
-        sb.Append(AbrirTabla("Sucursal", "Activos", "Altas", "Bajas", "Δ% Viajes", "Lectura"));
+        sb.Append(AbrirTabla("Sucursal", "Activos", "Altas", "Bajas", "Δ% Viajes", "Lectura", "Venta de bajas"));
         foreach (var f in resumen.Rotacion.PorSucursal)
-            sb.Append(FilaTabla(f.Sucursal, FormatoN0(f.Activos), FormatoN0(f.Altas), FormatoN0(f.Bajas), FormatoPct(f.DeltaViajesPorcentaje), f.Lectura));
+            sb.Append(FilaTabla(f.Sucursal, FormatoN0(f.Activos), FormatoN0(f.Altas), FormatoN0(f.Bajas), FormatoPct(f.DeltaViajesPorcentaje), f.Lectura, FormatoDinero(f.VentaBajas)));
 
         var t = resumen.Rotacion.Total;
         sb.Append($"<tr style=\"background:{ColorTotalBg};font-weight:bold;\">");
-        sb.Append(Celda(t.Sucursal) + Celda(FormatoN0(t.Activos)) + Celda(FormatoN0(t.Altas)) + Celda(FormatoN0(t.Bajas)) + Celda(FormatoPct(t.DeltaViajesPorcentaje)) + Celda(t.Lectura));
+        sb.Append(Celda(t.Sucursal) + Celda(FormatoN0(t.Activos)) + Celda(FormatoN0(t.Altas)) + Celda(FormatoN0(t.Bajas)) + Celda(FormatoPct(t.DeltaViajesPorcentaje)) + Celda(t.Lectura) + Celda(FormatoDinero(t.VentaBajas)));
         sb.Append("</tr>");
         sb.Append(CerrarTabla());
     }
@@ -182,6 +207,6 @@ public static class ResumenEjecutivoWordExporter
     private static string CerrarTabla() => "</tbody></table>";
 
     private static string FormatoN0(decimal v) => Math.Round(v).ToString("N0", Cultura);
-    private static string FormatoN0(int v) => v.ToString("N0", Cultura);
+    private static string FormatoDinero(decimal v) => v.ToString("C0", Cultura);
     private static string FormatoPct(decimal? v) => v is null ? "—" : ResumenEjecutivoCalculator.FormatoPorcentaje(v.Value);
 }

@@ -1,0 +1,79 @@
+﻿@using ApexCharts
+@using Testing.Application.GetAllViajes
+
+@* Replica RE_chartSVG(): serie real dorada (grosor 2.6, markers radio 3.2) + serie de tendencia
+   gris punteada (grosor 1.6, sin markers), calculada con TendenciaCalculator (regresión exacta:
+   lineal 2-3 puntos, cuadrática 4+ -- NUNCA promedio móvil). Altura ~210px, sin grid excesiva,
+   caption fijo "Línea punteada = tendencia" (texto literal del HTML). El eje Y se autoescala
+   sobre AMBAS series (ApexCharts ya hace esto por defecto al graficar 2 series juntas -- mismo
+   resultado que "todos=valores.concat(tend)" del HTML).
+
+   ⚠ Riesgo de compilación: Blazor-ApexCharts (paquete ya instalado, v7.0.0) no se pudo compilar
+   en esta fase (sin acceso a build) -- la forma de ApexChartOptions&lt;T&gt;/Stroke/Markers/Chart
+   aquí usada es la API pública conocida de esa librería, pero si el build falla, es el primer
+   lugar a revisar (IntelliSense del paquete instalado) antes que cualquier otro archivo de esta
+   entrega. *@
+
+<div class="re-grafica">
+    <p class="re-grafica-titulo">@Titulo</p>
+    <ApexChart TItem="PuntoGrafica" Options="opciones" Height="210">
+        <ApexPointSeries TItem="PuntoGrafica"
+                         Items="real"
+                         Name="@NombreSerieReal"
+                         SeriesType="SeriesType.Line"
+                         XValue="@(p => p.Etiqueta)"
+                         YValue="@(p => (decimal?)p.Valor)" />
+        <ApexPointSeries TItem="PuntoGrafica"
+                         Items="tendencia"
+                         Name="Tendencia"
+                         SeriesType="SeriesType.Line"
+                         XValue="@(p => p.Etiqueta)"
+                         YValue="@(p => (decimal?)p.Valor)" />
+    </ApexChart>
+    <p class="re-grafica-caption">Línea punteada = tendencia</p>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Titulo { get; set; } = "";
+    [Parameter, EditorRequired] public string NombreSerieReal { get; set; } = "";
+    [Parameter, EditorRequired] public IReadOnlyList<(string Etiqueta, decimal Valor)> Datos { get; set; } = [];
+
+    private sealed record PuntoGrafica(string Etiqueta, decimal Valor);
+
+    private List<PuntoGrafica> real = [];
+    private List<PuntoGrafica> tendencia = [];
+    private ApexChartOptions<PuntoGrafica> opciones = new();
+
+    protected override void OnParametersSet()
+    {
+        real = Datos.Select(d => new PuntoGrafica(d.Etiqueta, d.Valor)).ToList();
+
+        // TendenciaCalculator replica RE_tendencia() exacto: 0-1 pts = mismos valores, 2-3 pts =
+        // lineal por mínimos cuadrados, 4+ pts = cuadrática -- nunca promedio móvil.
+        var valoresTendencia = TendenciaCalculator.Calcular(Datos.Select(d => d.Valor).ToList());
+        tendencia = Datos.Select((d, i) => new PuntoGrafica(d.Etiqueta, valoresTendencia[i])).ToList();
+
+        opciones = new ApexChartOptions<PuntoGrafica>
+        {
+            Chart = new Chart
+            {
+                Height = 210,
+                Toolbar = new Toolbar { Show = false },
+                Zoom = new Zoom { Enabled = false },
+            },
+            Colors = ["#f59e0b", "#94a3b8"], // real=dorado (--vz-acc), tendencia=gris (--vz-gris)
+            Stroke = new Stroke
+            {
+                Curve = Curve.Smooth,
+                Width = new List<double> { 2.6, 1.6 },
+                DashArray = new List<double> { 0, 5 },
+            },
+            Markers = new Markers { Size = new List<double> { 3.2, 0 } }, // solo la serie real tiene marker
+            Grid = new Grid { Show = true, Padding = new Padding { Left = 4, Right = 4 } },
+            Legend = new Legend { Show = false }, // el caption fijo reemplaza la leyenda, igual que el HTML
+            DataLabels = new DataLabels { Enabled = false },
+            Xaxis = new XAxis { Labels = new XAxisLabels { Style = new AxisLabelStyle { FontSize = "10px" } } },
+            Yaxis = [new YAxis { Labels = new YAxisLabels { Style = new AxisLabelStyle { FontSize = "10px" } } }],
+        };
+    }
+}

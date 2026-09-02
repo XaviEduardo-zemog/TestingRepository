@@ -38,19 +38,19 @@ else
                         {
                             @if (!MesColapsado(mes.Clave))
                             {
-                                @foreach (var col in columnas)
+                                @for (var ci = 0; ci < columnas.Count; ci++)
                                 {
-                                    <th class="align-end">@col.Etiqueta</th>
+                                    <th class="align-end @(ci == 0 ? "aj-mes0" : "")">@columnas[ci].Etiqueta</th>
                                 }
                             }
                         }
                     }
                     @if (MesA is not null && MesB is not null)
                     {
-                        @foreach (var col in columnas)
+                        @for (var ci = 0; ci < columnas.Count; ci++)
                         {
-                            <th class="align-end">Δ @col.Etiqueta</th>
-                            <th class="align-end">%</th>
+                            <th class="align-end aj-cmp @(ci == 0 ? "aj-cmp-start" : "")">Δ @columnas[ci].Etiqueta</th>
+                            <th class="align-end aj-cmp @(ci == columnas.Count - 1 ? "aj-cmp-end" : "")">%</th>
                         }
                     }
                 </tr>
@@ -74,18 +74,24 @@ else
                         </td>
                         @if (!SoloComparativa)
                         {
-                            @foreach (var mes in Meses)
+                            @for (var mi = 0; mi < Meses.Count; mi++)
                             {
+                                var mes = Meses[mi];
                                 @if (!MesColapsado(mes.Clave))
                                 {
                                     var metricasMes = fila.Nodo.ObtenerMes(mes.Clave);
-                                    @foreach (var col in columnas)
+                                    var metricasMesAnterior = mi > 0 ? fila.Nodo.ObtenerMes(Meses[mi - 1].Clave) : null;
+                                    var esPrimerMes = mi == 0;
+                                    @for (var ci = 0; ci < columnas.Count; ci++)
                                     {
-                                        <td class="align-end tabular aj-lvl-@fila.Nivel">
-                                            @col.Formato(col.Selector(metricasMes))
+                                        var col = columnas[ci];
+                                        var valorActual = col.Selector(metricasMes);
+                                        var valorAnterior = metricasMesAnterior is null ? 0 : col.Selector(metricasMesAnterior);
+                                        <td class="align-end tabular aj-lvl-@fila.Nivel @(ci == 0 ? "aj-mes0" : "") @(col.EsSumable ? ClaseCelda(valorActual, valorAnterior, esPrimerMes) : "")">
+                                            @col.Formato(valorActual)
                                             @if (MostrarParticipacion && col.EsSumable)
                                             {
-                                                <span class="aj-pct">@FormatoPorcentaje(Participacion(col.Selector(metricasMes), col.Selector(Raiz.ObtenerMes(mes.Clave))))</span>
+                                                <span class="aj-pct">@FormatoPorcentaje(Participacion(valorActual, col.Selector(Raiz.ObtenerMes(mes.Clave))))</span>
                                             }
                                         </td>
                                     }
@@ -96,12 +102,13 @@ else
                         {
                             var a = fila.Nodo.ObtenerMes(MesA);
                             var b = fila.Nodo.ObtenerMes(MesB);
-                            @foreach (var col in columnas)
+                            @for (var ci = 0; ci < columnas.Count; ci++)
                             {
+                                var col = columnas[ci];
                                 var va = col.Selector(a);
                                 var vb = col.Selector(b);
-                                <td class="align-end tabular @ClaseDelta(va, vb)">@FormatoDeltaCelda(va, vb, col.Formato)</td>
-                                <td class="align-end tabular @ClaseDelta(va, vb)">@FormatoPctCelda(va, vb)</td>
+                                <td class="align-end tabular aj-cmp @(ci == 0 ? "aj-cmp-start" : "") @ClaseDelta(va, vb)">@FormatoDeltaCelda(va, vb, col.Formato)</td>
+                                <td class="align-end tabular aj-cmp @(ci == columnas.Count - 1 ? "aj-cmp-end" : "") @ClaseDelta(va, vb)">@FormatoPctCelda(va, vb)</td>
                             }
                         }
                     </tr>
@@ -117,9 +124,9 @@ else
                             @if (!MesColapsado(mes.Clave))
                             {
                                 var totalMes = Raiz.ObtenerMes(mes.Clave);
-                                @foreach (var col in columnas)
+                                @for (var ci = 0; ci < columnas.Count; ci++)
                                 {
-                                    <td class="align-end tabular">@col.Formato(col.Selector(totalMes))</td>
+                                    <td class="align-end tabular @(ci == 0 ? "aj-mes0" : "")">@columnas[ci].Formato(columnas[ci].Selector(totalMes))</td>
                                 }
                             }
                         }
@@ -128,12 +135,13 @@ else
                     {
                         var totalA = Raiz.ObtenerMes(MesA);
                         var totalB = Raiz.ObtenerMes(MesB);
-                        @foreach (var col in columnas)
+                        @for (var ci = 0; ci < columnas.Count; ci++)
                         {
+                            var col = columnas[ci];
                             var va = col.Selector(totalA);
                             var vb = col.Selector(totalB);
-                            <td class="align-end tabular">@FormatoDeltaCelda(va, vb, col.Formato)</td>
-                            <td class="align-end tabular">@FormatoPctCelda(va, vb)</td>
+                            <td class="align-end tabular aj-cmp @(ci == 0 ? "aj-cmp-start" : "")">@FormatoDeltaCelda(va, vb, col.Formato)</td>
+                            <td class="align-end tabular aj-cmp @(ci == columnas.Count - 1 ? "aj-cmp-end" : "")">@FormatoPctCelda(va, vb)</td>
                         }
                     }
                 </tr>
@@ -150,7 +158,10 @@ else
     [Parameter] public bool MostrarViajes { get; set; } = true;
     [Parameter] public bool MostrarKms { get; set; } = true;
     [Parameter] public bool MostrarPeaje { get; set; } = true;
+    [Parameter] public bool MostrarVenta { get; set; } = true;
+    [Parameter] public bool MostrarPkm { get; set; } = true;
     [Parameter] public bool MostrarKmPorViaje { get; set; } = true;
+    [Parameter] public bool MostrarPvj { get; set; } = true;
     [Parameter] public bool MostrarParticipacion { get; set; }
     [Parameter] public bool SoloComparativa { get; set; }
 
@@ -162,17 +173,16 @@ else
     private bool ordenDescendente;
     private readonly HashSet<string> mesesColapsados = [];
 
-    // TEMPORAL MVP: igual que TablaPivoteViajes, el orden alfabético por Label se recalcula en
-    // cada render (árboles de este tamaño no lo justifican). A diferencia de la tabla plana, NO
-    // se replica el ordenamiento por columna/mes (click en métrica) — solo orden alfabético del
-    // nivel, con un único toggle asc/desc en la cabecera de la jerarquía. Ver Fase 7 / §54.108.
     protected override void OnParametersSet()
     {
         columnas = [];
         if (MostrarViajes) columnas.Add(new("viajes", "Viajes", m => m.Viajes, FormatoNumero, true));
         if (MostrarKms) columnas.Add(new("kms", "KMS", m => m.Km, FormatoNumero, true));
         if (MostrarPeaje) columnas.Add(new("peaje", "Peaje", m => m.Peaje, FormatoDinero, true));
+        if (MostrarVenta) columnas.Add(new("venta", "Venta", m => m.Venta, FormatoDinero, true));
+        if (MostrarPkm) columnas.Add(new("pkm", "$/KM", m => m.VentaPorKm, FormatoDinero, false));
         if (MostrarKmPorViaje) columnas.Add(new("kmv", "km/Viaje", m => m.KmPorViaje, FormatoNumero, false));
+        if (MostrarPvj) columnas.Add(new("pvj", "$/Viaje", m => m.VentaPorViaje, FormatoDinero, false));
     }
 
     private string? MesA => Meses.Count >= 2 ? Meses[^2].Clave : null;
@@ -192,8 +202,6 @@ else
 
     private void AlternarOrden() => ordenDescendente = !ordenDescendente;
 
-    // Llamado desde ConsultaViajes.razor vía @ref, para los botones globales "Expandir todo" /
-    // "Colapsar todo" que viven en la barra de herramientas (fuera de este componente).
     public void ExpandirTodo()
     {
         AplicarATodos(Raiz, expandir: true);
@@ -215,11 +223,6 @@ else
         }
     }
 
-    // Replica RE_aplana()/tablaJerarquia() de viajes_v14.html: colapsa visualmente cadenas de
-    // hijo único (esa fila repetiría exactamente el mismo total que su único hijo). Label
-    // siempre es la clave del nivel mostrado (para que el id de expandir/colapsar sea estable);
-    // Nodo es el descendiente real al que se llegó tras colapsar, cuyas métricas se pintan y
-    // cuyos Hijos se usan si el usuario expande esta fila.
     private List<FilaArbol> Aplanar()
     {
         var filas = new List<FilaArbol>();
@@ -277,8 +280,22 @@ else
     {
         if (a == 0 && b == 0)
             return "aj-neutro";
+        if (a == b)
+            return "aj-neutro";
 
-        return b >= a ? "aj-pos" : "aj-neg";
+        return b > a ? "aj-pos" : "aj-neg";
+    }
+
+    private static string ClaseCelda(decimal actual, decimal anterior, bool esPrimerMes)
+    {
+        if (esPrimerMes)
+            return "aj-neutro";
+        if (anterior == 0 || actual == 0)
+            return "aj-neutro";
+        if (actual == anterior)
+            return "aj-neutro";
+
+        return actual > anterior ? "aj-pos" : "aj-neg";
     }
 
     private static string FormatoPorcentaje(decimal v) => $" {v.ToString("0.0", Cultura)}%";

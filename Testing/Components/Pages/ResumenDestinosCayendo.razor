@@ -1,0 +1,105 @@
+﻿@using System.Globalization
+@using Testing.Application.GetAllViajes
+
+@* Bloque 8.5 (RE_seccionDestinos), confirmado línea por línea en esta fase: agrupa por
+   Destino+Matriz (no solo Destino); condición ventaAnterior&gt;0 AND ventaActual&lt;ventaAnterior,
+   SIN umbral mínimo; ordena por Δ Venta ascendente (mayor pérdida primero); Top 25 (no 30 --
+   corregido en esta fase). El "impacto total" de la nota es la suma de TODOS los grupos que
+   cumplen la condición; el TOTAL de la tabla es solo la suma de las 25 filas mostradas -- son
+   números distintos a propósito. "Se dejó de dar" = ViajesActual==0 AND ViajesAnterior&gt;0
+   (una caída de venta NO implica automáticamente que se dejó de dar). *@
+
+<section class="re-bloque re-destinos-cayendo">
+    <h3>Destinos que estamos dejando de dar</h3>
+
+    @if (Datos is null || Datos.TotalConCaida == 0)
+    {
+        <p class="re-vacio">Ningún destino con caída de venta entre @MesAnterior y @MesUltimo.</p>
+    }
+    else
+    {
+        <p class="re-nota re-nota-superior">
+            <b>@Datos.TotalConCaida</b> destino(s) con caída de venta en @MesUltimo vs @MesAnterior
+            · impacto total <span class="re-neg">@FormatoDinero(Datos.ImpactoTotal)</span>
+            · se listan las @Datos.Top25.Count mayores caídas (el TOTAL de la tabla corresponde solo a esas @Datos.Top25.Count)
+        </p>
+        <div class="re-tbl-wrap">
+            <table class="re-tabla">
+                <thead>
+                    <tr>
+                        <th class="re-th-dim @ClaseOrden("destino")" @onclick='() => OrdenarPor("destino")'>Destino</th>
+                        <th class="@ClaseOrden("matriz")" @onclick='() => OrdenarPor("matriz")'>Matriz</th>
+                        <th class="@ClaseOrden("viajesAnt")" @onclick='() => OrdenarPor("viajesAnt")'>Viajes @MesAnterior</th>
+                        <th class="@ClaseOrden("viajesAct")" @onclick='() => OrdenarPor("viajesAct")'>Viajes @MesUltimo</th>
+                        <th class="@ClaseOrden("ventaAnt")" @onclick='() => OrdenarPor("ventaAnt")'>Venta @MesAnterior</th>
+                        <th class="@ClaseOrden("ventaAct")" @onclick='() => OrdenarPor("ventaAct")'>Venta @MesUltimo</th>
+                        <th class="@ClaseOrden("delta")" @onclick='() => OrdenarPor("delta")'>Δ Venta</th>
+                        <th>Se dejó de dar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var d in FilasOrdenadas())
+                    {
+                        <tr>
+                            <td>@d.Destino</td>
+                            <td>@d.Matriz</td>
+                            <td class="align-end tabular">@FormatoNumero(d.ViajesAnterior)</td>
+                            <td class="align-end tabular">@FormatoNumero(d.ViajesActual)</td>
+                            <td class="align-end tabular">@FormatoDinero(d.VentaAnterior)</td>
+                            <td class="align-end tabular">@FormatoDinero(d.VentaActual)</td>
+                            <td class="align-end tabular re-neg">@FormatoDinero(d.DeltaVenta)</td>
+                            <td class="@(d.SeDejoDeDar ? "re-neg" : "re-neutro")">@(d.SeDejoDeDar ? "Sí" : "—")</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="re-total">
+                        <td colspan="6">TOTAL (Top @Datos.Top25.Count)</td>
+                        <td class="align-end tabular re-neg">@FormatoDinero(Datos.TotalTop25)</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter] public DestinosCayendoResumenDto? Datos { get; set; }
+    [Parameter] public string? MesUltimo { get; set; }
+    [Parameter] public string? MesAnterior { get; set; }
+
+    private string ordenClave = "delta";
+    private bool ordenDescendente; // "delta" ascendente por defecto = mayor pérdida primero (DeltaVenta más negativo)
+
+    private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-MX");
+
+    private void OrdenarPor(string clave)
+    {
+        if (ordenClave == clave) ordenDescendente = !ordenDescendente;
+        else { ordenClave = clave; ordenDescendente = clave is "viajesAnt" or "viajesAct" or "ventaAnt" or "ventaAct"; }
+    }
+
+    private string ClaseOrden(string clave) => ordenClave == clave ? "is-active" : "";
+
+    private List<DestinoCayendoDto> FilasOrdenadas()
+    {
+        if (Datos is null) return [];
+
+        IOrderedEnumerable<DestinoCayendoDto> query = ordenClave switch
+        {
+            "destino" => Datos.Top25.OrderBy(d => d.Destino, StringComparer.CurrentCultureIgnoreCase),
+            "matriz" => Datos.Top25.OrderBy(d => d.Matriz, StringComparer.CurrentCultureIgnoreCase),
+            "viajesAnt" => Datos.Top25.OrderBy(d => d.ViajesAnterior),
+            "viajesAct" => Datos.Top25.OrderBy(d => d.ViajesActual),
+            "ventaAnt" => Datos.Top25.OrderBy(d => d.VentaAnterior),
+            "ventaAct" => Datos.Top25.OrderBy(d => d.VentaActual),
+            _ => Datos.Top25.OrderBy(d => d.DeltaVenta),
+        };
+
+        return (ordenDescendente ? query.Reverse() : query).ToList();
+    }
+
+    private static string FormatoNumero(decimal v) => Math.Round(v).ToString("N0", Cultura);
+    private static string FormatoDinero(decimal v) => v.ToString("C0", Cultura);
+}

@@ -2,6 +2,15 @@
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
+@* Replica el overlay fullscreen de viajes_v14.html (#presView). Estado 100% en C#. El único JS
+   es un listener de teclado global (registrado una vez) que reenvía la tecla a OnTeclaPresionada.
+
+   AJUSTE DE ESTA FASE: recibe Viajes/Corte (como ResumenEjecutivo.razor), NO un ResumenEjecutivoDto
+   ya armado -- Presentación tiene su PROPIA regla de exclusión del mes de avance (PR_corteInfo,
+   día de corte &lt; 28), que el Resumen Ejecutivo normal YA NO tiene. Se filtra el mes de avance
+   ANTES de llamar a ResumenEjecutivoCalculator.Calcular -- mismo motor, subconjunto de datos
+   distinto. Ver SlidesPresentacionCalculator.PrepararParaPresentacion. *@
+
 <div class="pres-overlay @(abierta ? "pres-abierta" : "")">
     <div class="pres-top">
         <button type="button" class="pres-btn-salir" @onclick="Cerrar">✕ Salir (Esc)</button>
@@ -21,27 +30,34 @@
             {
                 <h2>La operación en 3 cifras · @slides.TresCifras.Periodo</h2>
                 <div class="pres-rev @Clase(0)">
-                    <div class="pres-kpi"><p class="pres-kpi-label">VENTA ACUMULADA</p><p class="pres-kpi-valor">Pendiente</p><p class="pres-nota">@slides.TresCifras.VentaPendienteMotivo</p></div>
+                    <div class="pres-kpi"><p class="pres-kpi-label">VENTA ACUMULADA</p><p class="pres-kpi-valor">@FormatoDinero(slides.TresCifras.VentaYtd)</p></div>
                 </div>
                 <div class="pres-rev @Clase(1)">
                     <div class="pres-kpi"><p class="pres-kpi-label">VIAJES</p><p class="pres-kpi-valor">@FormatoN0(slides.TresCifras.ViajesYtd)</p></div>
                 </div>
                 <div class="pres-rev @Clase(2)">
                     <div class="pres-kpi"><p class="pres-kpi-label">KILÓMETROS</p><p class="pres-kpi-valor">@FormatoN0(slides.TresCifras.KmsYtd)</p></div>
+                    @if (slides.TresCifras.MejorMes is not null && slides.TresCifras.PeorMes is not null)
+                    {
+                        <p class="pres-smaller">Mejor mes: <b class="pres-acc">@slides.TresCifras.MejorMes.Value.MesEtiqueta</b> (@FormatoDinero(slides.TresCifras.MejorMes.Value.Venta)) · Peor mes: <b class="pres-acc">@slides.TresCifras.PeorMes.Value.MesEtiqueta</b> (@FormatoDinero(slides.TresCifras.PeorMes.Value.Venta))</p>
+                    }
                 </div>
             }
             else if (slideActual == 2)
             {
                 <h2>El año de un vistazo</h2>
-                <div class="pres-rev @Clase(0)">
-                    <p class="pres-pendiente">Pendiente — @slides.AnioVistazo.PendienteMotivo</p>
+                <div class="pres-rev @Clase(0)" @onclick:stopPropagation="true">
+                    @if (slides.AnioVistazo.VentaPorMes.Count > 0)
+                    {
+                        <GraficaTendencia Titulo="Venta mensual" NombreSerieReal="Venta" Datos="slides.AnioVistazo.VentaPorMes" />
+                    }
                 </div>
             }
             else if (slideActual == 3)
             {
                 <h2>@slides.ComparativoMensual.MesActual contra @slides.ComparativoMensual.MesAnterior</h2>
                 <div class="pres-rev @Clase(0)">
-                    <p class="pres-row">VENTA: <span class="pres-pendiente">Pendiente — @slides.ComparativoMensual.VentaPendienteMotivo</span></p>
+                    <p class="pres-row">VENTA: <b class="pres-acc">@FormatoDinero(slides.ComparativoMensual.VentaActual)</b> (@slides.ComparativoMensual.MesAnterior: @FormatoDinero(slides.ComparativoMensual.VentaAnterior)) @FormatoDelta(slides.ComparativoMensual.DeltaVentaPorcentaje)</p>
                 </div>
                 <div class="pres-rev @Clase(1)">
                     <p class="pres-row">VIAJES: <b class="pres-acc">@FormatoN0(slides.ComparativoMensual.ViajesActual)</b> (@slides.ComparativoMensual.MesAnterior: @FormatoN0(slides.ComparativoMensual.ViajesAnterior)) @FormatoDelta(slides.ComparativoMensual.DeltaViajesPorcentaje)</p>
@@ -57,7 +73,7 @@
                 {
                     var f = slides.PorCliente.Filas[i];
                     <div class="pres-rev @Clase(i)">
-                        <p class="pres-row">@f.Cliente — VENTA: <span class="pres-pendiente">Pendiente</span> · VIAJES: <b class="pres-acc">@FormatoN0(f.Viajes)</b> @FormatoDelta(f.DeltaViajesPorcentaje)</p>
+                        <p class="pres-row">@f.Cliente — VENTA: <b class="pres-acc">@FormatoDinero(f.Venta)</b> @FormatoDelta(f.DeltaVentaPorcentaje) · VIAJES: <b class="pres-acc">@FormatoN0(f.Viajes)</b> @FormatoDelta(f.DeltaViajesPorcentaje)</p>
                     </div>
                 }
                 <div class="pres-rev @Clase(slides.PorCliente.Filas.Count)">
@@ -75,18 +91,25 @@
                     }
                 </div>
                 <div class="pres-rev @Clase(1)">
-                    <p class="pres-note pres-pendiente">Pendiente — @slides.MezclaExpedicion.NotaCierrePendienteMotivo</p>
+                    <p class="pres-note">Cada punto que Full cede a Sencillo cuesta ≈ @FormatoDinero(slides.MezclaExpedicion.VentaPorViajeFull - slides.MezclaExpedicion.VentaPorViajeSencillo) por viaje. La conversación es con el cliente: recuperar full o repreciar sencillo.</p>
                 </div>
             }
             else if (slideActual == 6)
             {
                 <h2>Segunda fuga: destinos y agencias</h2>
                 <div class="pres-rev @Clase(0)">
-                    <p class="pres-row pres-pendiente">Caída de destinos por venta: Pendiente — @slides.Fugas.CaidaDestinoPendienteMotivo</p>
+                    @if (slides.Fugas.PeorDestinoCayendo is not null)
+                    {
+                        <p class="pres-row">Mayor caída de destino: <b class="pres-acc">@slides.Fugas.PeorDestinoCayendo.Value.Destino</b> (-@FormatoDinero(slides.Fugas.PeorDestinoCayendo.Value.VentaPerdida))</p>
+                    }
+                    else
+                    {
+                        <p class="pres-row">Ningún destino con caída de venta este mes.</p>
+                    }
                 </div>
                 <div class="pres-rev @Clase(1)">
-                    <p class="pres-row"><b class="pres-acc">@FormatoN0(slides.Fugas.AgenciasDesaparecidas)</b> agencias ya no aparecen en el último mes cerrado</p>
-                    <p class="pres-smaller pres-pendiente">Venta acumulada perdida: Pendiente — @slides.Fugas.VentaAcumuladaPendienteMotivo</p>
+                    <p class="pres-row"><b class="pres-acc">@FormatoN0(slides.Fugas.AgenciasDesaparecidas)</b> agencias ya no aparecen en el último mes</p>
+                    <p class="pres-smaller">Venta acumulada perdida: <b class="pres-acc">@FormatoDinero(slides.Fugas.VentaAcumuladaPerdida)</b></p>
                 </div>
                 <div class="pres-rev @Clase(2)">
                     <p class="pres-note">@SlideFugasDto.NotaFija</p>
@@ -116,7 +139,8 @@
 </div>
 
 @code {
-    [Parameter, EditorRequired] public ResumenEjecutivoDto? Resumen { get; set; }
+    [Parameter, EditorRequired] public IReadOnlyList<ViajesDto> Viajes { get; set; } = [];
+    [Parameter] public CorteMensual? Corte { get; set; }
 
     private PresentacionResumenDto? slides;
     private bool abierta;
@@ -124,8 +148,12 @@
     private int pasoActual;
     private DotNetObjectReference<ResumenPresentacion>? dotNetRef;
 
-    protected override void OnParametersSet() =>
-        slides = Resumen?.NivelZemog is null ? null : SlidesPresentacionCalculator.Construir(Resumen);
+    protected override void OnParametersSet()
+    {
+        var (viajesParaPresentacion, etiquetaAvance) = SlidesPresentacionCalculator.PrepararParaPresentacion(Viajes, Corte);
+        var resumen = ResumenEjecutivoCalculator.Calcular(viajesParaPresentacion, Corte);
+        slides = resumen.NivelZemog is null ? null : SlidesPresentacionCalculator.Construir(resumen, etiquetaAvance);
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -190,6 +218,7 @@
         }
     }
 
+    // Al retroceder se revela TODO el slide anterior de una vez -- mismo comportamiento que PR_prev().
     private void Anterior()
     {
         if (slides is null || slideActual == 0) return;
@@ -214,7 +243,7 @@
 
     private static readonly System.Globalization.CultureInfo Cultura = System.Globalization.CultureInfo.GetCultureInfo("es-MX");
     private static string FormatoN0(decimal v) => Math.Round(v).ToString("N0", Cultura);
-    private static string FormatoN0(int v) => v.ToString("N0", Cultura);
+    private static string FormatoDinero(decimal v) => v.ToString("C0", Cultura);
     private static string FormatoPct(decimal v) => ResumenEjecutivoCalculator.FormatoPorcentaje(v);
     private static string FormatoDelta(decimal? v) => v is null ? "" : $"({ResumenEjecutivoCalculator.FormatoPorcentaje(v.Value)})";
 

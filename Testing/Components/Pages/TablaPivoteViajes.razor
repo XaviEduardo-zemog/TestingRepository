@@ -50,19 +50,23 @@ else
                             {
                                 @if (!MesColapsado(mes.Clave))
                                 {
-                                    @foreach (var col in columnas)
+                                    @for (var ci = 0; ci < columnas.Count; ci++)
                                     {
-                                        <th class="align-end @ClaseOrden($"{mes.Clave}|{col.Clave}")" @onclick="@(() => OrdenarPor($"{mes.Clave}|{col.Clave}"))">@col.Etiqueta</th>
+                                        var col = columnas[ci];
+                                        <th class="align-end @(ci == 0 ? "tp-mes0" : "") @ClaseOrden($"{mes.Clave}|{col.Clave}")" @onclick="@(() => OrdenarPor($"{mes.Clave}|{col.Clave}"))">@col.Etiqueta</th>
                                     }
                                 }
                             }
                         }
                         @if (MesA is not null && MesB is not null)
                         {
-                            @foreach (var col in columnas)
+                            @for (var ci = 0; ci < columnas.Count; ci++)
                             {
-                                <th class="align-end @ClaseOrden($"cmp|{col.Clave}|delta")" @onclick="@(() => OrdenarPor($"cmp|{col.Clave}|delta"))">Δ @col.Etiqueta</th>
-                                <th class="align-end @ClaseOrden($"cmp|{col.Clave}|pct")" @onclick="@(() => OrdenarPor($"cmp|{col.Clave}|pct"))">%</th>
+                                var col = columnas[ci];
+                                var esInicio = ci == 0;
+                                var esFin = ci == columnas.Count - 1;
+                                <th class="align-end tp-cmp @(esInicio ? "tp-cmp-start" : "") @ClaseOrden($"cmp|{col.Clave}|delta")" @onclick="@(() => OrdenarPor($"cmp|{col.Clave}|delta"))">Δ @col.Etiqueta</th>
+                                <th class="align-end tp-cmp @(esFin ? "tp-cmp-end" : "") @ClaseOrden($"cmp|{col.Clave}|pct")" @onclick="@(() => OrdenarPor($"cmp|{col.Clave}|pct"))">%</th>
                             }
                         }
                     </tr>
@@ -90,19 +94,28 @@ else
                         {
                             @if (!SoloComparativa)
                             {
-                                @foreach (var mes in Meses)
+                                @for (var mi = 0; mi < Meses.Count; mi++)
                                 {
+                                    var mes = Meses[mi];
                                     @if (!MesColapsado(mes.Clave))
                                     {
                                         var metricasMes = fila.ObtenerMes(mes.Clave);
                                         var totalMesActual = totalesPorMes[mes.Clave];
-                                        @foreach (var col in columnas)
+                                        // Celdas mensuales: compara SIEMPRE contra el mismo dato del mes
+                                        // inmediatamente anterior en Meses (por posición, no por columna
+                                        // visible) -- igual que pintarTabla() en viajes_v14.html.
+                                        var metricasMesAnterior = mi > 0 ? fila.ObtenerMes(Meses[mi - 1].Clave) : null;
+                                        var esPrimerMes = mi == 0;
+                                        @for (var ci = 0; ci < columnas.Count; ci++)
                                         {
-                                            <td class="align-end tabular">
-                                                @col.Formato(col.Selector(metricasMes))
+                                            var col = columnas[ci];
+                                            var valorActual = col.Selector(metricasMes);
+                                            var valorAnterior = metricasMesAnterior is null ? 0 : col.Selector(metricasMesAnterior);
+                                            <td class="align-end tabular @(ci == 0 ? "tp-mes0" : "") @(col.EsSumable ? ClaseCelda(valorActual, valorAnterior, esPrimerMes) : "")">
+                                                @col.Formato(valorActual)
                                                 @if (MostrarParticipacion && col.EsSumable)
                                                 {
-                                                    <span class="tp-pct">@FormatoPorcentaje(Participacion(col.Selector(metricasMes), col.Selector(totalMesActual)))</span>
+                                                    <span class="tp-pct">@FormatoPorcentaje(Participacion(valorActual, col.Selector(totalMesActual)))</span>
                                                 }
                                             </td>
                                         }
@@ -113,12 +126,15 @@ else
                             {
                                 var a = fila.ObtenerMes(MesA);
                                 var b = fila.ObtenerMes(MesB);
-                                @foreach (var col in columnas)
+                                @for (var ci = 0; ci < columnas.Count; ci++)
                                 {
+                                    var col = columnas[ci];
                                     var va = col.Selector(a);
                                     var vb = col.Selector(b);
-                                    <td class="align-end tabular @ClaseDelta(va, vb)">@FormatoDeltaCelda(va, vb, col.Formato)</td>
-                                    <td class="align-end tabular @ClaseDelta(va, vb)">@FormatoPctCelda(va, vb)</td>
+                                    var esInicio = ci == 0;
+                                    var esFin = ci == columnas.Count - 1;
+                                    <td class="align-end tabular tp-cmp @(esInicio ? "tp-cmp-start" : "") @ClaseDelta(va, vb)">@FormatoDeltaCelda(va, vb, col.Formato)</td>
+                                    <td class="align-end tabular tp-cmp @(esFin ? "tp-cmp-end" : "") @ClaseDelta(va, vb)">@FormatoPctCelda(va, vb)</td>
                                 }
                             }
                         }
@@ -144,9 +160,10 @@ else
                                 @if (!MesColapsado(mes.Clave))
                                 {
                                     var totalMes = totalesPorMes[mes.Clave];
-                                    @foreach (var col in columnas)
+                                    @for (var ci = 0; ci < columnas.Count; ci++)
                                     {
-                                        <td class="align-end tabular">@col.Formato(col.Selector(totalMes))</td>
+                                        var col = columnas[ci];
+                                        <td class="align-end tabular @(ci == 0 ? "tp-mes0" : "")">@col.Formato(col.Selector(totalMes))</td>
                                     }
                                 }
                             }
@@ -155,12 +172,15 @@ else
                         {
                             var totalA = totalesPorMes.GetValueOrDefault(MesA, MetricasMes.Vacio);
                             var totalB = totalesPorMes.GetValueOrDefault(MesB, MetricasMes.Vacio);
-                            @foreach (var col in columnas)
+                            @for (var ci = 0; ci < columnas.Count; ci++)
                             {
+                                var col = columnas[ci];
                                 var va = col.Selector(totalA);
                                 var vb = col.Selector(totalB);
-                                <td class="align-end tabular">@FormatoDeltaCelda(va, vb, col.Formato)</td>
-                                <td class="align-end tabular">@FormatoPctCelda(va, vb)</td>
+                                var esInicio = ci == 0;
+                                var esFin = ci == columnas.Count - 1;
+                                <td class="align-end tabular tp-cmp @(esInicio ? "tp-cmp-start" : "")">@FormatoDeltaCelda(va, vb, col.Formato)</td>
+                                <td class="align-end tabular tp-cmp @(esFin ? "tp-cmp-end" : "")">@FormatoPctCelda(va, vb)</td>
                             }
                         }
                     }
@@ -178,7 +198,10 @@ else
     [Parameter] public bool MostrarViajes { get; set; } = true;
     [Parameter] public bool MostrarKms { get; set; } = true;
     [Parameter] public bool MostrarPeaje { get; set; } = true;
+    [Parameter] public bool MostrarVenta { get; set; } = true;
+    [Parameter] public bool MostrarPkm { get; set; } = true;
     [Parameter] public bool MostrarKmPorViaje { get; set; } = true;
+    [Parameter] public bool MostrarPvj { get; set; } = true;
     [Parameter] public bool MostrarParticipacion { get; set; }
     [Parameter] public bool SoloComparativa { get; set; }
 
@@ -203,7 +226,10 @@ else
         if (MostrarViajes) columnas.Add(new("viajes", "Viajes", m => m.Viajes, FormatoNumero, true));
         if (MostrarKms) columnas.Add(new("kms", "KMS", m => m.Km, FormatoNumero, true));
         if (MostrarPeaje) columnas.Add(new("peaje", "Peaje", m => m.Peaje, FormatoDinero, true));
+        if (MostrarVenta) columnas.Add(new("venta", "Venta", m => m.Venta, FormatoDinero, true));
+        if (MostrarPkm) columnas.Add(new("pkm", "$/KM", m => m.VentaPorKm, FormatoDinero, false));
         if (MostrarKmPorViaje) columnas.Add(new("kmv", "km/Viaje", m => m.KmPorViaje, FormatoNumero, false));
+        if (MostrarPvj) columnas.Add(new("pvj", "$/Viaje", m => m.VentaPorViaje, FormatoDinero, false));
 
         totalesPorMes = Meses.ToDictionary(
             m => m.Clave,
@@ -273,7 +299,10 @@ else
         "viajes" => m.Viajes,
         "kms" => m.Km,
         "peaje" => m.Peaje,
+        "venta" => m.Venta,
+        "pkm" => m.VentaPorKm,
         "kmv" => m.KmPorViaje,
+        "pvj" => m.VentaPorViaje,
         _ => 0,
     };
 
@@ -299,12 +328,31 @@ else
         return (pct >= 0 ? "+" : "") + pct.ToString("0.0", Cultura) + "%";
     }
 
+    // Bloque Δ/% (últimos 2 meses): igual==0 => neutro; si no, positivo/negativo por signo.
     private static string ClaseDelta(decimal a, decimal b)
     {
         if (a == 0 && b == 0)
             return "tp-neutro";
+        if (a == b)
+            return "tp-neutro";
 
-        return b >= a ? "tp-pos" : "tp-neg";
+        return b > a ? "tp-pos" : "tp-neg";
+    }
+
+    // Celdas mensuales: primer mes de la fila -> neutro; sin mes anterior en Meses -> neutro;
+    // valor anterior o actual == 0 -> neutro; igual -> neutro; si no, verde si sube, rojo si baja.
+    // Solo se aplica a columnas EsSumable (Viajes/KMS/Peaje/Venta) -- los ratios no se pintan por
+    // celda, igual que el HTML original.
+    private static string ClaseCelda(decimal actual, decimal anterior, bool esPrimerMes)
+    {
+        if (esPrimerMes)
+            return "tp-neutro";
+        if (anterior == 0 || actual == 0)
+            return "tp-neutro";
+        if (actual == anterior)
+            return "tp-neutro";
+
+        return actual > anterior ? "tp-pos" : "tp-neg";
     }
 
     private static string FormatoPorcentaje(decimal v) => $" {v.ToString("0.0", Cultura)}%";

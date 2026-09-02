@@ -1,0 +1,47 @@
+﻿@using System.Globalization
+@using Testing.Application.GetAllViajes
+
+<div class="re-tbl-wrap">
+    <table class="re-tabla">
+        <thead>
+            <tr><th>Operador</th><th>Viajes</th><th>KM</th><th>Venta</th><th>KM/Viaje</th><th>$/KM</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var f in Filas)
+            {
+                <tr>
+                    <td>@f.Operador</td>
+                    <td class="align-end tabular">@FormatoNumero(f.Viajes)</td>
+                    <td class="align-end tabular">@FormatoNumero(f.Kms)</td>
+                    <td class="align-end tabular">@FormatoDinero(f.Venta)</td>
+                    <td class="align-end tabular">@FormatoNumero(f.KmPorViaje)</td>
+                    <td class="align-end tabular">@FormatoDinero(f.VentaPorKm)</td>
+                </tr>
+            }
+        </tbody>
+        @if (FilaTotal is not null)
+        {
+            <tfoot>
+                <tr class="re-total">
+                    <td>@FilaTotal.Operador</td>
+                    <td class="align-end tabular">@FormatoNumero(FilaTotal.Viajes)</td>
+                    <td class="align-end tabular">@FormatoNumero(FilaTotal.Kms)</td>
+                    <td class="align-end tabular">@FormatoDinero(FilaTotal.Venta)</td>
+                    <td class="align-end tabular">@FormatoNumero(FilaTotal.KmPorViaje)</td>
+                    <td class="align-end tabular">@FormatoDinero(FilaTotal.VentaPorKm)</td>
+                </tr>
+            </tfoot>
+        }
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public List<OperadorFilaDto> Filas { get; set; } = [];
+    [Parameter] public OperadorFilaDto? FilaTotal { get; set; }
+
+    private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-MX");
+
+    private static string FormatoNumero(decimal v) => Math.Round(v).ToString("N0", Cultura);
+    private static string FormatoNumero(int v) => v.ToString("N0", Cultura);
+    private static string FormatoDinero(decimal v) => v.ToString("C0", Cultura);
+}

@@ -1,0 +1,73 @@
+﻿@using System.Globalization
+@using Testing.Application.GetAllViajes
+
+<section class="re-bloque re-rotacion">
+    <h3>Rotación de operadores</h3>
+
+    @if (Rotacion.PorSucursal.Count == 0)
+    {
+        <p class="re-vacio">Sin datos suficientes (se necesitan al menos 2 meses cerrados).</p>
+    }
+    else
+    {
+        <div class="re-tbl-wrap">
+            <table class="re-tabla">
+                <thead>
+                    <tr><th>Sucursal</th><th>Activos</th><th>Altas</th><th>Bajas</th><th>Δ% Viajes vs mes anterior</th><th>Lectura</th><th>Venta de bajas</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var f in Rotacion.PorSucursal)
+                    {
+                        <tr>
+                            <td>@f.Sucursal</td>
+                            <td class="align-end tabular">@f.Activos</td>
+                            <td class="align-end tabular">@f.Altas</td>
+                            <td class="align-end tabular">@f.Bajas</td>
+                            <td class="align-end tabular @ClaseDelta(f.DeltaViajesPorcentaje)">@FormatoDeltaPct(f.DeltaViajesPorcentaje)</td>
+                            <td class="@ClaseLectura(f.Lectura)">@f.Lectura</td>
+                            <td class="align-end tabular @(f.VentaBajas > 0 ? "re-neg" : "re-neutro")">@FormatoDinero(f.VentaBajas)</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="re-total">
+                        <td>@Rotacion.Total.Sucursal</td>
+                        <td class="align-end tabular">@Rotacion.Total.Activos</td>
+                        <td class="align-end tabular">@Rotacion.Total.Altas</td>
+                        <td class="align-end tabular">@Rotacion.Total.Bajas</td>
+                        <td class="align-end tabular @ClaseDelta(Rotacion.Total.DeltaViajesPorcentaje)">@FormatoDeltaPct(Rotacion.Total.DeltaViajesPorcentaje)</td>
+                        <td class="@ClaseLectura(Rotacion.Total.Lectura)">@Rotacion.Total.Lectura</td>
+                        <td class="align-end tabular @(Rotacion.Total.VentaBajas > 0 ? "re-neg" : "re-neutro")">@FormatoDinero(Rotacion.Total.VentaBajas)</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    }
+    <p class="re-nota">"Activos" y "Altas" en @MesUltimo no son mutuamente excluyentes: un operador nuevo que ya trabajó este mes cuenta en ambas columnas (mismo criterio que viajes_v14.html). "Venta de bajas" = venta acumulada (todos los meses cerrados) de los operadores cuyo último mes de actividad no es @MesUltimo.</p>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public RotacionOperadoresDto Rotacion { get; set; } = null!;
+    [Parameter] public string? MesUltimo { get; set; }
+
+    private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-MX");
+
+    private static string FormatoDinero(decimal v) => v.ToString("C0", Cultura);
+
+    private static string FormatoDeltaPct(decimal? v) => v is null ? "—" : ResumenEjecutivoCalculator.FormatoPorcentaje(v.Value);
+
+    private static string ClaseDelta(decimal? v) => v switch
+    {
+        null => "re-neutro",
+        > 0 => "re-pos",
+        < 0 => "re-neg",
+        _ => "re-neutro",
+    };
+
+    private static string ClaseLectura(string lectura) => lectura switch
+    {
+        "Sin bajas" => "re-pos",
+        "Volumen sostenido" => "re-neutro",
+        _ => "re-neg",
+    };
+}

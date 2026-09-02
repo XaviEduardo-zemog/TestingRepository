@@ -2,8 +2,8 @@
 
 /// <summary>
 /// Un KPI comparado mes actual vs. mes anterior, listo para pintar en KpiCard.
-/// Disponible=false cuando el KPI depende de Venta (sin fuente — ver Fase 5 / §54.85): en ese
-/// caso ValorActual/ValorAnterior quedan siempre null, nunca fabricados.
+/// Disponible=false solo si no hubo datos que agregar (nunca por falta de Venta -- TotalVenta =
+/// subtotal_factura, confirmado por el usuario para esta fase, ver §54.85 / auditoría Venta).
 /// </summary>
 public sealed record KpiComparativo(
     string Clave,
@@ -27,19 +27,8 @@ public sealed record KpiComparativo(
     public bool SinMesAnterior => Disponible && EtiquetaMesAnterior is null;
 }
 
-internal sealed record MetricaMensual(int Anio, int Mes, decimal Viajes, decimal Kms);
+internal sealed record MetricaMensual(int Anio, int Mes, decimal Viajes, decimal Kms, decimal Venta);
 
-/// <summary>
-/// Replica pintarKPIs()/calcMet() de viajes_v14.html: acumula por (Año,Mes) las contribuciones
-/// ya proyectadas de cada viaje (ContribucionViajeProyectada — Ida-only para Viajes, factor de
-/// CorteMensual aplicado), y compara el último mes con datos contra el anterior.
-///
-/// $/KM y $/Viaje son SIEMPRE razón de totales (Venta total / Kms totales, Venta total /
-/// Viajes totales) — nunca promedio de razones por viaje individual (regla explícita de la
-/// Fase 6). Hoy Venta no tiene fuente (Fase 5 / §54.85): Venta, $/KM y $/Viaje quedan
-/// Disponible=false — el cálculo de la razón ya está listo para cuando Venta exista, no hace
-/// falta rehacerlo, solo dejar de forzar null.
-/// </summary>
 public static class KpisComparativaCalculator
 {
     private static readonly string[] NombresMes =
@@ -55,7 +44,8 @@ public static class KpisComparativaCalculator
                 g.Key.Anio,
                 g.Key.Mes,
                 g.Sum(x => ContribucionViajeProyectada.Viajes(x.Viaje, corte)),
-                g.Sum(x => ContribucionViajeProyectada.Kms(x.Viaje, corte))))
+                g.Sum(x => ContribucionViajeProyectada.Kms(x.Viaje, corte)),
+                g.Sum(x => ContribucionViajeProyectada.Venta(x.Viaje, corte))))
             .OrderBy(m => m.Anio).ThenBy(m => m.Mes)
             .ToList();
 
@@ -68,14 +58,20 @@ public static class KpisComparativaCalculator
         decimal? kmPorViajeActual = actual is null ? null : actual.Viajes > 0 ? actual.Kms / actual.Viajes : 0;
         decimal? kmPorViajeAnterior = anterior is null ? null : anterior.Viajes > 0 ? anterior.Kms / anterior.Viajes : 0;
 
+        // $/KM y $/Viaje: razón de acumulados del propio mes -- NUNCA promedio de razones de viaje.
+        decimal? pkmActual = actual is null ? null : actual.Kms > 0 ? actual.Venta / actual.Kms : 0;
+        decimal? pkmAnterior = anterior is null ? null : anterior.Kms > 0 ? anterior.Venta / anterior.Kms : 0;
+        decimal? pvjActual = actual is null ? null : actual.Viajes > 0 ? actual.Venta / actual.Viajes : 0;
+        decimal? pvjAnterior = anterior is null ? null : anterior.Viajes > 0 ? anterior.Venta / anterior.Viajes : 0;
+
         return
         [
             new("viajes", "Viajes", true, null, actual?.Viajes, anterior?.Viajes, etiquetaActual, etiquetaAnterior),
             new("kms", "KMS", true, null, actual?.Kms, anterior?.Kms, etiquetaActual, etiquetaAnterior),
-            new("venta", "Venta", false, "Fuente no localizada — ver §54.85", null, null, etiquetaActual, etiquetaAnterior),
-            new("pkm", "$/KM", false, "Requiere Venta", null, null, etiquetaActual, etiquetaAnterior),
+            new("venta", "Venta", true, null, actual?.Venta, anterior?.Venta, etiquetaActual, etiquetaAnterior),
+            new("pkm", "$/KM", true, null, pkmActual, pkmAnterior, etiquetaActual, etiquetaAnterior),
             new("kpv", "KM/Viaje", true, null, kmPorViajeActual, kmPorViajeAnterior, etiquetaActual, etiquetaAnterior),
-            new("pvj", "$/Viaje", false, "Requiere Venta", null, null, etiquetaActual, etiquetaAnterior),
+            new("pvj", "$/Viaje", true, null, pvjActual, pvjAnterior, etiquetaActual, etiquetaAnterior),
         ];
     }
 

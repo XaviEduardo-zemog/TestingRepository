@@ -1,0 +1,147 @@
+﻿@using System.Globalization
+@using Testing.Application.GetAllViajes
+
+<section class="re-bloque re-operadores">
+    <h3>Operadores</h3>
+
+    <div class="re-operadores-controles">
+        <div class="re-field-group">
+            <label for="reOpSuc">Sucursal</label>
+            <select id="reOpSuc" class="re-select" @bind="sucursalSeleccionada">
+                @foreach (var s in Datos.Sucursales)
+                {
+                    <option value="@s">@s</option>
+                }
+            </select>
+        </div>
+
+        <div class="re-field-group">
+            <label for="reOpRub">Rankear por</label>
+            <select id="reOpRub" class="re-select" @bind="ranking">
+                <option value="venta">Venta</option>
+                <option value="km">KM</option>
+                <option value="viajes">Viajes</option>
+                <option value="pkm">$ por KM</option>
+                <option value="kmv">KM por Viaje</option>
+            </select>
+        </div>
+
+        <div class="re-field-group">
+            <label>Meses</label>
+            <div class="re-meses-checkbox">
+                @foreach (var mes in Datos.MesesDisponibles)
+                {
+                    var clave = (mes.Anio, mes.Mes);
+                    <label class="re-mes-check">
+                        <input type="checkbox" checked="@mesesSeleccionados.Contains(clave)" @onchange="() => ToggleMes(mes)" />
+                        @mes.Etiqueta
+                    </label>
+                }
+                <button type="button" class="re-btn" @onclick="SeleccionarAnioCompleto">Año completo</button>
+            </div>
+        </div>
+    </div>
+
+    @{
+        var filas = FilasOrdenadas();
+    }
+
+    @if (filas.Count == 0)
+    {
+        <p class="re-vacio">Sin operadores con viajes en la selección actual.</p>
+    }
+    else
+    {
+        <h4>Mejores 5</h4>
+        <TablaOperadores Filas="filas.Take(5).ToList()" />
+
+        <h4>Peores 5</h4>
+        <TablaOperadores Filas="filas.TakeLast(5).Reverse().ToList()" />
+
+        <h4>Todos (@filas.Count)</h4>
+        <TablaOperadores Filas="filas" FilaTotal="TotalFila()" />
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public OperadoresResumenDto Datos { get; set; } = null!;
+
+    private string? sucursalSeleccionada;
+    private HashSet<(int Anio, int Mes)> mesesSeleccionados = [];
+    private string ranking = "venta";
+
+    // TEMPORAL MVP: RE_prepOperadores ya preagregó Sucursal->Operador->Mes una sola vez
+    // (OperadoresRotacionCalculator.CalcularOperadores) — esta recombinación (sucursal, meses,
+    // orden) es pura interacción de UI, no vuelve a recorrer los viajes. Ver Fase 8 / §54.135.
+    protected override void OnParametersSet()
+    {
+        if (sucursalSeleccionada is null || !Datos.Sucursales.Contains(sucursalSeleccionada))
+            sucursalSeleccionada = Datos.Sucursales.FirstOrDefault();
+
+        if (mesesSeleccionados.Count == 0 && Datos.MesesDisponibles.Count > 0)
+        {
+            var ultimo = Datos.MesesDisponibles[^1];
+            mesesSeleccionados = [(ultimo.Anio, ultimo.Mes)];
+        }
+    }
+
+    private void ToggleMes(MesCerrado mes)
+    {
+        var clave = (mes.Anio, mes.Mes);
+        if (!mesesSeleccionados.Remove(clave))
+            mesesSeleccionados.Add(clave);
+    }
+
+    private void SeleccionarAnioCompleto() =>
+        mesesSeleccionados = Datos.MesesDisponibles.Select(m => (m.Anio, m.Mes)).ToHashSet();
+
+    private List<OperadorFilaDto> FilasOperadores()
+    {
+        if (sucursalSeleccionada is null || !Datos.PorSucursalOperadorMes.TryGetValue(sucursalSeleccionada, out var porOperador))
+            return [];
+
+        var filas = new List<OperadorFilaDto>();
+        foreach (var (operador, porMes) in porOperador)
+        {
+            var viajes = 0m;
+            var kms = 0m;
+            var venta = 0m;
+            foreach (var clave in mesesSeleccionados)
+            {
+                if (porMes.TryGetValue(clave, out var totales))
+                {
+                    viajes += totales.Viajes;
+                    kms += totales.Kms;
+                    venta += totales.Venta;
+                }
+            }
+
+            if (viajes > 0 || kms > 0 || venta > 0)
+                filas.Add(new OperadorFilaDto(operador, viajes, kms, venta));
+        }
+
+        return filas;
+    }
+
+    // Ranking: SIEMPRE sobre el valor ya sumado de cada operador (Viajes/KM/Venta totales de la
+    // selección) -- $/KM ordena por la propiedad VentaPorKm, que ya es razón de acumulados
+    // (Venta/Kms de ESE operador ya sumado), nunca promedio de $/KM de cada mes.
+    private List<OperadorFilaDto> FilasOrdenadas()
+    {
+        var filas = FilasOperadores();
+        return ranking switch
+        {
+            "km" => filas.OrderByDescending(f => f.Kms).ToList(),
+            "viajes" => filas.OrderByDescending(f => f.Viajes).ToList(),
+            "pkm" => filas.OrderByDescending(f => f.VentaPorKm).ToList(),
+            "kmv" => filas.OrderByDescending(f => f.KmPorViaje).ToList(),
+            _ => filas.OrderByDescending(f => f.Venta).ToList(),
+        };
+    }
+
+    private OperadorFilaDto TotalFila()
+    {
+        var filas = FilasOperadores();
+        return new OperadorFilaDto("TOTAL", filas.Sum(f => f.Viajes), filas.Sum(f => f.Kms), filas.Sum(f => f.Venta));
+    }
+}

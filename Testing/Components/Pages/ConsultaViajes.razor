@@ -1,4 +1,5 @@
 @page "/"
+@layout ViajesZemogLayout
 @rendermode InteractiveServer
 @using System.Globalization
 @using MediatR
@@ -47,18 +48,21 @@
                 <div class="vz-field-group">
                     <label for="vzAgrupar">Agrupar por</label>
                     <select id="vzAgrupar" class="vz-select" @bind="agruparPor" @bind:after="RecalcularPivote">
+                        <option value="jerarquia">Jerarquía (Cliente › Zona › Matriz › Sucursal)</option>
+                        <option value="jerarquia_tarifa">Jerarquía + Tarifa (Cliente › Zona › Matriz › Sucursal › Tarifa)</option>
+                        <option value="sucursal">Sucursal</option>
                         <option value="cliente">Cliente</option>
                         <option value="zona">Zona</option>
                         <option value="matriz">Matriz</option>
-                        <option value="expedicion">Expedición</option>
+                        <option value="tarifa">Tipo de tarifa</option>
+                        <option value="movimiento">Movimiento</option>
+                        <option value="destino">Destino</option>
+                        <option value="edestino" disabled>Edo. Destino — Pendiente</option>
                         <option value="operador">Operador</option>
                         <option value="unidad">Unidad</option>
-                        <option value="ruta">Ruta</option>
-                        <option value="destino">Destino</option>
-                        <option value="movimiento">Movimiento</option>
-                        <option value="semana">Semana</option>
+                        <option value="expedicion">Expedición</option>
                         <option value="dia">Día</option>
-                        <option value="jerarquia">Jerarquía (Cliente › Zona › Matriz › Sucursal)</option>
+                        <option value="semana">Semana</option>
                     </select>
                 </div>
 
@@ -113,10 +117,10 @@
             <label><input type="checkbox" @bind="mostrarViajes" /> Viajes</label>
             <label><input type="checkbox" @bind="mostrarKms" /> KMS</label>
             <label><input type="checkbox" @bind="mostrarPeaje" /> Peaje</label>
-            <label class="vz-metric-disabled" title="Fuente no localizada — ver §54.20"><input type="checkbox" disabled /> Venta</label>
-            <label class="vz-metric-disabled" title="Requiere Venta"><input type="checkbox" disabled /> $/km</label>
+            <label><input type="checkbox" @bind="mostrarVenta" /> Venta</label>
+            <label><input type="checkbox" @bind="mostrarPkm" /> $/km</label>
             <label><input type="checkbox" @bind="mostrarKmPorViaje" /> km/Viaje</label>
-            <label class="vz-metric-disabled" title="Requiere Venta"><input type="checkbox" disabled /> $/Viaje</label>
+            <label><input type="checkbox" @bind="mostrarPvj" /> $/Viaje</label>
             <label class="vz-metric-sep"><input type="checkbox" @bind="mostrarParticipacion" /> % Part.</label>
             <label><input type="checkbox" @bind="soloComparativa" /> Solo comparativa</label>
         </div>
@@ -170,7 +174,7 @@
                 </Actions>
             </DataStateBanner>
         }
-        else if (viajesFiltrados.Count > 0 && agruparPor == "jerarquia" && raizJerarquia is not null)
+        else if (viajesFiltrados.Count > 0 && agruparPor is "jerarquia" or "jerarquia_tarifa" && raizJerarquia is not null)
         {
             <div class="vz-arbol-controles">
                 <button type="button" class="vz-btn" @onclick="() => arbolRef?.ExpandirTodo()">Expandir todo</button>
@@ -179,10 +183,15 @@
             <ArbolJerarquiaViajes @ref="arbolRef"
                                   Raiz="raizJerarquia"
                                   Meses="mesesPivote"
+                                  EtiquetaJerarquia="@(agruparPor == "jerarquia_tarifa" ? "Cliente › Zona › Matriz › Sucursal › Tarifa" : "Cliente › Zona › Matriz › Sucursal")"
+                                  ProfundidadMaxima="@(agruparPor == "jerarquia_tarifa" ? 5 : 4)"
                                   MostrarViajes="mostrarViajes"
                                   MostrarKms="mostrarKms"
                                   MostrarPeaje="mostrarPeaje"
+                                  MostrarVenta="mostrarVenta"
+                                  MostrarPkm="mostrarPkm"
                                   MostrarKmPorViaje="mostrarKmPorViaje"
+                                  MostrarPvj="mostrarPvj"
                                   MostrarParticipacion="mostrarParticipacion"
                                   SoloComparativa="soloComparativa" />
         }
@@ -195,7 +204,10 @@
                                MostrarViajes="mostrarViajes"
                                MostrarKms="mostrarKms"
                                MostrarPeaje="mostrarPeaje"
+                               MostrarVenta="mostrarVenta"
+                               MostrarPkm="mostrarPkm"
                                MostrarKmPorViaje="mostrarKmPorViaje"
+                               MostrarPvj="mostrarPvj"
                                MostrarParticipacion="mostrarParticipacion"
                                SoloComparativa="soloComparativa" />
         }
@@ -235,7 +247,10 @@
     private bool mostrarViajes = true;
     private bool mostrarKms = true;
     private bool mostrarPeaje = true;
+    private bool mostrarVenta = true;
+    private bool mostrarPkm = true;
     private bool mostrarKmPorViaje = true;
+    private bool mostrarPvj = true;
     private bool mostrarParticipacion;
     private bool soloComparativa;
 
@@ -244,6 +259,11 @@
     private NodoJerarquia? raizJerarquia;
     private ArbolJerarquiaViajes? arbolRef;
 
+    // Cliente/Zona: CamposDerivadosViajes.ObtenerCliente/ObtenerZona. Sucursal = Matriz = _base
+    // (confirmado por el usuario en esta fase -- "no inventar otra Sucursal"). La cadena
+    // Matriz→Sucursal siempre tiene 1 solo hijo (mismo valor dos veces), así que el colapso de
+    // cadenas de hijo único (ArbolJerarquiaViajes.Caminar) la fusiona visualmente sola -- ver
+    // Fase 7 / §54.109 y la auditoría de Sucursal/Matriz de esta fase.
     private static readonly Func<ViajesDto, string?>[] NivelesJerarquia =
     [
         CamposDerivadosViajes.ObtenerCliente,
@@ -252,15 +272,26 @@
         v => v._base,
     ];
 
+    // "Jerarquía + Tarifa": mismo árbol de 4 niveles + un 5º nivel (Tipo de tarifa, desde Ruta).
+    private static readonly Func<ViajesDto, string?>[] NivelesJerarquiaConTarifa =
+    [
+        CamposDerivadosViajes.ObtenerCliente,
+        CamposDerivadosViajes.ObtenerZona,
+        v => v._base,
+        v => v._base,
+        CamposDerivadosViajes.ObtenerTarifa,
+    ];
+
     private static readonly Dictionary<string, string> EtiquetasAgrupacion = new()
     {
+        ["sucursal"] = "Sucursal",
         ["cliente"] = "Cliente",
         ["zona"] = "Zona",
         ["matriz"] = "Matriz",
+        ["tarifa"] = "Tipo de tarifa",
         ["expedicion"] = "Expedición",
         ["operador"] = "Operador",
         ["unidad"] = "Unidad",
-        ["ruta"] = "Ruta",
         ["destino"] = "Destino",
         ["movimiento"] = "Movimiento",
         ["semana"] = "Semana",
@@ -283,11 +314,20 @@
 
     protected override void OnInitialized()
     {
+        // Orden de cascada confirmado en esta fase (auditoría de filtros):
+        // Cliente -> Sucursal -> Mes -> Destino -> Expedición -> Zona -> Matriz -> Año -> Semana
+        // -> EdoDestino -> Operador -> Unidad -> Tarifa -> Movimiento.
+        // Sucursal = _base (ya NO Pendiente, confirmado por el usuario en esta fase -- ver
+        // auditoría Sucursal/Matriz). Tipo de tarifa = CamposDerivadosViajes.ObtenerTarifa (ya NO
+        // Pendiente, parser nuevo de esta fase -- ver auditoría de Tarifa para el conflicto de
+        // formato de Ruta detectado y no resuelto por inspección). Edo. Destino sigue Pendiente:
+        // el código entre paréntesis de Ruta (CodigoDestino) sigue sin confirmarse como
+        // EstadoDestino, a propósito separado (Fase 4 punto 4) -- ninguna de las reglas
+        // confirmadas en esta fase (Venta, Sucursal, Tarifa) resuelve esa duda en particular.
         filtros =
         [
             new() { Clave = "cliente", Etiqueta = "Cliente", Selector = CamposDerivadosViajes.ObtenerCliente, ConBuscador = true },
-            new() { Clave = "sucursal", Etiqueta = "Sucursal", Selector = _ => null, Disponible = false,
-                    MotivoPendiente = "Pendiente de backend: granularidad más fina que Matriz (_base), sin confirmar — ver §54.21" },
+            new() { Clave = "sucursal", Etiqueta = "Sucursal", Selector = v => v._base },
             new() { Clave = "mes", Etiqueta = "Mes", Selector = CamposDerivadosViajes.ObtenerMesEtiqueta },
             new() { Clave = "destino", Etiqueta = "Destino", Selector = CamposDerivadosViajes.ObtenerDestino, ConBuscador = true },
             new() { Clave = "expedicion", Etiqueta = "Expedición", Selector = v => v.expedicion },
@@ -299,12 +339,13 @@
                     MotivoPendiente = "Pendiente: el código entre paréntesis de Ruta (CodigoDestino) no está confirmado como EstadoDestino — se dejan separados a propósito, ver Fase 4 punto 4" },
             new() { Clave = "operador", Etiqueta = "Operador", Selector = v => v.operador1, ConBuscador = true },
             new() { Clave = "unidad", Etiqueta = "Unidad", Selector = v => v.id_unidad, ConBuscador = true },
-            new() { Clave = "tarifa", Etiqueta = "Tipo de tarifa", Selector = _ => null, Disponible = false,
-                    MotivoPendiente = "Pendiente: tarifaDeRuta() del HTML asume un formato de Ruta distinto al confirmado — ver §54.20/Fase 4 punto 7" },
+            new() { Clave = "tarifa", Etiqueta = "Tipo de tarifa", Selector = CamposDerivadosViajes.ObtenerTarifa },
             new() { Clave = "movimiento", Etiqueta = "Movimiento", Selector = CamposDerivadosViajes.ObtenerMovimiento },
         ];
     }
 
+    // Lee el tema persistido (localStorage, misma clave "viajesTema" que viajes_v14.html) tras
+    // el primer render -- JS interop no está disponible antes de eso en Blazor Server.
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
@@ -323,6 +364,8 @@
         await JS.InvokeVoidAsync("vzInterop.guardarTema", esTemaClaro ? "claro" : "oscuro");
     }
 
+    // Sin listener de scroll a propósito: en viajes_v14.html, #up tampoco depende de la posición
+    // de scroll -- solo se muestra mientras hay datos cargados.
     private async Task Subir() => await JS.InvokeVoidAsync("vzInterop.scrollArriba");
 
     private void ToggleMasFiltros() => mostrarMasFiltros = !mostrarMasFiltros;
@@ -404,13 +447,14 @@
 
     private string? ObtenerValorAgrupacion(ViajesDto v) => agruparPor switch
     {
+        "sucursal" => v._base,
         "cliente" => CamposDerivadosViajes.ObtenerCliente(v),
         "zona" => CamposDerivadosViajes.ObtenerZona(v),
         "matriz" => v._base,
+        "tarifa" => CamposDerivadosViajes.ObtenerTarifa(v),
         "expedicion" => v.expedicion,
         "operador" => v.operador1,
         "unidad" => v.id_unidad,
-        "ruta" => v.ruta,
         "destino" => CamposDerivadosViajes.ObtenerDestino(v),
         "movimiento" => CamposDerivadosViajes.ObtenerMovimiento(v),
         "semana" => CamposDerivadosViajes.ObtenerSemana(v),
@@ -425,7 +469,7 @@
     // — ver §54.22-54.23/§54.27.
     private void RecalcularPivote()
     {
-        if (agruparPor == "jerarquia")
+        if (agruparPor is "jerarquia" or "jerarquia_tarifa")
         {
             RecalcularArbol();
             mesesPivote = CalcularMesesPivote();
@@ -481,14 +525,14 @@
 
     // Replica la construcción del árbol de tablaJerarquia() en viajes_v14.html: cada viaje
     // acumula en la RAÍZ y en TODOS sus ancestros (Cliente, Cliente>Zona, ...), no solo en su
-    // nodo hoja — así Raiz.PorMes/Total ya son el gran total de la tabla, sin cálculo aparte
-    // (ver Testing/Features/JerarquiaViajesModels.cs). Reutiliza ContribucionViajeProyectada
-    // (Fase 6): mismo criterio Ida-only y misma proyección del mes abierto que el pivote plano
-    // y las tarjetas KPI — ver Fase 7 / §54.108.
+    // nodo hoja — así Raiz.PorMes/Total ya son el gran total de la tabla, sin cálculo aparte.
+    // "jerarquia_tarifa" usa un 5º nivel (Tipo de tarifa) -- mismo mecanismo, un arreglo de
+    // selectores más largo.
     private void RecalcularArbol()
     {
         var anterior = raizJerarquia;
         var nuevo = new NodoJerarquia { Id = "", Label = "TOTAL", Nivel = -1 };
+        var niveles = agruparPor == "jerarquia_tarifa" ? NivelesJerarquiaConTarifa : NivelesJerarquia;
 
         foreach (var viaje in viajesFiltrados)
         {
@@ -500,7 +544,7 @@
             Acumular(nuevo, mesClave, viaje);
 
             var nodo = nuevo;
-            foreach (var nivel in NivelesJerarquia)
+            foreach (var nivel in niveles)
             {
                 var clave = nivel(viaje) is { Length: > 0 } valor ? valor : "(sin dato)";
                 nodo = ObtenerOCrearHijo(nodo, clave);
@@ -535,7 +579,8 @@
         var metrica = new MetricasMes(
             (int)Math.Round(ContribucionViajeProyectada.Viajes(viaje, corte)),
             ContribucionViajeProyectada.Kms(viaje, corte),
-            ContribucionViajeProyectada.Peaje(viaje, corte));
+            ContribucionViajeProyectada.Peaje(viaje, corte),
+            ContribucionViajeProyectada.Venta(viaje, corte));
 
         nodo.PorMes[mesClave] = MetricasMes.Sumar(nodo.ObtenerMes(mesClave), metrica);
         nodo.Total = MetricasMes.Sumar(nodo.Total, metrica);
@@ -543,8 +588,8 @@
 
     // Conserva IsExpanded entre reconstrucciones del árbol (nuevos filtros/consulta) para que
     // el usuario no pierda lo que ya expandió — el HTML no lo necesita porque EXPAND vive
-    // aparte del árbol; aquí IsExpanded vive en el nodo (ver JerarquiaViajesModels.cs), así que
-    // hay que copiarlo explícitamente del árbol viejo al nuevo, emparejando por clave de nivel.
+    // aparte del árbol; aquí IsExpanded vive en el nodo, así que hay que copiarlo explícitamente
+    // del árbol viejo al nuevo, emparejando por clave de nivel.
     private static void PreservarExpansion(NodoJerarquia nuevo, NodoJerarquia anterior)
     {
         foreach (var (clave, hijoNuevo) in nuevo.Hijos)
@@ -559,15 +604,16 @@
 
     // Viajes cuenta solo tramos de Ida (ContribucionViajeProyectada.Viajes) y aplica el
     // factor de proyección del mes abierto por viaje, no por grupo — un grupo (ej. Semana)
-    // puede mezclar viajes de más de un mes, cada uno con su propio factor. Ver Fase 6 /
-    // §54.99 y CorteMensual.FactorPara(ViajesDto) en Testing.Application.
+    // puede mezclar viajes de más de un mes, cada uno con su propio factor. Venta/Kms/Peaje
+    // proyectan igual (auditoría de Venta de esta fase: TotalVenta = subtotal_factura).
     private static MetricasMes CalcularMetricas(IEnumerable<ViajesDto> grupo, CorteMensual? corte)
     {
         var lista = grupo as IReadOnlyCollection<ViajesDto> ?? grupo.ToList();
         var viajes = lista.Sum(v => ContribucionViajeProyectada.Viajes(v, corte));
         var kms = lista.Sum(v => ContribucionViajeProyectada.Kms(v, corte));
         var peaje = lista.Sum(v => ContribucionViajeProyectada.Peaje(v, corte));
-        return new MetricasMes((int)Math.Round(viajes), kms, peaje);
+        var venta = lista.Sum(v => ContribucionViajeProyectada.Venta(v, corte));
+        return new MetricasMes((int)Math.Round(viajes), kms, peaje, venta);
     }
 
     private async Task ConsultarAsync()

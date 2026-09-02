@@ -5,29 +5,33 @@ public sealed record SlideEstadoOperacionDto(string TextoCorte)
     public int PasosRevelado => 1;
 }
 
-/// <summary>Slide 2. Mejor/peor mes son 100% Venta — VentaPendienteMotivo cubre ambos (venta acumulada y mejor/peor mes).</summary>
+/// <summary>Slide 2. ViajesYtd/KmsYtd/VentaYtd son decimal -- TotalesPeriodo.Viajes ya es decimal (proyectado con factorMes).</summary>
 public sealed record SlideTresCifrasDto(
     string Periodo,
-    int ViajesYtd,
+    decimal VentaYtd,
+    decimal ViajesYtd,
     decimal KmsYtd,
-    string VentaPendienteMotivo)
+    (string MesEtiqueta, decimal Venta)? MejorMes,
+    (string MesEtiqueta, decimal Venta)? PeorMes)
 {
-    public int PasosRevelado => 3; // Venta acumulada / Viajes / KM, uno a la vez -- igual que 3 <div class="pkpi">
+    public int PasosRevelado => 3; // Venta / Viajes / KM, uno a la vez -- igual que 3 <div class="pkpi">
 }
 
-/// <summary>Slide 3. 100% Venta (gráfica de venta mensual) — no hay ninguna cifra no-Venta que mostrar en su lugar.</summary>
-public sealed record SlideAnioVistazoDto(string PendienteMotivo)
+/// <summary>Slide 3. Venta mensual, datos reales (RE_tendencia calcula la línea de tendencia real, ver ResumenPresentacion.razor).</summary>
+public sealed record SlideAnioVistazoDto(IReadOnlyList<(string MesEtiqueta, decimal Venta)> VentaPorMes)
 {
     public int PasosRevelado => 1;
 }
 
-/// <summary>Slide 4. Venta+Δ% pendiente; Viajes/KM+Δ% funcionales (mismos datos que ResumenBloqueNivel, Bloque 8.2).</summary>
+/// <summary>Slide 4. Mes actual (ya excluye el mes de avance si corresponde -- ver SlidesPresentacionCalculator.PrepararParaPresentacion) contra mes anterior.</summary>
 public sealed record SlideComparativoMensualDto(
     string MesActual,
     string MesAnterior,
-    string VentaPendienteMotivo,
-    int ViajesActual,
-    int ViajesAnterior,
+    decimal VentaActual,
+    decimal VentaAnterior,
+    decimal? DeltaVentaPorcentaje,
+    decimal ViajesActual,
+    decimal ViajesAnterior,
     decimal? DeltaViajesPorcentaje,
     decimal KmsActual,
     decimal KmsAnterior,
@@ -36,15 +40,13 @@ public sealed record SlideComparativoMensualDto(
     public int PasosRevelado => 3; // Venta / Viajes / KM
 }
 
-public sealed record FilaClientePresentacionDto(string Cliente, string VentaPendienteMotivo, int Viajes, decimal? DeltaViajesPorcentaje);
+public sealed record FilaClientePresentacionDto(string Cliente, decimal Venta, decimal? DeltaVentaPorcentaje, decimal Viajes, decimal? DeltaViajesPorcentaje);
 
-/// <summary>Slide 5. Por cliente: Venta+Δ% pendiente, Viajes+Δ% funcional (mismos datos que ResumenPorCliente, Bloque 8.3).</summary>
 public sealed record SlidePorClienteDto(IReadOnlyList<FilaClientePresentacionDto> Filas)
 {
-    // Texto fijo del HTML (L1706), no depende de Venta -- se muestra siempre.
     public const string NotaFija = "La señal: quien vende más con menos viajes está cambiando su mezcla — siguiente lámina.";
 
-    public int PasosRevelado => Filas.Count + 1; // una fila a la vez + la nota final
+    public int PasosRevelado => Filas.Count + 1;
 }
 
 public sealed record SlideMezclaExpedicionDto(
@@ -54,22 +56,22 @@ public sealed record SlideMezclaExpedicionDto(
     int Total,
     decimal PctComodato,
     decimal? DeltaPuntosPorcentuales,
-    string NotaCierrePendienteMotivo)
+    decimal VentaPorViajeFull,
+    decimal VentaPorViajeSencillo)
 {
-    public int PasosRevelado => 2; // mezcla por conteo / nota de cierre (Pendiente)
+    public int PasosRevelado => 2;
 }
 
 public sealed record SlideFugasDto(
-    string CaidaDestinoPendienteMotivo,
+    (string Destino, decimal VentaPerdida)? PeorDestinoCayendo,
     int AgenciasDesaparecidas,
-    string VentaAcumuladaPendienteMotivo)
+    decimal VentaAcumuladaPerdida)
 {
     public const string NotaFija = "Ese volumen no desapareció del mercado: si no lo movemos nosotros, lo mueve otro transportista.";
 
-    public int PasosRevelado => 3; // destinos (Pendiente) / agencias (funcional) / nota final
+    public int PasosRevelado => 3;
 }
 
-/// <summary>Slide 8. 100% texto estático del HTML (L1718-1722, estos 4 párrafos son literales, no se resumen ni se reformulan).</summary>
 public sealed record SlideQueSigueDto
 {
     public static readonly string[] Parrafos =
@@ -84,7 +86,7 @@ public sealed record SlideQueSigueDto
     public int PasosRevelado => Parrafos.Length + 1;
 }
 
-/// <summary>Los 8 slides, en el orden exacto de PR_build. TotalSlides existe para no repetir "8" en la UI.</summary>
+/// <summary>Los 8 slides, en el orden exacto de PR_build.</summary>
 public sealed record PresentacionResumenDto(
     SlideEstadoOperacionDto EstadoOperacion,
     SlideTresCifrasDto TresCifras,

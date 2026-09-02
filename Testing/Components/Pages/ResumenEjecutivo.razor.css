@@ -1,9 +1,10 @@
-
 .re-page {
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    padding: 8px 0 40px;
+    gap: 36px;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px 24px 60px;
 }
 
 .re-toolbar {
@@ -42,26 +43,24 @@
     margin: 0;
 }
 
-.re-page ::deep .re-bloque {
-    background: var(--vz-panel, #111111);
-    border: 1px solid var(--vz-line2, #1e1e1e);
-    border-radius: 10px;
-    padding: 16px 18px;
+/* Sin "cards": #resumenView en el HTML original NO tiene fondo/borde en cada <section> -- solo
+   .semaforo lo tiene (ver más abajo, .re-semaforo). El resto son secciones que fluyen, con un
+   título tipo h2 (dorado, uppercase, compacto, borde inferior) igual que el HTML. */
+.re-page ::deep .re-bloque h3 {
+    margin: 0 0 14px;
+    color: var(--vz-acc, #f59e0b);
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--vz-line5, #444444);
+    padding-bottom: 8px;
 }
 
-    .re-page ::deep .re-bloque h3 {
-        margin: 0 0 12px;
-        color: var(--vz-acc, #f59e0b);
-        font-size: 13px;
-        text-transform: uppercase;
-        letter-spacing: .5px;
-    }
-
-    .re-page ::deep .re-bloque h4 {
-        margin: 16px 0 8px;
-        color: var(--vz-txt, #e2e8f0);
-        font-size: 12px;
-    }
+.re-page ::deep .re-bloque h4 {
+    margin: 16px 0 8px;
+    color: var(--vz-txt, #e2e8f0);
+    font-size: 12px;
+}
 
 .re-page ::deep .re-nota {
     margin: 10px 0 0;
@@ -70,13 +69,18 @@
 }
 
 /* ---------- Semáforo (8.1) ---------- */
+/* Única sección con "card": el HTML original SÍ le da fondo/borde/radio a .semaforo
+   específicamente (L199), a diferencia de cualquier otra sección de #resumenView. */
 .re-page ::deep .re-semaforo-lista {
     list-style: none;
     margin: 0;
-    padding: 0;
+    padding: 18px 22px;
     display: flex;
     flex-direction: column;
     gap: 6px;
+    background: var(--vz-panel, #111111);
+    border: 1px solid var(--vz-line5, #444444);
+    border-radius: 8px;
 }
 
     .re-page ::deep .re-semaforo-lista li {
@@ -116,7 +120,7 @@
 }
 
     .re-page ::deep .re-tabla th {
-        padding: 6px 8px;
+        padding: 8px 10px;
         text-align: right;
         color: var(--vz-gris2, #64748b);
         font-weight: 600;
@@ -135,7 +139,7 @@
         }
 
     .re-page ::deep .re-tabla td {
-        padding: 6px 8px;
+        padding: 7px 10px;
         text-align: right;
         border-bottom: 1px solid var(--vz-panel, #111111);
         color: var(--vz-txt2, #cbd5e1);
@@ -161,12 +165,6 @@
         color: #ffffff;
     }
 
-.re-page ::deep .re-fila-pendiente td,
-.re-page ::deep .re-pendiente {
-    color: var(--vz-gris2, #64748b) !important;
-    font-style: italic;
-}
-
 .re-page ::deep .re-pos {
     color: var(--vz-verde, #4ade80) !important;
 }
@@ -179,18 +177,49 @@
     color: var(--vz-gris2, #64748b) !important;
 }
 
-.re-page ::deep .re-chart-pendiente {
-    margin-top: 12px;
-    padding: 10px;
-    border: 1px dashed var(--vz-line4, #333333);
-    border-radius: 8px;
-    color: var(--vz-gris2, #64748b);
-    font-size: 11px;
+/* Peor/mejor mes del año por Venta (Tendencia mensual, ResumenBloqueNivel.razor) -- Venta
+   desbloqueada en esta fase. Fila completa resaltada, no solo un valor. */
+.re-page ::deep tr.re-peor td {
+    background: rgba(239, 68, 68, .12) !important;
 }
 
-    .re-page ::deep .re-chart-pendiente p {
-        margin: 0 0 4px;
+.re-page ::deep tr.re-mejor td {
+    background: rgba(74, 222, 128, .12) !important;
+}
+
+/* Frecuencia por agencia (Bloque 8.7, ResumenArbolComparativo.razor): fila con alerta ⚠ Revisar. */
+.re-page ::deep tr.re-fila-alerta td {
+    background: rgba(239, 68, 68, .08) !important;
+}
+
+/* Dos gráficas lado a lado (Venta mensual / $/KM mensual) -- Zemog · Nivel general y cada tab de
+   Cliente (ResumenBloqueNivel.razor, reutilizado por ambos). */
+.re-page ::deep .re-graficas-fila {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+@media (max-width: 720px) {
+    .re-page ::deep .re-graficas-fila {
+        grid-template-columns: 1fr;
     }
+}
+
+/* Nota superior de Destinos que estamos dejando de dar (conteo/impacto/Top 25). */
+.re-page ::deep .re-nota-superior {
+    margin: 0 0 10px;
+    font-size: 12px;
+    color: var(--vz-txt2, #cbd5e1);
+}
+
+/* Headers ordenables (sorting activo dorado) -- Destinos cayendo, Asignación. Solo los th con
+   @onclick (los que de verdad ordenan) reciben cursor:pointer -- .is-active ya implica que ese
+   th es clickeable. */
+.re-page ::deep .re-tabla th.is-active {
+    color: var(--vz-acc, #f59e0b);
+}
 
 /* ---------- Tabs (Por Cliente / Árbol comparativo) ---------- */
 .re-page ::deep .re-tabs {

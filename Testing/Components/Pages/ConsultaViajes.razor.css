@@ -28,11 +28,27 @@
     background: var(--vz-bg);
     color: var(--vz-txt);
     font-family: Arial, Helvetica, sans-serif;
-    margin: -32px -32px 0;
+    /* Layout sin Navbar (auditoría P0 de esta fase): esta página ya no vive dentro de
+       .app-content de MainLayout (padding:32px) -- usa @layout ViajesZemogLayout, sin padding
+       propio, ver ese archivo. Antes de esta fase, margin:-32px -32px 0 cancelaba ese padding a
+       propósito ("bleed"); con el layout nuevo ya no hay nada que cancelar, así que ese margin
+       negativo se retira -- dejarlo habría estirado la página 32px más allá del viewport. */
+    margin: 0;
     padding: 0 24px 40px;
     min-height: calc(100vh - 1px);
 }
 
+    /* ---------- Fase 10: tema claro ----------
+   Valores tomados literal de body.claro en viajes_v14.html (L20-29). SOLO se redefinen los
+   tokens que también existen arriba en .vz-page (24 de los ~33 que tiene el HTML original —
+   los que no se usan todavía en este puerto no se agregan, ver Artifact §54.15x). --vz-head
+   NO se redefine aquí A PROPÓSITO: es la pieza clave de "filter bar negra, headers negros" —
+   .vz-header y los thead th de TablaPivoteViajes/ArbolJerarquiaViajes/ResumenEjecutivo usan
+   var(--vz-head), y como .claro no lo toca, ese valor oscuro seguido cae por cascada normal de
+   custom properties (ambas reglas aplican al MISMO elemento .vz-page.claro, así que "no declarar"
+   equivale a "seguir heredando el valor de la regla .vz-page de arriba"). .vz-toolbar (la barra
+   de filtros) SÍ necesita su propia regla explícita más abajo porque usa var(--vz-bg), que sí
+   cambia a claro -- sin ese override se pondría clara, no negra. */
     .vz-page.claro {
         --vz-bg: #FAFAF8;
         --vz-panel: #FFFFFF;
@@ -369,6 +385,10 @@
     }
 }
 
+/* La tabla de detalle (.vz-table*) de las Fases 1-2 se removió — la Fase 3
+   reemplaza esa vista por <TablaPivoteViajes>, con sus propios estilos
+   aislados en Testing/Components/Pages/TablaPivoteViajes.razor.css (.tp-*). */
+
 /* ---------- Fase 7: controles globales del árbol de jerarquía ---------- */
 .vz-arbol-controles {
     display: flex;
@@ -376,6 +396,10 @@
     margin-bottom: 8px;
 }
 
+/* ---------- Fase 10: botón flotante "volver arriba" ----------
+   Replica #up de viajes_v14.html (L150-153): NO depende de la posición de scroll, solo de si
+   hay datos cargados (ver ConsultaViajes.razor: "seConsulto && viajesCargados.Count > 0") --
+   mismo criterio exacto que el original, confirmado en la investigación de esta fase. */
 .vz-subir {
     position: fixed;
     bottom: 24px;

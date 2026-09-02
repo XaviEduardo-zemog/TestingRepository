@@ -1,27 +1,28 @@
 ﻿namespace Testing.Application.GetAllViajes;
 
 /// <summary>
-/// Fase 9 — Operadores (Bloque 8.9) y Rotación (Bloque 8.10), extraídos de
-/// ResumenEjecutivoCalculator a su propio archivo: son la parte del Resumen Ejecutivo de mayor
-/// valor operativo hoy (no dependen de Venta) y esta fase las trata como una unidad propia,
-/// testeable por separado. ResumenEjecutivoCalculator.Calcular() delega aquí — ver el Artifact
-/// sobre por qué NO se creó una query MediatR nueva: no consulta la base de datos, transforma
-/// viajes ya cargados, igual que el resto del Resumen Ejecutivo desde la Fase 8.
+/// Operadores (Bloque 8.9) y Rotación (Bloque 8.10). ResumenEjecutivoCalculator.Calcular()
+/// delega aquí -- no consulta la base de datos, transforma viajes ya cargados.
 ///
-/// Reglas exactas (dadas por el usuario en la Fase 9):
+/// Reglas exactas (Fase 9, sin cambios en esta fase):
 ///   Activo:  último mes de actividad == último mes del periodo.
 ///   Alta:    primer mes de actividad &gt; primer mes del periodo.
 ///   Baja:    último mes de actividad != último mes del periodo.
 ///   Lectura: "Sin bajas" si Bajas==0; si no, "Volumen sostenido" si Δ%Viajes &gt;= -5,
 ///            si no "⚠ Volumen a la baja".
-/// Los ratios del TOTAL (KM/Viaje, y $/KM el día que exista Venta) se calculan como
-/// KmTotal/ViajesTotal — NUNCA como promedio de los ratios individuales de cada operador.
+/// Los ratios del TOTAL (KM/Viaje, $/KM) se calculan como KmTotal/ViajesTotal y
+/// VentaTotal/KmTotal — NUNCA como promedio de los ratios individuales de cada operador.
+///
+/// AJUSTE DE ESTA FASE: recibe CorteMensual? corte y usa TotalesPeriodo.De(v, corte) -- Viajes/
+/// Kms/Venta ya proyectados con factorMes, igual que el resto del Resumen Ejecutivo desde que se
+/// confirmó que RE_render() (y todo lo que cuelga de él) opera directo sobre DATA ya proyectada,
+/// sin excluir el mes de corte.
 /// </summary>
 public static class OperadoresRotacionCalculator
 {
     // ---------- Bloque 8.9 — Operadores (replica RE_prepOperadores) ----------
 
-    public static OperadoresResumenDto CalcularOperadores(IReadOnlyList<ViajesDto> viajes, IReadOnlyList<MesCerrado> mesesCerrados)
+    public static OperadoresResumenDto CalcularOperadores(IReadOnlyList<ViajesDto> viajes, IReadOnlyList<MesCerrado> mesesCerrados, CorteMensual? corte)
     {
         var mesPorClave = mesesCerrados.ToDictionary(m => (m.Anio, m.Mes));
         var porSucursal = new Dictionary<string, Dictionary<string, Dictionary<(int, int), TotalesPeriodo>>>();
@@ -35,8 +36,7 @@ public static class OperadoresRotacionCalculator
             var sucursal = v._base ?? "(sin dato)";
             var operador = v.operador1 ?? "(sin dato)";
             var claveMes = (fecha.Value.Year, fecha.Value.Month);
-            var esIda = CamposDerivadosViajes.ObtenerMovimiento(v) == "Ida";
-            var contribucion = new TotalesPeriodo(esIda ? 1 : 0, v.kms_viaje ?? 0);
+            var contribucion = TotalesPeriodo.De(v, corte);
 
             if (!porSucursal.TryGetValue(sucursal, out var porOperador))
                 porSucursal[sucursal] = porOperador = [];
@@ -57,11 +57,11 @@ public static class OperadoresRotacionCalculator
     }
 
     // ---------- Bloque 8.10 — Rotación de operadores (replica RE_seccionRotacion) ----------
-    // Requiere al menos 2 meses cerrados (mismo guard que el resto de comparativos del Resumen
+    // Requiere al menos 2 meses (mismo guard que el resto de comparativos del Resumen
     // Ejecutivo) — el llamador (ResumenEjecutivoCalculator) es responsable de no invocar este
     // método con menos de 2 meses.
 
-    public static RotacionOperadoresDto CalcularRotacion(IReadOnlyList<ViajesDto> viajes, IReadOnlyList<MesCerrado> mesesCerrados)
+    public static RotacionOperadoresDto CalcularRotacion(IReadOnlyList<ViajesDto> viajes, IReadOnlyList<MesCerrado> mesesCerrados, CorteMensual? corte)
     {
         var mesPorClave = mesesCerrados.ToDictionary(m => (m.Anio, m.Mes));
         var ultimo = mesesCerrados[^1];
@@ -71,6 +71,7 @@ public static class OperadoresRotacionCalculator
         var minPorOperador = new Dictionary<string, MesCerrado>();
         var maxPorOperador = new Dictionary<string, MesCerrado>();
         var sucursalPorOperador = new Dictionary<string, string>();
+        var ventaPorOperador = new Dictionary<string, decimal>();
 
         foreach (var v in viajes)
         {
@@ -90,10 +91,15 @@ public static class OperadoresRotacionCalculator
                 maxPorOperador[operador] = mes;
                 sucursalPorOperador[operador] = sucursal; // sucursal de la aparición más reciente del operador
             }
+
+            // Venta acumulada del operador en todos los meses del periodo -- usada más abajo solo
+            // para los operadores clasificados como Baja (VentaBajas, replica VtaBajas del HTML).
+            ventaPorOperador[operador] = ventaPorOperador.GetValueOrDefault(operador) + ContribucionViajeProyectada.Venta(v, corte);
         }
 
-        var acumuladoPorSucursal = new Dictionary<string, (int Activos, int Altas, int Bajas)>();
+        var acumuladoPorSucursal = new Dictionary<string, (int Activos, int Altas, int Bajas, decimal VentaBajas)>();
         int nActTotal = 0, nAltasTotal = 0, nBajasTotal = 0;
+        decimal ventaBajasTotal = 0;
 
         foreach (var operador in maxPorOperador.Keys)
         {
@@ -101,36 +107,33 @@ public static class OperadoresRotacionCalculator
             var max = maxPorOperador[operador];
             var min = minPorOperador[operador];
 
-            // Nombrar también el valor por defecto es obligatorio: si se deja (0, 0, 0) sin
-            // nombres, la inferencia de tipos de GetValueOrDefault combina ese literal (sin
-            // nombre) con el tipo del diccionario (con nombre) y el compilador DESCARTA los
-            // nombres del resultado — acc quedaría tipado como (int, int, int), sin .Activos/
-            // .Altas/.Bajas (error real reportado tras la Fase 8, corregido aquí desde el origen).
-            var acc = acumuladoPorSucursal.GetValueOrDefault(sucursal, (Activos: 0, Altas: 0, Bajas: 0));
+            // Nombrar también el valor por defecto es obligatorio: si se deja (0,0,0,0) sin
+            // nombres, la inferencia de tipos de GetValueOrDefault descarta los nombres del
+            // resultado (error real reportado en la Fase 8, corregido aquí desde el origen).
+            var acc = acumuladoPorSucursal.GetValueOrDefault(sucursal, (Activos: 0, Altas: 0, Bajas: 0, VentaBajas: 0m));
 
-            // Activo: último mes de actividad == último mes del periodo.
             var esActivo = max.Anio == ultimo.Anio && max.Mes == ultimo.Mes;
-            // Alta: primer mes de actividad > primer mes del periodo.
             var esAlta = EsAnterior(primerMes, min); // min > primerMes
-            // Baja: último mes de actividad != último mes del periodo.
             var esBaja = !esActivo;
 
-            // Activo y Alta NO son mutuamente excluyentes — un operador nuevo que ya trabajó
-            // en el último mes cuenta en ambas columnas, igual que el HTML.
+            // Activo y Alta NO son mutuamente excluyentes.
             if (esActivo) { acc.Activos++; nActTotal++; }
             if (esAlta) { acc.Altas++; nAltasTotal++; }
-            if (esBaja) { acc.Bajas++; nBajasTotal++; }
+            if (esBaja)
+            {
+                acc.Bajas++;
+                nBajasTotal++;
+                var venta = ventaPorOperador.GetValueOrDefault(operador);
+                acc.VentaBajas += venta;
+                ventaBajasTotal += venta;
+            }
 
             acumuladoPorSucursal[sucursal] = acc;
         }
 
-        var viajesPorSucursalMes = new Dictionary<(string Sucursal, MesCerrado Mes), int>();
+        var viajesPorSucursalMes = new Dictionary<(string Sucursal, MesCerrado Mes), decimal>();
         foreach (var v in viajes)
         {
-            var esIda = CamposDerivadosViajes.ObtenerMovimiento(v) == "Ida";
-            if (!esIda)
-                continue;
-
             var fecha = CamposDerivadosViajes.ObtenerFechaNegocio(v);
             if (fecha is null)
                 continue;
@@ -144,41 +147,38 @@ public static class OperadoresRotacionCalculator
                 continue;
 
             var sucursal = v._base ?? "(sin dato)";
-            viajesPorSucursalMes[(sucursal, mes)] = viajesPorSucursalMes.GetValueOrDefault((sucursal, mes)) + 1;
+            var clave = (sucursal, mes);
+            viajesPorSucursalMes[clave] = viajesPorSucursalMes.GetValueOrDefault(clave) + ContribucionViajeProyectada.Viajes(v, corte);
         }
 
         var filas = new List<RotacionSucursalDto>();
-        int totalA = 0, totalB = 0;
+        decimal totalA = 0, totalB = 0;
 
-        foreach (var (sucursal, (activos, altas, bajas)) in acumuladoPorSucursal.OrderBy(kv => kv.Key, StringComparer.CurrentCultureIgnoreCase))
+        foreach (var (sucursal, (activos, altas, bajas, ventaBajas)) in acumuladoPorSucursal.OrderBy(kv => kv.Key, StringComparer.CurrentCultureIgnoreCase))
         {
             var a = viajesPorSucursalMes.GetValueOrDefault((sucursal, anterior));
             var b = viajesPorSucursalMes.GetValueOrDefault((sucursal, ultimo));
             totalA += a;
             totalB += b;
 
-            filas.Add(new RotacionSucursalDto(sucursal, activos, altas, bajas, CalcularDeltaViajes(a, b), CalcularLectura(bajas, a, b)));
+            filas.Add(new RotacionSucursalDto(sucursal, activos, altas, bajas, CalcularDeltaViajes(a, b), CalcularLectura(bajas, a, b), ventaBajas));
         }
 
         // El Δ% y la Lectura del TOTAL se recalculan sobre ΣViajes anterior/ΣViajes último de
         // TODAS las sucursales — nunca promediando el Δ% de cada sucursal individual.
-        var total = new RotacionSucursalDto("TOTAL", nActTotal, nAltasTotal, nBajasTotal, CalcularDeltaViajes(totalA, totalB), CalcularLectura(nBajasTotal, totalA, totalB));
+        var total = new RotacionSucursalDto("TOTAL", nActTotal, nAltasTotal, nBajasTotal, CalcularDeltaViajes(totalA, totalB), CalcularLectura(nBajasTotal, totalA, totalB), ventaBajasTotal);
 
         return new RotacionOperadoresDto(filas, total);
     }
 
-    // Delta expuesto a la UI: null si no hay base (más honesto que el 0% que devuelve el HTML
-    // cuando v.a===0). CalcularLectura, en cambio, replica el fallback a 0 EXACTO del HTML para
-    // la regla de "Lectura" (dv=v.a?...: 0), a propósito — dos tratamientos distintos del mismo
-    // caso borde, cada uno justificado por separado.
-    private static decimal? CalcularDeltaViajes(int a, int b) => a > 0 ? (decimal)(b - a) / a * 100 : null;
+    private static decimal? CalcularDeltaViajes(decimal a, decimal b) => a > 0 ? (b - a) / a * 100 : null;
 
-    private static string CalcularLectura(int bajas, int a, int b)
+    private static string CalcularLectura(int bajas, decimal a, decimal b)
     {
         if (bajas == 0)
             return "Sin bajas";
 
-        var dv = a > 0 ? (decimal)(b - a) / a * 100 : 0m;
+        var dv = a > 0 ? (b - a) / a * 100 : 0m;
         return dv >= -5 ? "Volumen sostenido" : "⚠ Volumen a la baja";
     }
 

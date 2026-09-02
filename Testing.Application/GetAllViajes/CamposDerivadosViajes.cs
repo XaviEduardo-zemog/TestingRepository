@@ -3,11 +3,6 @@ using System.Text.RegularExpressions;
 
 namespace Testing.Application.GetAllViajes;
 
-/// <summary>
-/// Resultado de parsear el campo "ruta". CodigoDestino se deja separado de "EstadoDestino"
-/// a propósito: no se ha confirmado que sean el mismo concepto — ver §54.20 del Artifact
-/// y Fase 4 punto 4.
-/// </summary>
 public sealed record RutaParseada(
     bool Reconocida,
     string? CodigoRuta,
@@ -27,55 +22,69 @@ public sealed record RutaParseada(
 /// </summary>
 public static class CamposDerivadosViajes
 {
-    // Formato confirmado por el usuario (chat, 2026-08-28) sobre datos reales:
-    //   "<código> Origen (CodOrigen) - Destino (CodDestino) - I|R"
-    //   Ejemplo ida:     800059 Victor Rosales (CCZ) - Torreon (DCMNorte) - I
-    //   Ejemplo regreso: 059800 Torreon (DCMNorte) - Victor Rosales (CCZ) - R
-    // Es distinto del formato que tarifaDeRuta() del HTML asume (prefijo "C."/"P." tras el
-    // primer espacio) — por eso NO se implementa Tarifa en esta fase (ver ObtenerTarifa).
-    private static readonly Regex PatronRuta = new(
-        @"^(?<codigo>\S+)\s+(?<origen>.+?)\s*\((?<codorigen>[^()]*)\)\s*-\s*(?<destino>.+?)\s*\((?<coddestino>[^()]*)\)\s*-\s*(?<mov>[IR])\s*$",
+    private static readonly Regex PatronCodigoEntreParentesis = new(
+        @"^(?<texto>.+?)\s*\((?<codigo>[^()]*)\)\s*$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
-    /// <summary>
-    /// Parsea "ruta" con el formato confirmado. Heurística: si el texto no calza con el
-    /// patrón exacto, devuelve RutaParseada.NoReconocida en vez de adivinar — no se ha
-    /// validado este patrón contra el universo completo de valores reales de Ruta.
-    /// </summary>
+    private static readonly Regex PatronCodigoInicial = new(
+        @"^(?<codigo>\S+)\s+(?<resto>.+)$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     public static RutaParseada ParsearRuta(string? ruta)
     {
         if (string.IsNullOrWhiteSpace(ruta))
             return RutaParseada.NoReconocida;
 
-        var match = PatronRuta.Match(ruta.Trim());
-        if (!match.Success)
-            return RutaParseada.NoReconocida;
+        var s = ruta.Trim();
+        var movimiento = ObtenerMovimiento(s);
 
-        var movimiento = match.Groups["mov"].Value.ToUpperInvariant() switch
-        {
-            "I" => "Ida",
-            "R" => "Regreso",
-            _ => null,
-        };
+        var partes = s.Split(" - ", StringSplitOptions.None);
+        if (partes.Length < 3)
+            return RutaParseada.NoReconocida with { Movimiento = movimiento }; // Origen/Destino no se pudieron extraer, pero Movimiento (si se reconoció) se conserva -- no depende de este parseo.
 
-        return new RutaParseada(
-            Reconocida: true,
-            CodigoRuta: match.Groups["codigo"].Value,
-            Origen: NuloSiVacio(match.Groups["origen"].Value),
-            CodigoOrigen: NuloSiVacio(match.Groups["codorigen"].Value),
-            Destino: NuloSiVacio(match.Groups["destino"].Value),
-            CodigoDestino: NuloSiVacio(match.Groups["coddestino"].Value),
-            Movimiento: movimiento);
+        // Si hay más de 3 partes (un nombre de lugar que por casualidad contuviera " - "), se
+        // toma la primera como origen, la última como dirección, y todo lo de en medio se une de
+        // vuelta como destino -- heurística conservadora, no se ha visto un caso así en los
+        // ejemplos confirmados.
+        var origenCrudo = partes[0];
+        var destinoCrudo = string.Join(" - ", partes.Skip(1).Take(partes.Length - 2)).Trim();
+
+        var codigoInicial = PatronCodigoInicial.Match(origenCrudo);
+        var codigoRuta = codigoInicial.Success ? codigoInicial.Groups["codigo"].Value : null;
+        var origenSinCodigo = codigoInicial.Success ? codigoInicial.Groups["resto"].Value : origenCrudo;
+
+        var (origen, codigoOrigen) = SepararCodigoEntreParentesis(origenSinCodigo);
+        var (destino, codigoDestino) = SepararCodigoEntreParentesis(destinoCrudo);
+
+        return new RutaParseada(true, codigoRuta, origen, codigoOrigen, destino, codigoDestino, movimiento);
+    }
+
+    private static (string? Texto, string? Codigo) SepararCodigoEntreParentesis(string valor)
+    {
+        var match = PatronCodigoEntreParentesis.Match(valor);
+        return match.Success
+            ? (NuloSiVacio(match.Groups["texto"].Value), NuloSiVacio(match.Groups["codigo"].Value))
+            : (NuloSiVacio(valor), null);
     }
 
     public static string? ObtenerDestino(ViajesDto viaje) => ParsearRuta(viaje.ruta).Destino;
 
-    public static string? ObtenerMovimiento(ViajesDto viaje) => ParsearRuta(viaje.ruta).Movimiento;
+    public static string? ObtenerMovimiento(ViajesDto viaje) => ObtenerMovimiento(viaje.ruta);
 
-    /// <summary>
-    /// El código entre paréntesis junto al destino (ej. "DCMNorte"). Deliberadamente NO se
-    /// llama "EstadoDestino" — esa equivalencia no está confirmada (Fase 4 punto 4).
-    /// </summary>
+    private static string? ObtenerMovimiento(string? ruta)
+    {
+        if (string.IsNullOrWhiteSpace(ruta))
+            return null;
+
+        var s = ruta.TrimEnd();
+        if (s.EndsWith("- I", StringComparison.OrdinalIgnoreCase) || s.EndsWith("-I", StringComparison.OrdinalIgnoreCase))
+            return "Ida";
+        if (s.EndsWith("- R", StringComparison.OrdinalIgnoreCase) || s.EndsWith("-R", StringComparison.OrdinalIgnoreCase))
+            return "Regreso";
+
+        return null;
+    }
+
     public static string? ObtenerCodigoDestino(ViajesDto viaje) => ParsearRuta(viaje.ruta).CodigoDestino;
 
     private static string? NuloSiVacio(string valor)
@@ -84,15 +93,6 @@ public static class CamposDerivadosViajes
         return recortado.Length > 0 ? recortado : null;
     }
 
-    /// <summary>
-    /// Deriva Cliente/Zona de "tipo_operacion" (regla confirmada por el usuario, chat
-    /// 2026-08-28, con solo 2-3 valores de ejemplo vistos: "Arca", "Modelo metro", "Modelo
-    /// occidente"): primer token = Cliente, resto = Zona. tipo_operacion CONFIRMADO por el
-    /// usuario (2026-08-31) como ya devuelto por sp_ConsultaViajesZemog y agregado a
-    /// ViajesDto — ver Fase 4 punto 1 / §54.68. El listado completo de valores reales de
-    /// tipo_operacion sigue sin confirmarse — validar contra datos reales antes de confiar
-    /// al 100% en producción.
-    /// </summary>
     public static (string? Cliente, string? Zona) ParsearClienteZona(string? tipoOperacion)
     {
         if (string.IsNullOrWhiteSpace(tipoOperacion))
@@ -116,12 +116,8 @@ public static class CamposDerivadosViajes
     private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-MX");
 
     /// <summary>
-    /// Fecha de negocio usada para Año/Mes/Semana/Día: fecha_ingreso, la misma columna que ya
-    /// usaba ConsultaViajes.razor antes de esta fase (heredado del código original, no
-    /// re-confirmado contra el SP). El SP recibe @tipo_fecha = NULL siempre hoy
-    /// (ConsultaViajesFilterModel.TipoFecha nunca se expone en la UI desde la Fase 1) — no se
-    /// sabe con certeza qué columna de fecha usa el SP internamente cuando tipo_fecha es NULL,
-    /// ni si coincide con fecha_ingreso. Riesgo documentado, no resuelto — ver Fase 4 punto 6.
+    /// Fecha de negocio usada para Año/Mes/Semana/Día: fecha_ingreso. Riesgo documentado, no
+    /// resuelto — ver Fase 4 punto 6.
     /// </summary>
     public static DateTime? ObtenerFechaNegocio(ViajesDto viaje)
     {
@@ -153,13 +149,24 @@ public static class CamposDerivadosViajes
         return fecha is null ? null : ISOWeek.GetWeekOfYear(fecha.Value).ToString();
     }
 
-    /// <summary>
-    /// NO implementado a propósito: tarifaDeRuta() del HTML original asume un formato de Ruta
-    /// con prefijo "C."/"P." tras el primer espacio, que NO coincide con el formato real
-    /// confirmado (ver PatronRuta arriba, y §54.20 del Artifact). Se deja como stub
-    /// documentado — no se omite en silencio — hasta validar contra más datos reales. No
-    /// confundir con "expedicion", que es un campo real y distinto ya disponible en
-    /// ViajesDto.expedicion.
-    /// </summary>
-    public static string? ObtenerTarifa(ViajesDto viaje) => null;
+    public static string ObtenerTarifa(ViajesDto viaje)
+    {
+        var s = viaje.ruta?.Trim();
+        if (string.IsNullOrEmpty(s))
+            return "(sin tarifa)";
+
+        var i = s.IndexOf(' ');
+        if (i < 0)
+            return "Viaje";
+
+        var restante = s.Length - (i + 1);
+        var token = restante <= 0 ? "" : s.Substring(i + 1, Math.Min(2, restante));
+
+        return token switch
+        {
+            "C." => "Comodato",
+            "P." => "Propio",
+            _ => "Viaje",
+        };
+    }
 }

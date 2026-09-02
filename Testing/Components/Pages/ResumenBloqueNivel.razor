@@ -10,28 +10,36 @@
         <div class="re-tbl-wrap">
             <table class="re-tabla">
                 <thead>
-                    <tr><th></th><th>@Bloque.MesAnterior.Value.Etiqueta</th><th>@Bloque.MesUltimo.Etiqueta</th><th>Δ</th></tr>
+                    <tr><th>Métrica</th><th>@Bloque.MesAnterior.Value.Etiqueta</th><th>@Bloque.MesUltimo.Etiqueta</th><th>Δ</th><th>%</th></tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td>Viajes</td>
                         <td class="align-end tabular">@FormatoNumero(Bloque.TotalesAnterior!.Viajes)</td>
                         <td class="align-end tabular">@FormatoNumero(Bloque.TotalesUltimo.Viajes)</td>
+                        <td class="align-end tabular @ClaseDelta(Bloque.DeltaViajesPctVsAnterior)">@FormatoDeltaAbs(Bloque.TotalesUltimo.Viajes - Bloque.TotalesAnterior.Viajes, FormatoNumero)</td>
                         <td class="align-end tabular @ClaseDelta(Bloque.DeltaViajesPctVsAnterior)">@FormatoDeltaPct(Bloque.DeltaViajesPctVsAnterior)</td>
                     </tr>
                     <tr>
-                        <td>KMS</td>
+                        <td>KM</td>
                         <td class="align-end tabular">@FormatoNumero(Bloque.TotalesAnterior.Kms)</td>
                         <td class="align-end tabular">@FormatoNumero(Bloque.TotalesUltimo.Kms)</td>
+                        <td class="align-end tabular @ClaseDelta(Bloque.DeltaKmsPctVsAnterior)">@FormatoDeltaAbs(Bloque.TotalesUltimo.Kms - Bloque.TotalesAnterior.Kms, FormatoNumero)</td>
                         <td class="align-end tabular @ClaseDelta(Bloque.DeltaKmsPctVsAnterior)">@FormatoDeltaPct(Bloque.DeltaKmsPctVsAnterior)</td>
                     </tr>
-                    <tr class="re-fila-pendiente">
+                    <tr>
                         <td>Venta</td>
-                        <td class="align-end" colspan="3">Pendiente — @PendienteVenta</td>
+                        <td class="align-end tabular">@FormatoDinero(Bloque.TotalesAnterior.Venta)</td>
+                        <td class="align-end tabular">@FormatoDinero(Bloque.TotalesUltimo.Venta)</td>
+                        <td class="align-end tabular @ClaseDelta(Bloque.DeltaVentaPctVsAnterior)">@FormatoDeltaAbs(Bloque.TotalesUltimo.Venta - Bloque.TotalesAnterior.Venta, FormatoDinero)</td>
+                        <td class="align-end tabular @ClaseDelta(Bloque.DeltaVentaPctVsAnterior)">@FormatoDeltaPct(Bloque.DeltaVentaPctVsAnterior)</td>
                     </tr>
-                    <tr class="re-fila-pendiente">
+                    <tr>
                         <td>$/KM</td>
-                        <td class="align-end" colspan="3">Pendiente — requiere Venta</td>
+                        <td class="align-end tabular">@FormatoDinero(Bloque.TotalesAnterior.PorKm)</td>
+                        <td class="align-end tabular">@FormatoDinero(Bloque.TotalesUltimo.PorKm)</td>
+                        <td class="align-end tabular @ClaseDelta(Bloque.DeltaPkmPctVsAnterior)">@FormatoDeltaAbs(Bloque.TotalesUltimo.PorKm - Bloque.TotalesAnterior.PorKm, FormatoDinero)</td>
+                        <td class="align-end tabular @ClaseDelta(Bloque.DeltaPkmPctVsAnterior)">@FormatoDeltaPct(Bloque.DeltaPkmPctVsAnterior)</td>
                     </tr>
                 </tbody>
             </table>
@@ -44,20 +52,29 @@
         <div class="re-tbl-wrap">
             <table class="re-tabla">
                 <thead>
-                    <tr><th></th><th>@Bloque.PrimerMesDelAnio.Etiqueta</th><th>@Bloque.MesUltimo.Etiqueta</th><th>Δ</th></tr>
+                    <tr><th>Métrica</th><th>@Bloque.PrimerMesDelAnio.Etiqueta</th><th>@Bloque.MesUltimo.Etiqueta</th><th>Δ</th><th>%</th></tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td>Viajes</td>
                         <td class="align-end tabular">@FormatoNumero(Bloque.TotalesPrimerMesDelAnio.Viajes)</td>
                         <td class="align-end tabular">@FormatoNumero(Bloque.TotalesUltimo.Viajes)</td>
+                        <td class="align-end tabular @ClaseDelta(Bloque.DeltaViajesPctVsEnero)">@FormatoDeltaAbs(Bloque.TotalesUltimo.Viajes - Bloque.TotalesPrimerMesDelAnio.Viajes, FormatoNumero)</td>
                         <td class="align-end tabular @ClaseDelta(Bloque.DeltaViajesPctVsEnero)">@FormatoDeltaPct(Bloque.DeltaViajesPctVsEnero)</td>
                     </tr>
                     <tr>
-                        <td>KMS</td>
+                        <td>KM</td>
                         <td class="align-end tabular">@FormatoNumero(Bloque.TotalesPrimerMesDelAnio.Kms)</td>
                         <td class="align-end tabular">@FormatoNumero(Bloque.TotalesUltimo.Kms)</td>
+                        <td class="align-end tabular @ClaseDelta(Bloque.DeltaKmsPctVsEnero)">@FormatoDeltaAbs(Bloque.TotalesUltimo.Kms - Bloque.TotalesPrimerMesDelAnio.Kms, FormatoNumero)</td>
                         <td class="align-end tabular @ClaseDelta(Bloque.DeltaKmsPctVsEnero)">@FormatoDeltaPct(Bloque.DeltaKmsPctVsEnero)</td>
+                    </tr>
+                    <tr>
+                        <td>Venta</td>
+                        <td class="align-end tabular">@FormatoDinero(Bloque.TotalesPrimerMesDelAnio.Venta)</td>
+                        <td class="align-end tabular">@FormatoDinero(Bloque.TotalesUltimo.Venta)</td>
+                        <td class="align-end tabular @ClaseDelta(Bloque.DeltaVentaPctVsEnero)">@FormatoDeltaAbs(Bloque.TotalesUltimo.Venta - Bloque.TotalesPrimerMesDelAnio.Venta, FormatoDinero)</td>
+                        <td class="align-end tabular @ClaseDelta(Bloque.DeltaVentaPctVsEnero)">@FormatoDeltaPct(Bloque.DeltaVentaPctVsEnero)</td>
                     </tr>
                 </tbody>
             </table>
@@ -67,40 +84,52 @@
     <h4>Tendencia mensual</h4>
     <div class="re-tbl-wrap">
         <table class="re-tabla">
-            <thead><tr><th>Mes</th><th>Viajes</th><th>KM</th></tr></thead>
+            <thead><tr><th>Mes</th><th>Viajes</th><th>KM</th><th>Venta</th><th>$/KM</th></tr></thead>
             <tbody>
                 @foreach (var (mes, totales) in Bloque.Tendencia)
                 {
-                    <tr>
+                    <tr class="@(EsPeorMes(mes) ? "re-peor" : EsMejorMes(mes) ? "re-mejor" : "")">
                         <td>@mes.Etiqueta</td>
                         <td class="align-end tabular">@FormatoNumero(totales.Viajes)</td>
                         <td class="align-end tabular">@FormatoNumero(totales.Kms)</td>
+                        <td class="align-end tabular">@FormatoDinero(totales.Venta)</td>
+                        <td class="align-end tabular">@FormatoDinero(totales.PorKm)</td>
                     </tr>
                 }
+                <tr class="re-total">
+                    <td>TOTAL</td>
+                    <td class="align-end tabular">@FormatoNumero(TotalTendencia().Viajes)</td>
+                    <td class="align-end tabular">@FormatoNumero(TotalTendencia().Kms)</td>
+                    <td class="align-end tabular">@FormatoDinero(TotalTendencia().Venta)</td>
+                    <td class="align-end tabular">@FormatoDinero(TotalTendencia().PorKm)</td>
+                </tr>
             </tbody>
         </table>
     </div>
-    <p class="re-nota">"Peor mes" (por venta) no se muestra: Pendiente — @PendienteVenta.</p>
+    @if (Bloque.PeorMesDelAnio is not null)
+    {
+        <p class="re-nota">Peor mes (por venta): <b>@Bloque.PeorMesDelAnio.Value.Mes.Etiqueta</b> (@FormatoDinero(Bloque.PeorMesDelAnio.Value.Venta)). Mejor mes: <b>@Bloque.MejorMesDelAnio!.Value.Mes.Etiqueta</b> (@FormatoDinero(Bloque.MejorMesDelAnio.Value.Venta)).</p>
+    }
 
-    <div class="re-chart-pendiente">
-        <p><strong>Venta mensual</strong> y <strong>$/KM mensual</strong>: Pendiente — @PendienteVenta.</p>
-        <p class="re-nota">
-            La integración de ApexCharts (Blazor-ApexCharts, ya referenciado en Testing.csproj/_Imports.razor/App.razor)
-            queda lista para activarse aquí en cuanto exista una fuente de Venta — ver Fase 8 / §54.128.
-        </p>
-    </div>
+    @if (Bloque.Tendencia.Count > 0)
+    {
+        <div class="re-graficas-fila">
+            <GraficaTendencia Titulo="Venta mensual" NombreSerieReal="Venta" Datos="Bloque.Tendencia.Select(t => (t.Mes.Etiqueta, t.Totales.Venta)).ToList()" />
+            <GraficaTendencia Titulo="$/KM mensual" NombreSerieReal="$/KM" Datos="Bloque.Tendencia.Select(t => (t.Mes.Etiqueta, t.Totales.PorKm)).ToList()" />
+        </div>
+    }
 </section>
 
 @code {
     [Parameter, EditorRequired] public string Titulo { get; set; } = "";
     [Parameter, EditorRequired] public BloqueNivelDto Bloque { get; set; } = null!;
 
-    private const string PendienteVenta = ResumenEjecutivoCalculator.PendienteVenta;
-
     private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-MX");
 
     private static string FormatoNumero(decimal v) => Math.Round(v).ToString("N0", Cultura);
-    private static string FormatoNumero(int v) => v.ToString("N0", Cultura);
+    private static string FormatoDinero(decimal v) => v.ToString("C0", Cultura);
+
+    private static string FormatoDeltaAbs(decimal delta, Func<decimal, string> formato) => (delta >= 0 ? "+" : "-") + formato(Math.Abs(delta));
 
     private static string FormatoDeltaPct(decimal? v) => v is null ? "—" : ResumenEjecutivoCalculator.FormatoPorcentaje(v.Value);
 
@@ -111,4 +140,11 @@
         < 0 => "re-neg",
         _ => "re-neutro",
     };
+
+    private bool EsPeorMes(MesCerrado mes) => Bloque.PeorMesDelAnio?.Mes == mes;
+    private bool EsMejorMes(MesCerrado mes) => Bloque.MejorMesDelAnio?.Mes == mes;
+
+    // TOTAL de la tendencia: Viajes/KM/Venta = suma; $/KM = VentaTotal/KMTotal (ratio de
+    // acumulados, nunca promedio de las filas de $/KM mensual).
+    private TotalesPeriodo TotalTendencia() => Bloque.Tendencia.Select(t => t.Totales).Aggregate(TotalesPeriodo.Vacio, TotalesPeriodo.Sumar);
 }

@@ -1,8 +1,3 @@
-/* TablaPivoteViajes — vive dentro de .vz-page (ConsultaViajes.razor.css),
-   hereda --vz-* por cascada normal de CSS custom properties (no por CSS
-   Isolation, que no cruza componentes). Fallbacks var(--token, #hex) para
-   que no se rompa si se usa fuera de ese contexto. */
-
 .tp-sin-metricas {
     color: var(--vz-gris2, #64748b);
     font-size: 12px;
@@ -25,7 +20,7 @@
 }
 
     .tp-table th {
-        padding: 6px 8px;
+        padding: 8px 10px;
         text-align: right;
         color: var(--vz-gris2, #64748b);
         font-weight: 600;
@@ -39,6 +34,7 @@
         z-index: 5;
         cursor: pointer;
         user-select: none;
+        box-shadow: 0 1px 0 var(--vz-line2, #1e1e1e);
     }
 
         .tp-table th:hover {
@@ -81,15 +77,44 @@
     border-right: 1px solid var(--vz-line, #1a1a1a);
 }
 
+/* Inicio de cada bloque de mes (primera métrica de ENE, FEB, MAR...) -- separación vertical
+   marcada, distinta del borde tenue entre columnas normales. Aplica a la 2ª fila del header Y a
+   las celdas de datos/TOTAL -- selector genérico th.tp-mes0/td.tp-mes0 (no solo thead). */
+th.tp-mes0,
+td.tp-mes0 {
+    border-left: 2px solid var(--vz-line3, #2a2a2a);
+}
+
 .tp-cmp-header {
     text-align: center !important;
     color: var(--vz-acc, #f59e0b);
     border-left: 2px solid var(--vz-acc, #f59e0b);
     border-right: 2px solid var(--vz-acc, #f59e0b);
+    border-top: 2px solid var(--vz-acc, #f59e0b);
+}
+
+/* Columnas Δ/% del bloque comparativo: más compactas que las columnas normales. */
+th.tp-cmp,
+td.tp-cmp {
+    padding-left: 5px;
+    padding-right: 5px;
+    font-size: 11px;
+}
+
+/* Bordes dorados SOLO en la primera y última celda de TODO el bloque comparativo (no por cada
+   columna/métrica) -- igual que th.cmpS/th.cmpE del HTML. */
+th.tp-cmp-start,
+td.tp-cmp-start {
+    border-left: 2px solid var(--vz-acc, #f59e0b);
+}
+
+th.tp-cmp-end,
+td.tp-cmp-end {
+    border-right: 2px solid var(--vz-acc, #f59e0b);
 }
 
 .tp-table td {
-    padding: 6px 8px;
+    padding: 7px 10px;
     text-align: right;
     border-bottom: 1px solid var(--vz-panel, #111111);
     color: var(--vz-txt2, #cbd5e1);
@@ -156,4 +181,10 @@
 
     .tp-table tfoot tr.tp-total td:first-child {
         z-index: 6;
+    }
+
+    /* Borde inferior dorado del bloque comparativo, en la fila TOTAL -- cierra el marco de 4 lados
+   (izquierdo/derecho en las celdas, superior en el header, inferior aquí). */
+    .tp-table tfoot tr.tp-total td.tp-cmp {
+        border-bottom: 2px solid var(--vz-acc, #f59e0b);
     }
