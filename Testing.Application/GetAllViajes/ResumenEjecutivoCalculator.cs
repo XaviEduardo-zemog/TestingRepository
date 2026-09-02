@@ -1,26 +1,10 @@
 ﻿namespace Testing.Application.GetAllViajes;
 
-/// <summary>Bloque 8.6 (RE_asigVals) — mezcla de Expedición (Comodato/Full/Sencillo) de UN nodo del árbol, último mes vs anterior, con $/viaje por tipo.</summary>
 public sealed record AsignacionExpedicionDto(
     int Comodato, int Full, int Sencillo, int Total,
-    decimal PctComodato, decimal? DeltaPuntosPorcentuales,
+    decimal? PctComodato, decimal? DeltaPuntosPorcentuales,
     decimal VentaPorViajeComodato, decimal VentaPorViajeFull, decimal VentaPorViajeSencillo);
 
-/// <summary>
-/// Replica el Resumen Ejecutivo de viajes_v14.html (RE_render()).
-///
-/// AJUSTE DE ESTA FASE (auditoría de "Tabla y Resumen Ejecutivo"): RE_render() se construye
-/// DIRECTO sobre DATA -- confirmado línea por línea que no existe ninguna exclusión del mes de
-/// corte/avance dentro de RE_render ni de ninguna función RE_ que llame. Esa regla ("avance",
-/// día de corte &lt; 28 => comparar con los 2 meses cerrados anteriores) es EXCLUSIVA de
-/// Presentación (PR_corteInfo/PR_build) -- este archivo YA NO la aplica. Si Presentación necesita
-/// esa exclusión, filtra los viajes ANTES de llamar a Calcular() (ver SlidesPresentacionCalculator).
-///
-/// "DATA ya contiene valores proyectados del mes de corte": todo aquí usa TotalesPeriodo.De(v,
-/// corte) / ContribucionViajeProyectada, igual que la vista principal -- antes de esta fase se
-/// usaban sumas crudas sin proyectar, lo cual era inconsistente con "Resumen Ejecutivo se
-/// construye directo sobre DATA" (que SÍ está proyectada).
-/// </summary>
 public static class ResumenEjecutivoCalculator
 {
     private static readonly string[] NombresMes =
@@ -73,7 +57,9 @@ public static class ResumenEjecutivoCalculator
 
         var semaforo = CalcularSemaforo(nivelZemog, porCliente, arbol, destinosCayendo, agenciasDesaparecidas, rotacion, hayComparativos);
 
-        return new ResumenEjecutivoDto(meses, hayComparativos, semaforo, nivelZemog, porCliente, arbol, destinosCayendo, agenciasDesaparecidas, operadores, rotacion);
+        var armadosDesconocidos = CalcularArmadosDesconocidos(viajesConFecha);
+
+        return new ResumenEjecutivoDto(meses, hayComparativos, semaforo, nivelZemog, porCliente, arbol, destinosCayendo, agenciasDesaparecidas, operadores, rotacion, armadosDesconocidos);
     }
 
     // ---------- Meses presentes en los datos (SIN exclusión -- ver nota de clase) ----------
@@ -145,15 +131,18 @@ public static class ResumenEjecutivoCalculator
             var mes = meses.First(m => m.Anio == claveMes.Anio && m.Mes == claveMes.Mes);
             var esIda = CamposDerivadosViajes.ObtenerMovimiento(v) == "Ida";
             var contribucion = TotalesPeriodo.De(v, corte);
+            // AJUSTE — Correcciones puntuales finales: Asignación se clasifica desde "armado"
+            // (fuente real de nuestro SP), NO desde "expedicion" -- ver CamposDerivadosViajes.ClasificarArmado.
+            var armado = CamposDerivadosViajes.ClasificarArmado(v);
 
-            AcumularComparativo(raiz, mes, ultimo, anterior, contribucion, v.expedicion, esIda);
+            AcumularComparativo(raiz, mes, ultimo, anterior, contribucion, armado, esIda);
 
             var nodo = raiz;
             foreach (var nivelSelector in NivelesArbol)
             {
                 var clave = nivelSelector(v) is { Length: > 0 } valor ? valor : "(sin dato)";
                 nodo = ObtenerOCrearHijoComparativo(nodo, clave);
-                AcumularComparativo(nodo, mes, ultimo, anterior, contribucion, v.expedicion, esIda);
+                AcumularComparativo(nodo, mes, ultimo, anterior, contribucion, armado, esIda);
             }
         }
 
@@ -170,68 +159,83 @@ public static class ResumenEjecutivoCalculator
         return nuevo;
     }
 
-    // Anual = TODO el rango cargado, SIN filtrar por año -- confirmado en esta fase:
-    // RE_arbol.suma() acumula n.y para cada fila de DATA incondicionalmente, sin comparar contra
-    // el año del último mes. (Antes de esta fase se filtraba por año -- corregido.)
     private static void AcumularComparativo(
         NodoComparativo nodo, MesCerrado mes, MesCerrado ultimo, MesCerrado? anterior,
-        TotalesPeriodo contribucion, string? expedicion, bool esIda)
+        TotalesPeriodo contribucion, string? armado, bool esIda)
     {
         nodo.Anual = TotalesPeriodo.Sumar(nodo.Anual, contribucion);
 
         if (mes.Anio == ultimo.Anio && mes.Mes == ultimo.Mes)
         {
             nodo.Ultimo = TotalesPeriodo.Sumar(nodo.Ultimo, contribucion);
-            if (esIda && expedicion is { Length: > 0 })
-                nodo.ExpedicionUltimo[expedicion] = nodo.ExpedicionUltimo.GetValueOrDefault(expedicion) + 1;
-            if (expedicion is { Length: > 0 })
-                nodo.ExpedicionVentaUltimo[expedicion] = nodo.ExpedicionVentaUltimo.GetValueOrDefault(expedicion) + contribucion.Venta;
+            if (esIda && armado is { Length: > 0 })
+                nodo.ArmadoUltimo[armado] = nodo.ArmadoUltimo.GetValueOrDefault(armado) + 1;
+            if (armado is { Length: > 0 })
+                nodo.ArmadoVentaUltimo[armado] = nodo.ArmadoVentaUltimo.GetValueOrDefault(armado) + contribucion.Venta;
         }
         else if (anterior is not null && mes.Anio == anterior.Value.Anio && mes.Mes == anterior.Value.Mes)
         {
             nodo.Anterior = TotalesPeriodo.Sumar(nodo.Anterior, contribucion);
-            if (esIda && expedicion is { Length: > 0 })
-                nodo.ExpedicionAnterior[expedicion] = nodo.ExpedicionAnterior.GetValueOrDefault(expedicion) + 1;
-            if (expedicion is { Length: > 0 })
-                nodo.ExpedicionVentaAnterior[expedicion] = nodo.ExpedicionVentaAnterior.GetValueOrDefault(expedicion) + contribucion.Venta;
+            if (esIda && armado is { Length: > 0 })
+                nodo.ArmadoAnterior[armado] = nodo.ArmadoAnterior.GetValueOrDefault(armado) + 1;
+            if (armado is { Length: > 0 })
+                nodo.ArmadoVentaAnterior[armado] = nodo.ArmadoVentaAnterior.GetValueOrDefault(armado) + contribucion.Venta;
         }
     }
 
-    // ---------- Bloque 8.6 — Asignación Comodato/Full/Sencillo, UN nodo (replica RE_asigVals) ----------
-    // Se llama una vez POR NODO renderizado (raíz y cada fila de la tabla jerárquica de
-    // Asignación) -- RE_jerAsig es una tabla jerárquica completa, no un resumen de una sola fila
-    // a nivel raíz (corregido en esta fase: antes solo se llamaba sobre la raíz).
-
     public static AsignacionExpedicionDto CalcularAsignacion(NodoComparativo nodo)
     {
-        var co = nodo.ExpedicionUltimo.GetValueOrDefault("Comodato");
-        var fu = nodo.ExpedicionUltimo.GetValueOrDefault("Full");
-        var se = nodo.ExpedicionUltimo.GetValueOrDefault("Sencillo");
+        const bool comodatoConfirmado = false;
+
+        var co = nodo.ArmadoUltimo.GetValueOrDefault("Comodato");
+        var fu = nodo.ArmadoUltimo.GetValueOrDefault("Full");
+        var se = nodo.ArmadoUltimo.GetValueOrDefault("Sencillo");
         var tt = co + fu + se;
-        var pc = tt > 0 ? (decimal)co / tt * 100 : 0m;
+        var pc = comodatoConfirmado && tt > 0 ? (decimal?)((decimal)co / tt * 100) : null;
 
-        var ca = nodo.ExpedicionAnterior.GetValueOrDefault("Comodato");
-        var fa = nodo.ExpedicionAnterior.GetValueOrDefault("Full");
-        var sa = nodo.ExpedicionAnterior.GetValueOrDefault("Sencillo");
+        var ca = nodo.ArmadoAnterior.GetValueOrDefault("Comodato");
+        var fa = nodo.ArmadoAnterior.GetValueOrDefault("Full");
+        var sa = nodo.ArmadoAnterior.GetValueOrDefault("Sencillo");
         var ta = ca + fa + sa;
-        var pa = ta > 0 ? (decimal?)((decimal)ca / ta * 100) : null;
+        var pa = comodatoConfirmado && ta > 0 ? (decimal?)((decimal)ca / ta * 100) : null;
 
-        var vCo = nodo.ExpedicionVentaUltimo.GetValueOrDefault("Comodato");
-        var vFu = nodo.ExpedicionVentaUltimo.GetValueOrDefault("Full");
-        var vSe = nodo.ExpedicionVentaUltimo.GetValueOrDefault("Sencillo");
+        var vCo = nodo.ArmadoVentaUltimo.GetValueOrDefault("Comodato");
+        var vFu = nodo.ArmadoVentaUltimo.GetValueOrDefault("Full");
+        var vSe = nodo.ArmadoVentaUltimo.GetValueOrDefault("Sencillo");
 
         return new AsignacionExpedicionDto(
-            co, fu, se, tt, pc, pa is null ? null : pc - pa.Value,
+            co, fu, se, tt,
+            PctComodato: pc,
+            DeltaPuntosPorcentuales: pc is null || pa is null ? null : pc - pa,
             VentaPorViajeComodato: co > 0 ? vCo / co : 0,
             VentaPorViajeFull: fu > 0 ? vFu / fu : 0,
             VentaPorViajeSencillo: se > 0 ? vSe / se : 0);
     }
 
-    // ---------- Bloque 8.5 — Destinos que estamos dejando de dar (replica RE_seccionDestinos) ----------
-    // Agrupa por Destino+Matriz (NO solo Destino). Condición: ventaAnterior>0 && ventaActual<
-    // ventaAnterior, SIN umbral mínimo. Orden: DeltaVenta ascendente (mayor pérdida primero).
-    // ImpactoTotal/TotalConCaida se calculan sobre TODOS los grupos que cumplen, ANTES del
-    // recorte a Top 25 -- el TOTAL de la tabla en pantalla es solo la suma de esas 25 filas.
+    private static List<(string Valor, decimal Viajes)> CalcularArmadosDesconocidos(IReadOnlyList<ViajesDto> viajes)
+    {
+        var acumulado = new Dictionary<string, decimal>();
+
+        foreach (var v in viajes)
+        {
+            if (CamposDerivadosViajes.ObtenerMovimiento(v) != "Ida")
+                continue;
+
+            if (CamposDerivadosViajes.ClasificarArmado(v) is not null)
+                continue; // ya se clasificó como Full o Sencillo
+
+            var crudo = CamposDerivadosViajes.NormalizarArmadoCrudo(v);
+            if (crudo is null)
+                continue; // sin dato, no es una categoría desconocida
+
+            acumulado[crudo] = acumulado.GetValueOrDefault(crudo) + 1;
+        }
+
+        return acumulado
+            .OrderByDescending(kv => kv.Value)
+            .Select(kv => (kv.Key, kv.Value))
+            .ToList();
+    }
 
     private static DestinosCayendoResumenDto CalcularDestinosCayendo(IReadOnlyList<ViajesDto> viajes, IReadOnlyList<MesCerrado> meses, CorteMensual? corte)
     {
@@ -275,11 +279,6 @@ public static class ResumenEjecutivoCalculator
             ImpactoTotal: candidatos.Sum(d => d.DeltaVenta),
             Top25: candidatos.Take(25).ToList());
     }
-
-    // ---------- Bloque 8.7 — Frecuencia por agencia (replica RE_jerFrec) ----------
-    // Tabla jerárquica completa (TODOS los niveles, no solo Matriz+) -- "Señal" se calcula para
-    // cada fila; el semáforo (8.1) es el único que filtra a nivel>=2 (confirmado en esta fase:
-    // antes se filtraba también la tabla, incorrectamente).
 
     public static List<FilaFrecuenciaDto> ConstruirTablaFrecuencia(NodoComparativo raiz)
     {

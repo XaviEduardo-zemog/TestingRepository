@@ -3,6 +3,11 @@ using System.Text.RegularExpressions;
 
 namespace Testing.Application.GetAllViajes;
 
+/// <summary>
+/// Resultado de parsear el campo "ruta". CodigoDestino se deja separado de "EstadoDestino"
+/// a propósito: no se ha confirmado que sean el mismo concepto — ver §54.20 del Artifact
+/// y Fase 4 punto 4.
+/// </summary>
 public sealed record RutaParseada(
     bool Reconocida,
     string? CodigoRuta,
@@ -22,6 +27,20 @@ public sealed record RutaParseada(
 /// </summary>
 public static class CamposDerivadosViajes
 {
+    // AUDITORÍA de Destino (esta fase, "ajuste fino"): se detectaron 2 formatos reales distintos
+    // de "ruta", confirmados por el usuario en dos ocasiones separadas:
+    //   Con paréntesis (Fase 4, chat 2026-08-28):
+    //     "800059 Victor Rosales (CCZ) - Torreon (DCMNorte) - I"
+    //   Sin paréntesis, con prefijo de tarifa (ejemplos de Tarifa de esta fase):
+    //     "33083301 C. Chihuahua - Juarez Chh. - I"
+    // AMBOS comparten la misma estructura de 3 partes separadas por " - ":
+    //   <código[+prefijo tarifa opcional] Origen> - <Destino[+código opcional]> - <I|R>
+    // Se parsea dividiendo por " - " (en vez del regex monolítico anterior, que exigía
+    // paréntesis en AMBOS lados y fallaba con el formato sin paréntesis) -- el Destino es
+    // siempre el segmento del MEDIO, con o sin "(codigo)" al final. Esto reemplaza el parser
+    // anterior (que solo reconocía el formato con paréntesis) por uno tolerante a ambos formatos
+    // conocidos -- sigue sin validarse contra el universo COMPLETO de valores reales de "ruta"
+    // (solo se conocen 4 ejemplos, 2 por formato), ver auditoría de Destino en el Artifact.
     private static readonly Regex PatronCodigoEntreParentesis = new(
         @"^(?<texto>.+?)\s*\((?<codigo>[^()]*)\)\s*$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -30,6 +49,13 @@ public static class CamposDerivadosViajes
         @"^(?<codigo>\S+)\s+(?<resto>.+)$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
+    /// <summary>
+    /// Parsea "ruta" dividiendo por " - " en 3 partes (origen, destino, dirección) -- tolerante a
+    /// ambos formatos confirmados (con o sin paréntesis de código junto a origen/destino). Si el
+    /// texto no tiene al menos 3 partes separadas por " - ", devuelve RutaParseada.NoReconocida
+    /// para Origen/Destino (Movimiento se resuelve aparte, ver ObtenerMovimiento -- no depende de
+    /// este parseo).
+    /// </summary>
     public static RutaParseada ParsearRuta(string? ruta)
     {
         if (string.IsNullOrWhiteSpace(ruta))
@@ -69,6 +95,13 @@ public static class CamposDerivadosViajes
 
     public static string? ObtenerDestino(ViajesDto viaje) => ParsearRuta(viaje.ruta).Destino;
 
+    /// <summary>
+    /// Ida/Regreso se decide EXCLUSIVAMENTE por el sufijo final de "ruta" (" - I" / " - R"), sin
+    /// depender del resto del parseo (auditoría P0 de la fase anterior: antes dependía de que
+    /// ParsearRuta matcheara la cadena completa con paréntesis, y una fila sin paréntesis
+    /// devolvía null -> 0 viajes silencioso). Sigue siendo la única pieza de "ruta" confirmada
+    /// en AMBOS formatos conocidos.
+    /// </summary>
     public static string? ObtenerMovimiento(ViajesDto viaje) => ObtenerMovimiento(viaje.ruta);
 
     private static string? ObtenerMovimiento(string? ruta)
@@ -85,6 +118,11 @@ public static class CamposDerivadosViajes
         return null;
     }
 
+    /// <summary>
+    /// El código entre paréntesis junto al destino (ej. "DCMNorte"), si lo hay -- null si el
+    /// formato de esta fila no trae paréntesis. Deliberadamente NO se llama "EstadoDestino" —
+    /// esa equivalencia no está confirmada (Fase 4 punto 4).
+    /// </summary>
     public static string? ObtenerCodigoDestino(ViajesDto viaje) => ParsearRuta(viaje.ruta).CodigoDestino;
 
     private static string? NuloSiVacio(string valor)
@@ -93,6 +131,11 @@ public static class CamposDerivadosViajes
         return recortado.Length > 0 ? recortado : null;
     }
 
+    /// <summary>
+    /// Deriva Cliente/Zona de "tipo_operacion" (regla confirmada por el usuario, chat
+    /// 2026-08-28): primer token = Cliente, resto = Zona. tipo_operacion confirmado como ya
+    /// devuelto por sp_ConsultaViajesZemog — ver Fase 4 punto 1 / §54.68.
+    /// </summary>
     public static (string? Cliente, string? Zona) ParsearClienteZona(string? tipoOperacion)
     {
         if (string.IsNullOrWhiteSpace(tipoOperacion))
@@ -149,6 +192,13 @@ public static class CamposDerivadosViajes
         return fecha is null ? null : ISOWeek.GetWeekOfYear(fecha.Value).ToString();
     }
 
+    /// <summary>
+    /// Tipo de tarifa desde "ruta" — replica tarifaDeRuta() de viajes_v14.html: recorta espacios,
+    /// vacío -> "(sin tarifa)"; busca el PRIMER espacio, sin espacio -> "Viaje"; toma exactamente
+    /// los 2 caracteres inmediatamente después de ese espacio y compara sensible a mayúsculas
+    /// contra "C." (Comodato) o "P." (Propio); cualquier otro valor -> "Viaje". Regla de
+    /// POSICIÓN, no de búsqueda de letras en cualquier parte de la cadena.
+    /// </summary>
     public static string ObtenerTarifa(ViajesDto viaje)
     {
         var s = viaje.ruta?.Trim();
@@ -169,4 +219,20 @@ public static class CamposDerivadosViajes
             _ => "Viaje",
         };
     }
+
+    public static string? ClasificarArmado(ViajesDto viaje)
+    {
+        if (string.IsNullOrWhiteSpace(viaje.armado))
+            return null;
+
+        return viaje.armado.Trim().ToUpperInvariant() switch
+        {
+            "FULL" => "Full",
+            "SENCILLO" => "Sencillo",
+            _ => null,
+        };
+    }
+
+    public static string? NormalizarArmadoCrudo(ViajesDto viaje) =>
+        string.IsNullOrWhiteSpace(viaje.armado) ? null : viaje.armado.Trim().ToUpperInvariant();
 }

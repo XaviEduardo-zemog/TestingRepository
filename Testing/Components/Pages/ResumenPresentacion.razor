@@ -244,7 +244,7 @@
     private static readonly System.Globalization.CultureInfo Cultura = System.Globalization.CultureInfo.GetCultureInfo("es-MX");
     private static string FormatoN0(decimal v) => Math.Round(v).ToString("N0", Cultura);
     private static string FormatoDinero(decimal v) => v.ToString("C0", Cultura);
-    private static string FormatoPct(decimal v) => ResumenEjecutivoCalculator.FormatoPorcentaje(v);
+    private static string FormatoPct(decimal? v) => v is null ? "—" : ResumenEjecutivoCalculator.FormatoPorcentaje(v.Value);
     private static string FormatoDelta(decimal? v) => v is null ? "" : $"({ResumenEjecutivoCalculator.FormatoPorcentaje(v.Value)})";
 
     public async ValueTask DisposeAsync()

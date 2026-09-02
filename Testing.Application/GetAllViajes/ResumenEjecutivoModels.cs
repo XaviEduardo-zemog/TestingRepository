@@ -1,7 +1,26 @@
 ﻿namespace Testing.Application.GetAllViajes;
 
+/// <summary>
+/// Un mes presente en los datos cargados. El nombre "MesCerrado" es heredado de una fase
+/// anterior (cuando se creía, incorrectamente, que Resumen Ejecutivo excluía el mes abierto) --
+/// se conserva el nombre para no romper firmas en cascada, pero desde esta fase (auditoría de
+/// ajuste fino): NO implica que el mes esté "cerrado" para Resumen Ejecutivo. RE_render() del
+/// HTML original se construye directo sobre DATA, sin excluir el mes de corte -- confirmado
+/// línea por línea, ver Artifact. Solo Presentación conserva una regla propia de exclusión del
+/// mes de "avance" (día de corte &lt; 28), separada por completo de este tipo.
+/// </summary>
 public readonly record struct MesCerrado(int Anio, int Mes, string Etiqueta);
 
+/// <summary>
+/// Totales de un período, YA PROYECTADOS con CorteMensual.FactorPara cuando corresponde (mismo
+/// criterio que la vista principal -- "DATA ya contiene valores proyectados del mes de corte").
+/// Viajes es decimal (no int) para poder proyectarse con factorMes fraccionario (ej. ×3.1) sin
+/// perder precisión por redondeos intermedios -- se redondea UNA sola vez, al formatear para
+/// mostrar (Math.Round en cada Razor), nunca durante la acumulación.
+/// TotalVenta = subtotal_factura, fuente temporal confirmada por el usuario (ver §54.85).
+/// $/KM es SIEMPRE razón de acumulados (Venta/Kms de este mismo TotalesPeriodo ya sumado) --
+/// nunca promedio de razones de fila individual.
+/// </summary>
 public sealed record TotalesPeriodo(decimal Viajes, decimal Kms, decimal Venta)
 {
     public decimal PorKm => Kms > 0 ? Venta / Kms : 0;
@@ -78,6 +97,11 @@ public sealed record BloqueNivelDto(
             ? (TotalesUltimo.Venta - TotalesPrimerMesDelAnio.Venta) / TotalesPrimerMesDelAnio.Venta * 100
             : null;
 
+    /// <summary>
+    /// AJUSTE — Correcciones puntuales: faltaba el equivalente a DeltaPkmPctVsAnterior para la
+    /// comparativa "vs Enero (avance del año)" -- RE_tablaComparativa aplica la misma fila $/KM a
+    /// ambas comparativas (vs mes anterior Y vs Enero), esta propiedad solo cubría la primera.
+    /// </summary>
     public decimal? DeltaPkmPctVsEnero =>
         HayComparativoVsEnero && TotalesPrimerMesDelAnio.Kms > 0 && TotalesPrimerMesDelAnio.PorKm > 0
             ? (TotalesUltimo.PorKm - TotalesPrimerMesDelAnio.PorKm) / TotalesPrimerMesDelAnio.PorKm * 100
@@ -112,10 +136,10 @@ public sealed class NodoComparativo
     public TotalesPeriodo Ultimo { get; set; } = TotalesPeriodo.Vacio;
     public TotalesPeriodo Anterior { get; set; } = TotalesPeriodo.Vacio;
     public TotalesPeriodo Anual { get; set; } = TotalesPeriodo.Vacio;
-    public Dictionary<string, int> ExpedicionUltimo { get; } = [];
-    public Dictionary<string, int> ExpedicionAnterior { get; } = [];
-    public Dictionary<string, decimal> ExpedicionVentaUltimo { get; } = [];
-    public Dictionary<string, decimal> ExpedicionVentaAnterior { get; } = [];
+    public Dictionary<string, int> ArmadoUltimo { get; } = [];
+    public Dictionary<string, int> ArmadoAnterior { get; } = [];
+    public Dictionary<string, decimal> ArmadoVentaUltimo { get; } = [];
+    public Dictionary<string, decimal> ArmadoVentaAnterior { get; } = [];
     public bool IsExpanded { get; set; }
 }
 
@@ -160,4 +184,5 @@ public sealed record ResumenEjecutivoDto(
     DestinosCayendoResumenDto? DestinosCayendo,
     IReadOnlyList<AgenciaDesaparecidaDto> AgenciasDesaparecidas,
     OperadoresResumenDto Operadores,
-    RotacionOperadoresDto Rotacion);
+    RotacionOperadoresDto Rotacion,
+    IReadOnlyList<(string Valor, decimal Viajes)> ArmadosDesconocidos);

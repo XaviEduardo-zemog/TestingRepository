@@ -54,7 +54,7 @@ public sealed record SlideMezclaExpedicionDto(
     int Full,
     int Sencillo,
     int Total,
-    decimal PctComodato,
+    decimal? PctComodato,
     decimal? DeltaPuntosPorcentuales,
     decimal VentaPorViajeFull,
     decimal VentaPorViajeSencillo)

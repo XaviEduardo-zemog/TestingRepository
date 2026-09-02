@@ -2,7 +2,7 @@
 @using Testing.Application.GetAllViajes
 
 <section class="re-bloque re-arbol-comparativo">
-    <h3>8.4 · Por Cliente › Zona › Matriz</h3>
+    <h3>Por Cliente › Zona › Matriz</h3>
 
     <div class="re-tbl-wrap">
         <table class="re-tabla">
@@ -50,7 +50,7 @@
 </section>
 
 <section class="re-bloque re-asignacion">
-    <h3>8.6 · Asignación · Comodato / Full / Sencillo</h3>
+    <h3>Asignación · Comodato / Full / Sencillo</h3>
 
     <div class="re-tbl-wrap">
         <table class="re-tabla">
@@ -80,11 +80,11 @@
                             }
                             @fila.Label
                         </td>
-                        <td class="align-end tabular">@FormatoNumero(fila.Asignacion.Comodato)</td>
+                        <td class="align-end tabular re-neutro" title="Pendiente fuente de Comodato">—</td>
                         <td class="align-end tabular">@FormatoNumero(fila.Asignacion.Full)</td>
                         <td class="align-end tabular">@FormatoNumero(fila.Asignacion.Sencillo)</td>
                         <td class="align-end tabular">@FormatoNumero(fila.Asignacion.Total)</td>
-                        <td class="align-end tabular">@ResumenEjecutivoCalculator.FormatoPorcentaje(fila.Asignacion.PctComodato)</td>
+                        <td class="align-end tabular">@FormatoPct(fila.Asignacion.PctComodato)</td>
                         <td class="align-end tabular @(fila.Asignacion.DeltaPuntosPorcentuales is null ? "re-neutro" : fila.Asignacion.DeltaPuntosPorcentuales >= 0 ? "re-pos" : "re-neg")">
                             @(fila.Asignacion.DeltaPuntosPorcentuales is null ? "—" : $"{ResumenEjecutivoCalculator.FormatoPorcentaje(fila.Asignacion.DeltaPuntosPorcentuales.Value)} pp")
                         </td>
@@ -95,11 +95,11 @@
                 @{ var totalAsig = ResumenEjecutivoCalculator.CalcularAsignacion(Raiz); }
                 <tr class="re-total">
                     <td>TOTAL</td>
-                    <td class="align-end tabular">@FormatoNumero(totalAsig.Comodato)</td>
+                    <td class="align-end tabular re-neutro" title="Pendiente fuente de Comodato">—</td>
                     <td class="align-end tabular">@FormatoNumero(totalAsig.Full)</td>
                     <td class="align-end tabular">@FormatoNumero(totalAsig.Sencillo)</td>
                     <td class="align-end tabular">@FormatoNumero(totalAsig.Total)</td>
-                    <td class="align-end tabular">@ResumenEjecutivoCalculator.FormatoPorcentaje(totalAsig.PctComodato)</td>
+                    <td class="align-end tabular">@FormatoPct(totalAsig.PctComodato)</td>
                     <td class="align-end tabular @(totalAsig.DeltaPuntosPorcentuales is null ? "re-neutro" : totalAsig.DeltaPuntosPorcentuales >= 0 ? "re-pos" : "re-neg")">
                         @(totalAsig.DeltaPuntosPorcentuales is null ? "—" : $"{ResumenEjecutivoCalculator.FormatoPorcentaje(totalAsig.DeltaPuntosPorcentuales.Value)} pp")
                     </td>
@@ -107,11 +107,19 @@
             </tfoot>
         </table>
     </div>
-    <p class="re-nota">Si sube la participación de Comodato (remolque de 3 ejes, 53 pies), se mueve más producto por viaje y bajan los viajes sencillos. Δ pp es diferencia de puntos porcentuales (no variación relativa) -- el TOTAL se recalcula desde la raíz, nunca promediando los % de cada fila.</p>
+    <p class="re-nota">Comodato: <b>pendiente de fuente de datos</b> -- "armado" (columna real de nuestro SP) por ahora solo distingue Full/Sencillo; Comodato no se inventa desde ningún otro campo. %Comodato y Δ pp se muestran como "—" mientras eso siga así. Si sube la participación de Comodato el día que se confirme su fuente, se mueve más producto por viaje y bajan los viajes sencillos. Δ pp es diferencia de puntos porcentuales (no variación relativa) -- el TOTAL se recalcula desde la raíz, nunca promediando los % de cada fila.</p>
+    @if (ArmadosDesconocidos.Count > 0)
+    {
+        <p class="re-nota" style="color:var(--vz-later,var(--vz-acc));">
+            Se detectaron @FormatoNumero(ArmadosDesconocidos.Sum(a => a.Viajes)) viaje(s) con "armado" no reconocido (ni Full ni Sencillo):
+            @string.Join(", ", ArmadosDesconocidos.Select(a => $"{a.Valor} ({FormatoNumero(a.Viajes)})")).
+            No se clasifican como Full ni Sencillo -- quedan excluidos del Total hasta confirmar su categoría real.
+        </p>
+    }
 </section>
 
 <section class="re-bloque re-frecuencia">
-    <h3>8.7 · Frecuencia por agencia</h3>
+    <h3>Frecuencia por agencia</h3>
 
     <div class="re-tbl-wrap">
         <table class="re-tabla">
@@ -132,13 +140,14 @@
             </tbody>
         </table>
     </div>
-    <p class="re-nota">Alerta: Δ Viajes ≤ -15% con base del mes anterior ≥ 20 viajes (misma regla que el semáforo, 8.1 -- ahí solo se listan las de nivel Matriz/Sucursal o más profundo; esta tabla muestra todos los niveles).</p>
+    <p class="re-nota">Alerta: Δ Viajes ≤ -15% con base del mes anterior ≥ 20 viajes (misma regla que el semáforo -- ahí solo se listan las de nivel Matriz/Sucursal o más profundo; esta tabla muestra todos los niveles).</p>
 </section>
 
 @code {
     [Parameter, EditorRequired] public NodoComparativo Raiz { get; set; } = null!;
     [Parameter] public string? MesUltimo { get; set; }
     [Parameter] public string? MesAnterior { get; set; }
+    [Parameter] public IReadOnlyList<(string Valor, decimal Viajes)> ArmadosDesconocidos { get; set; } = [];
 
     private string ordenAsigClave = "total";
     private bool ordenAsigDescendente = true;

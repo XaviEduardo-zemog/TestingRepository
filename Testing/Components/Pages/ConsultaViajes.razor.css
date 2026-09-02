@@ -216,6 +216,7 @@
     min-width: 140px;
     transition: border-color .15s ease, background .15s ease;
 }
+
     .vz-date:hover,
     .vz-select:hover {
         background: var(--vz-line);
@@ -227,7 +228,6 @@
         outline-offset: 1px;
     }
 
-/* ---------- botones ---------- */
 .vz-btn {
     padding: 5px 12px;
     background: var(--vz-line);
@@ -241,11 +241,21 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    transition: border-color .15s ease, color .15s ease, background .15s ease, transform .08s ease;
 }
 
     .vz-btn:hover:not(:disabled) {
         border-color: var(--vz-gris);
         color: var(--vz-txt);
+    }
+
+    .vz-btn:active:not(:disabled) {
+        transform: translateY(1px);
+    }
+
+    .vz-btn:focus-visible {
+        outline: 2px solid var(--vz-acc);
+        outline-offset: 1px;
     }
 
     .vz-btn:disabled {
@@ -258,10 +268,22 @@
     color: var(--vz-acc);
 }
 
+    .vz-btn-primary:hover:not(:disabled) {
+        background: var(--vz-line);
+        border-color: var(--vz-acc);
+        color: var(--vz-acc);
+    }
+
 .vz-btn-secondary {
     border-color: var(--vz-line5);
     color: var(--vz-txt2);
 }
+
+    .vz-btn-secondary:hover:not(:disabled) {
+        background: var(--vz-line);
+        border-color: var(--vz-gris);
+        color: var(--vz-txt);
+    }
 
 .vz-spinner {
     width: 11px;
