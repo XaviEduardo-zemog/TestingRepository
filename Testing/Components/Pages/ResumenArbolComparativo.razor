@@ -1,157 +1,138 @@
 ﻿@using System.Globalization
 @using Testing.Application.GetAllViajes
 
-@* Bloques 8.4 (comparativo, RE_jerComp), 8.6 (asignación, RE_jerAsig/RE_asigVals) y 8.7
-   (frecuencia, RE_jerFrec) comparten el mismo árbol (Raiz) -- un solo cálculo, 3 pestañas.
+<section class="re-bloque re-arbol-comparativo">
+    <h3>8.4 · Por Cliente › Zona › Matriz</h3>
 
-   AJUSTE DE ESTA FASE (auditoría de "Tabla y Resumen Ejecutivo"), confirmado línea por línea
-   contra el HTML real:
-   - Comparativo: columnas exactas son Nivel/Viajes(último)/Δ%/KM/Δ%/Venta/Δ%/Viajes(año)/
-     KM(año)/Venta(año) -- SIN columna de "mes anterior" en valor crudo (antes se mostraba,
-     incorrecto).
-   - Asignación: es una tabla JERÁRQUICA (una fila por nodo), NO un resumen de una sola fila a
-     nivel raíz (antes solo se mostraba la raíz -- corregido).
-   - Frecuencia: muestra TODOS los niveles del árbol, no solo Matriz+ (antes se filtraba a
-     nivel>=2 también en la tabla -- ese filtro es SOLO del semáforo, corregido). Se agrega
-     columna Venta actual. *@
-
-<section class="re-bloque re-arbol">
-    <h3>Cliente › Zona › Matriz › Sucursal</h3>
-
-    <div class="re-tabs">
-        <button type="button" class="re-tab @(pestana == "comparativo" ? "is-active" : "")" @onclick='() => pestana = "comparativo"'>Comparativo</button>
-        <button type="button" class="re-tab @(pestana == "asignacion" ? "is-active" : "")" @onclick='() => pestana = "asignacion"'>Asignación</button>
-        <button type="button" class="re-tab @(pestana == "frecuencia" ? "is-active" : "")" @onclick='() => pestana = "frecuencia"'>Frecuencia</button>
+    <div class="re-tbl-wrap">
+        <table class="re-tabla">
+            <thead>
+                <tr>
+                    <th class="re-th-dim">Nivel</th>
+                    <th>Viajes @MesUltimo</th><th>%</th>
+                    <th>KM @MesUltimo</th><th>%</th>
+                    <th>Venta @MesUltimo</th><th>%</th>
+                    <th>Viajes año</th><th>KM año</th><th>Venta año</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var fila in Aplanar())
+                {
+                    var deltaViajes = Delta(fila.Nodo.Anterior.Viajes, fila.Nodo.Ultimo.Viajes);
+                    var deltaKm = Delta(fila.Nodo.Anterior.Kms, fila.Nodo.Ultimo.Kms);
+                    var deltaVenta = Delta(fila.Nodo.Anterior.Venta, fila.Nodo.Ultimo.Venta);
+                    <tr>
+                        <td class="re-th-dim" style="padding-left:@(8 + fila.Nivel * 14)px;">
+                            @if (!fila.EsHoja)
+                            {
+                                <span class="re-flecha" @onclick="() => Alternar(fila.NodoOriginal)">@(fila.NodoOriginal.IsExpanded ? "▾" : "▸")</span>
+                            }
+                            else
+                            {
+                                <span class="re-flecha-vacia"></span>
+                            }
+                            @fila.Label
+                        </td>
+                        <td class="align-end tabular">@FormatoNumero(fila.Nodo.Ultimo.Viajes)</td>
+                        <td class="align-end tabular @ClaseDelta(deltaViajes)">@FormatoPct(deltaViajes)</td>
+                        <td class="align-end tabular">@FormatoNumero(fila.Nodo.Ultimo.Kms)</td>
+                        <td class="align-end tabular @ClaseDelta(deltaKm)">@FormatoPct(deltaKm)</td>
+                        <td class="align-end tabular">@FormatoDinero(fila.Nodo.Ultimo.Venta)</td>
+                        <td class="align-end tabular @ClaseDelta(deltaVenta)">@FormatoPct(deltaVenta)</td>
+                        <td class="align-end tabular">@FormatoNumero(fila.Nodo.Anual.Viajes)</td>
+                        <td class="align-end tabular">@FormatoNumero(fila.Nodo.Anual.Kms)</td>
+                        <td class="align-end tabular">@FormatoDinero(fila.Nodo.Anual.Venta)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
     </div>
+</section>
 
-    @if (pestana == "comparativo")
-    {
-        <div class="re-tbl-wrap">
-            <table class="re-tabla">
-                <thead>
+<section class="re-bloque re-asignacion">
+    <h3>8.6 · Asignación · Comodato / Full / Sencillo</h3>
+
+    <div class="re-tbl-wrap">
+        <table class="re-tabla">
+            <thead>
+                <tr>
+                    <th class="re-th-dim @ClaseOrdenAsig("label")" @onclick='() => OrdenarAsigPor("label")'>Nivel</th>
+                    <th class="@ClaseOrdenAsig("comodato")" @onclick='() => OrdenarAsigPor("comodato")'>Comodato</th>
+                    <th class="@ClaseOrdenAsig("full")" @onclick='() => OrdenarAsigPor("full")'>Full</th>
+                    <th class="@ClaseOrdenAsig("sencillo")" @onclick='() => OrdenarAsigPor("sencillo")'>Sencillo</th>
+                    <th class="@ClaseOrdenAsig("total")" @onclick='() => OrdenarAsigPor("total")'>Total viajes</th>
+                    <th class="@ClaseOrdenAsig("pct")" @onclick='() => OrdenarAsigPor("pct")'>% Comodato</th>
+                    <th>Δ pp vs @MesAnterior</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var fila in FilasAsignacionOrdenadas())
+                {
                     <tr>
-                        <th class="re-th-dim">Nivel</th>
-                        <th>Viajes @MesUltimo</th><th>%</th>
-                        <th>KM @MesUltimo</th><th>%</th>
-                        <th>Venta @MesUltimo</th><th>%</th>
-                        <th>Viajes año</th><th>KM año</th><th>Venta año</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var fila in Aplanar())
-                    {
-                        var deltaViajes = Delta(fila.Nodo.Anterior.Viajes, fila.Nodo.Ultimo.Viajes);
-                        var deltaKm = Delta(fila.Nodo.Anterior.Kms, fila.Nodo.Ultimo.Kms);
-                        var deltaVenta = Delta(fila.Nodo.Anterior.Venta, fila.Nodo.Ultimo.Venta);
-                        <tr>
-                            <td class="re-th-dim" style="padding-left:@(8 + fila.Nivel * 14)px;">
-                                @if (!fila.EsHoja)
-                                {
-                                    <span class="re-flecha" @onclick="() => Alternar(fila.NodoOriginal)">@(fila.NodoOriginal.IsExpanded ? "▾" : "▸")</span>
-                                }
-                                else
-                                {
-                                    <span class="re-flecha-vacia"></span>
-                                }
-                                @fila.Label
-                            </td>
-                            <td class="align-end tabular">@FormatoNumero(fila.Nodo.Ultimo.Viajes)</td>
-                            <td class="align-end tabular @ClaseDelta(deltaViajes)">@FormatoPct(deltaViajes)</td>
-                            <td class="align-end tabular">@FormatoNumero(fila.Nodo.Ultimo.Kms)</td>
-                            <td class="align-end tabular @ClaseDelta(deltaKm)">@FormatoPct(deltaKm)</td>
-                            <td class="align-end tabular">@FormatoDinero(fila.Nodo.Ultimo.Venta)</td>
-                            <td class="align-end tabular @ClaseDelta(deltaVenta)">@FormatoPct(deltaVenta)</td>
-                            <td class="align-end tabular">@FormatoNumero(fila.Nodo.Anual.Viajes)</td>
-                            <td class="align-end tabular">@FormatoNumero(fila.Nodo.Anual.Kms)</td>
-                            <td class="align-end tabular">@FormatoDinero(fila.Nodo.Anual.Venta)</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    }
-    else if (pestana == "asignacion")
-    {
-        <div class="re-tbl-wrap">
-            <table class="re-tabla">
-                <thead>
-                    <tr>
-                        <th class="re-th-dim @ClaseOrdenAsig("label")" @onclick='() => OrdenarAsigPor("label")'>Nivel</th>
-                        <th class="@ClaseOrdenAsig("comodato")" @onclick='() => OrdenarAsigPor("comodato")'>Comodato</th>
-                        <th class="@ClaseOrdenAsig("full")" @onclick='() => OrdenarAsigPor("full")'>Full</th>
-                        <th class="@ClaseOrdenAsig("sencillo")" @onclick='() => OrdenarAsigPor("sencillo")'>Sencillo</th>
-                        <th class="@ClaseOrdenAsig("total")" @onclick='() => OrdenarAsigPor("total")'>Total viajes</th>
-                        <th class="@ClaseOrdenAsig("pct")" @onclick='() => OrdenarAsigPor("pct")'>% Comodato</th>
-                        <th>Δ pp vs @MesAnterior</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var fila in FilasAsignacionOrdenadas())
-                    {
-                        <tr>
-                            <td class="re-th-dim" style="padding-left:@(8 + fila.Nivel * 14)px;">
-                                @if (!fila.EsHoja)
-                                {
-                                    <span class="re-flecha" @onclick="() => Alternar(fila.NodoOriginal)">@(fila.NodoOriginal.IsExpanded ? "▾" : "▸")</span>
-                                }
-                                else
-                                {
-                                    <span class="re-flecha-vacia"></span>
-                                }
-                                @fila.Label
-                            </td>
-                            <td class="align-end tabular">@FormatoNumero(fila.Asignacion.Comodato)</td>
-                            <td class="align-end tabular">@FormatoNumero(fila.Asignacion.Full)</td>
-                            <td class="align-end tabular">@FormatoNumero(fila.Asignacion.Sencillo)</td>
-                            <td class="align-end tabular">@FormatoNumero(fila.Asignacion.Total)</td>
-                            <td class="align-end tabular">@ResumenEjecutivoCalculator.FormatoPorcentaje(fila.Asignacion.PctComodato)</td>
-                            <td class="align-end tabular @(fila.Asignacion.DeltaPuntosPorcentuales is null ? "re-neutro" : fila.Asignacion.DeltaPuntosPorcentuales >= 0 ? "re-pos" : "re-neg")">
-                                @(fila.Asignacion.DeltaPuntosPorcentuales is null ? "—" : $"{ResumenEjecutivoCalculator.FormatoPorcentaje(fila.Asignacion.DeltaPuntosPorcentuales.Value)} pp")
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-                <tfoot>
-                    @{ var totalAsig = ResumenEjecutivoCalculator.CalcularAsignacion(Raiz); }
-                    <tr class="re-total">
-                        <td>TOTAL</td>
-                        <td class="align-end tabular">@FormatoNumero(totalAsig.Comodato)</td>
-                        <td class="align-end tabular">@FormatoNumero(totalAsig.Full)</td>
-                        <td class="align-end tabular">@FormatoNumero(totalAsig.Sencillo)</td>
-                        <td class="align-end tabular">@FormatoNumero(totalAsig.Total)</td>
-                        <td class="align-end tabular">@ResumenEjecutivoCalculator.FormatoPorcentaje(totalAsig.PctComodato)</td>
-                        <td class="align-end tabular @(totalAsig.DeltaPuntosPorcentuales is null ? "re-neutro" : totalAsig.DeltaPuntosPorcentuales >= 0 ? "re-pos" : "re-neg")">
-                            @(totalAsig.DeltaPuntosPorcentuales is null ? "—" : $"{ResumenEjecutivoCalculator.FormatoPorcentaje(totalAsig.DeltaPuntosPorcentuales.Value)} pp")
+                        <td class="re-th-dim" style="padding-left:@(8 + fila.Nivel * 14)px;">
+                            @if (!fila.EsHoja)
+                            {
+                                <span class="re-flecha" @onclick="() => Alternar(fila.NodoOriginal)">@(fila.NodoOriginal.IsExpanded ? "▾" : "▸")</span>
+                            }
+                            else
+                            {
+                                <span class="re-flecha-vacia"></span>
+                            }
+                            @fila.Label
+                        </td>
+                        <td class="align-end tabular">@FormatoNumero(fila.Asignacion.Comodato)</td>
+                        <td class="align-end tabular">@FormatoNumero(fila.Asignacion.Full)</td>
+                        <td class="align-end tabular">@FormatoNumero(fila.Asignacion.Sencillo)</td>
+                        <td class="align-end tabular">@FormatoNumero(fila.Asignacion.Total)</td>
+                        <td class="align-end tabular">@ResumenEjecutivoCalculator.FormatoPorcentaje(fila.Asignacion.PctComodato)</td>
+                        <td class="align-end tabular @(fila.Asignacion.DeltaPuntosPorcentuales is null ? "re-neutro" : fila.Asignacion.DeltaPuntosPorcentuales >= 0 ? "re-pos" : "re-neg")">
+                            @(fila.Asignacion.DeltaPuntosPorcentuales is null ? "—" : $"{ResumenEjecutivoCalculator.FormatoPorcentaje(fila.Asignacion.DeltaPuntosPorcentuales.Value)} pp")
                         </td>
                     </tr>
-                </tfoot>
-            </table>
-        </div>
-        <p class="re-nota">Si sube la participación de Comodato (remolque de 3 ejes, 53 pies), se mueve más producto por viaje y bajan los viajes sencillos. Δ pp es diferencia de puntos porcentuales (no variación relativa) -- el TOTAL se recalcula desde la raíz, nunca promediando los % de cada fila.</p>
-    }
-    else
-    {
-        <div class="re-tbl-wrap">
-            <table class="re-tabla">
-                <thead><tr><th class="re-th-dim">Nivel</th><th>Viajes @MesAnterior</th><th>Viajes @MesUltimo</th><th>Δ Viajes</th><th>%</th><th>Venta @MesUltimo</th><th>Señal</th></tr></thead>
-                <tbody>
-                    @foreach (var f in tablaFrecuencia)
-                    {
-                        <tr class="@(f.Alerta ? "re-fila-alerta" : "")">
-                            <td class="re-th-dim" style="padding-left:@(8 + f.Nivel * 14)px;">@f.Label</td>
-                            <td class="align-end tabular">@FormatoNumero(f.ViajesAnterior)</td>
-                            <td class="align-end tabular">@FormatoNumero(f.ViajesUltimo)</td>
-                            <td class="align-end tabular @ClaseDelta(f.DeltaPorcentaje)">@FormatoDeltaAbs(f.ViajesUltimo - f.ViajesAnterior)</td>
-                            <td class="align-end tabular @ClaseDelta(f.DeltaPorcentaje)">@FormatoPct(f.DeltaPorcentaje)</td>
-                            <td class="align-end tabular">@FormatoDinero(f.VentaUltimo)</td>
-                            <td class="@(f.Alerta ? "re-neg" : "re-neutro")">@(f.Alerta ? "⚠ Revisar" : "")</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-        <p class="re-nota">Alerta: Δ Viajes ≤ -15% con base del mes anterior ≥ 20 viajes (misma regla que el semáforo, 8.1 -- ahí solo se listan las de nivel Matriz/Sucursal o más profundo; esta tabla muestra todos los niveles).</p>
-    }
+                }
+            </tbody>
+            <tfoot>
+                @{ var totalAsig = ResumenEjecutivoCalculator.CalcularAsignacion(Raiz); }
+                <tr class="re-total">
+                    <td>TOTAL</td>
+                    <td class="align-end tabular">@FormatoNumero(totalAsig.Comodato)</td>
+                    <td class="align-end tabular">@FormatoNumero(totalAsig.Full)</td>
+                    <td class="align-end tabular">@FormatoNumero(totalAsig.Sencillo)</td>
+                    <td class="align-end tabular">@FormatoNumero(totalAsig.Total)</td>
+                    <td class="align-end tabular">@ResumenEjecutivoCalculator.FormatoPorcentaje(totalAsig.PctComodato)</td>
+                    <td class="align-end tabular @(totalAsig.DeltaPuntosPorcentuales is null ? "re-neutro" : totalAsig.DeltaPuntosPorcentuales >= 0 ? "re-pos" : "re-neg")">
+                        @(totalAsig.DeltaPuntosPorcentuales is null ? "—" : $"{ResumenEjecutivoCalculator.FormatoPorcentaje(totalAsig.DeltaPuntosPorcentuales.Value)} pp")
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    <p class="re-nota">Si sube la participación de Comodato (remolque de 3 ejes, 53 pies), se mueve más producto por viaje y bajan los viajes sencillos. Δ pp es diferencia de puntos porcentuales (no variación relativa) -- el TOTAL se recalcula desde la raíz, nunca promediando los % de cada fila.</p>
+</section>
+
+<section class="re-bloque re-frecuencia">
+    <h3>8.7 · Frecuencia por agencia</h3>
+
+    <div class="re-tbl-wrap">
+        <table class="re-tabla">
+            <thead><tr><th class="re-th-dim">Nivel</th><th>Viajes @MesAnterior</th><th>Viajes @MesUltimo</th><th>Δ Viajes</th><th>%</th><th>Venta @MesUltimo</th><th>Señal</th></tr></thead>
+            <tbody>
+                @foreach (var f in tablaFrecuencia)
+                {
+                    <tr class="@(f.Alerta ? "re-fila-alerta" : "")">
+                        <td class="re-th-dim" style="padding-left:@(8 + f.Nivel * 14)px;">@f.Label</td>
+                        <td class="align-end tabular">@FormatoNumero(f.ViajesAnterior)</td>
+                        <td class="align-end tabular">@FormatoNumero(f.ViajesUltimo)</td>
+                        <td class="align-end tabular @ClaseDelta(f.DeltaPorcentaje)">@FormatoDeltaAbs(f.ViajesUltimo - f.ViajesAnterior)</td>
+                        <td class="align-end tabular @ClaseDelta(f.DeltaPorcentaje)">@FormatoPct(f.DeltaPorcentaje)</td>
+                        <td class="align-end tabular">@FormatoDinero(f.VentaUltimo)</td>
+                        <td class="@(f.Alerta ? "re-neg" : "re-neutro")">@(f.Alerta ? "⚠ Revisar" : "")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <p class="re-nota">Alerta: Δ Viajes ≤ -15% con base del mes anterior ≥ 20 viajes (misma regla que el semáforo, 8.1 -- ahí solo se listan las de nivel Matriz/Sucursal o más profundo; esta tabla muestra todos los niveles).</p>
 </section>
 
 @code {
@@ -159,7 +140,6 @@
     [Parameter] public string? MesUltimo { get; set; }
     [Parameter] public string? MesAnterior { get; set; }
 
-    private string pestana = "comparativo";
     private string ordenAsigClave = "total";
     private bool ordenAsigDescendente = true;
     private List<FilaFrecuenciaDto> tablaFrecuencia = [];
@@ -173,8 +153,6 @@
 
     private void Alternar(NodoComparativo nodo) => nodo.IsExpanded = !nodo.IsExpanded;
 
-    // Colapso de cadenas de un solo hijo -- Sucursal = Matriz = _base hoy, así que esa cadena
-    // siempre colapsa sola (mismo criterio que ArbolJerarquiaViajes.razor, Fase 7).
     private const int ProfundidadMaxima = 4;
 
     private List<FilaComparativa> Aplanar()

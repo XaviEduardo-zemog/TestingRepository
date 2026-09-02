@@ -23,6 +23,14 @@ public enum SeveridadAlerta { Neutral, Positiva, Negativa }
 /// <summary>Una línea del semáforo (Bloque 8.1). Replica los sem.push(...) de RE_render() en viajes_v14.html.</summary>
 public sealed record AlertaSemaforo(string Texto, SeveridadAlerta Severidad);
 
+/// <summary>
+/// Replica RE_bloqueNivel() — usado tal cual para "Zemog · Nivel general" (8.2) y, una vez por
+/// cliente, para "Por Cliente" (8.3). "PrimerMesDelAnio"/"HayComparativoVsEnero" son nombres
+/// heredados: el HTML llama a esto "vs Enero (avance del año)" en la UI, pero la variable real es
+/// literal "mesesOrdenados[0]" (el primer mes de TODO el rango cargado, sin filtrar por año) --
+/// confirmado en esta fase. Se conserva el nombre de la propiedad, se corrige el cálculo (ya NO
+/// filtra por año).
+/// </summary>
 public sealed record BloqueNivelDto(
     string Titulo,
     MesCerrado? MesAnterior,
@@ -68,6 +76,11 @@ public sealed record BloqueNivelDto(
     public decimal? DeltaVentaPctVsEnero =>
         HayComparativoVsEnero && TotalesPrimerMesDelAnio.Venta > 0
             ? (TotalesUltimo.Venta - TotalesPrimerMesDelAnio.Venta) / TotalesPrimerMesDelAnio.Venta * 100
+            : null;
+
+    public decimal? DeltaPkmPctVsEnero =>
+        HayComparativoVsEnero && TotalesPrimerMesDelAnio.Kms > 0 && TotalesPrimerMesDelAnio.PorKm > 0
+            ? (TotalesUltimo.PorKm - TotalesPrimerMesDelAnio.PorKm) / TotalesPrimerMesDelAnio.PorKm * 100
             : null;
 
     /// <summary>Peor/mejor mes por Venta -- sobre TODA la Tendencia (todo el rango cargado, sin filtrar por año; RE_porMes/RE_tablaTendencia tampoco filtran por año).</summary>

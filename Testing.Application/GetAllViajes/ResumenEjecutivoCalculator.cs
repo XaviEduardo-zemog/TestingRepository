@@ -69,7 +69,7 @@ public static class ResumenEjecutivoCalculator
 
         var rotacion = hayComparativos
             ? OperadoresRotacionCalculator.CalcularRotacion(viajesConFecha, meses, corte)
-            : new RotacionOperadoresDto([], new RotacionSucursalDto("TOTAL", 0, 0, 0, null, "Sin datos", 0));
+            : new RotacionOperadoresDto([], new RotacionSucursalDto("TOTAL", 0, 0, 0, 0, 0, null, "Sin datos", 0));
 
         var semaforo = CalcularSemaforo(nivelZemog, porCliente, arbol, destinosCayendo, agenciasDesaparecidas, rotacion, hayComparativos);
 

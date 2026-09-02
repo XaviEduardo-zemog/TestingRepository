@@ -36,9 +36,9 @@
                     </tr>
                     <tr>
                         <td>$/KM</td>
-                        <td class="align-end tabular">@FormatoDinero(Bloque.TotalesAnterior.PorKm)</td>
-                        <td class="align-end tabular">@FormatoDinero(Bloque.TotalesUltimo.PorKm)</td>
-                        <td class="align-end tabular @ClaseDelta(Bloque.DeltaPkmPctVsAnterior)">@FormatoDeltaAbs(Bloque.TotalesUltimo.PorKm - Bloque.TotalesAnterior.PorKm, FormatoDinero)</td>
+                        <td class="align-end tabular">@FormatoPkm(Bloque.TotalesAnterior.PorKm)</td>
+                        <td class="align-end tabular">@FormatoPkm(Bloque.TotalesUltimo.PorKm)</td>
+                        <td class="align-end tabular @ClaseDelta(Bloque.DeltaPkmPctVsAnterior)">@FormatoDeltaAbs(Bloque.TotalesUltimo.PorKm - Bloque.TotalesAnterior.PorKm, FormatoPkm)</td>
                         <td class="align-end tabular @ClaseDelta(Bloque.DeltaPkmPctVsAnterior)">@FormatoDeltaPct(Bloque.DeltaPkmPctVsAnterior)</td>
                     </tr>
                 </tbody>
@@ -75,6 +75,13 @@
                         <td class="align-end tabular">@FormatoDinero(Bloque.TotalesUltimo.Venta)</td>
                         <td class="align-end tabular @ClaseDelta(Bloque.DeltaVentaPctVsEnero)">@FormatoDeltaAbs(Bloque.TotalesUltimo.Venta - Bloque.TotalesPrimerMesDelAnio.Venta, FormatoDinero)</td>
                         <td class="align-end tabular @ClaseDelta(Bloque.DeltaVentaPctVsEnero)">@FormatoDeltaPct(Bloque.DeltaVentaPctVsEnero)</td>
+                    </tr>
+                    <tr>
+                        <td>$/KM</td>
+                        <td class="align-end tabular">@FormatoPkm(Bloque.TotalesPrimerMesDelAnio.PorKm)</td>
+                        <td class="align-end tabular">@FormatoPkm(Bloque.TotalesUltimo.PorKm)</td>
+                        <td class="align-end tabular @ClaseDelta(Bloque.DeltaPkmPctVsEnero)">@FormatoDeltaAbs(Bloque.TotalesUltimo.PorKm - Bloque.TotalesPrimerMesDelAnio.PorKm, FormatoPkm)</td>
+                        <td class="align-end tabular @ClaseDelta(Bloque.DeltaPkmPctVsEnero)">@FormatoDeltaPct(Bloque.DeltaPkmPctVsEnero)</td>
                     </tr>
                 </tbody>
             </table>
@@ -129,6 +136,8 @@
     private static string FormatoNumero(decimal v) => Math.Round(v).ToString("N0", Cultura);
     private static string FormatoDinero(decimal v) => v.ToString("C0", Cultura);
 
+    private static string FormatoPkm(decimal v) => "$" + v.ToString("0.00", Cultura);
+
     private static string FormatoDeltaAbs(decimal delta, Func<decimal, string> formato) => (delta >= 0 ? "+" : "-") + formato(Math.Abs(delta));
 
     private static string FormatoDeltaPct(decimal? v) => v is null ? "—" : ResumenEjecutivoCalculator.FormatoPorcentaje(v.Value);
@@ -143,8 +152,5 @@
 
     private bool EsPeorMes(MesCerrado mes) => Bloque.PeorMesDelAnio?.Mes == mes;
     private bool EsMejorMes(MesCerrado mes) => Bloque.MejorMesDelAnio?.Mes == mes;
-
-    // TOTAL de la tendencia: Viajes/KM/Venta = suma; $/KM = VentaTotal/KMTotal (ratio de
-    // acumulados, nunca promedio de las filas de $/KM mensual).
     private TotalesPeriodo TotalTendencia() => Bloque.Tendencia.Select(t => t.Totales).Aggregate(TotalesPeriodo.Vacio, TotalesPeriodo.Sumar);
 }

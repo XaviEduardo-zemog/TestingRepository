@@ -52,14 +52,18 @@
     }
     else
     {
+        var mejores5 = filas.Take(5).ToList();
+
         <h4>Mejores 5</h4>
-        <TablaOperadores Filas="filas.Take(5).ToList()" />
+        <TablaOperadores Filas="mejores5" FilaTotal="TotalDe(mejores5)" />
+
+        var peores5 = filas.TakeLast(5).Reverse().ToList();
 
         <h4>Peores 5</h4>
-        <TablaOperadores Filas="filas.TakeLast(5).Reverse().ToList()" />
+        <TablaOperadores Filas="peores5" FilaTotal="TotalDe(peores5)" />
 
         <h4>Todos (@filas.Count)</h4>
-        <TablaOperadores Filas="filas" FilaTotal="TotalFila()" />
+        <TablaOperadores Filas="filas" FilaTotal="TotalDe(filas)" />
     }
 </section>
 
@@ -70,9 +74,6 @@
     private HashSet<(int Anio, int Mes)> mesesSeleccionados = [];
     private string ranking = "venta";
 
-    // TEMPORAL MVP: RE_prepOperadores ya preagregó Sucursal->Operador->Mes una sola vez
-    // (OperadoresRotacionCalculator.CalcularOperadores) — esta recombinación (sucursal, meses,
-    // orden) es pura interacción de UI, no vuelve a recorrer los viajes. Ver Fase 8 / §54.135.
     protected override void OnParametersSet()
     {
         if (sucursalSeleccionada is null || !Datos.Sucursales.Contains(sucursalSeleccionada))
@@ -123,9 +124,6 @@
         return filas;
     }
 
-    // Ranking: SIEMPRE sobre el valor ya sumado de cada operador (Viajes/KM/Venta totales de la
-    // selección) -- $/KM ordena por la propiedad VentaPorKm, que ya es razón de acumulados
-    // (Venta/Kms de ESE operador ya sumado), nunca promedio de $/KM de cada mes.
     private List<OperadorFilaDto> FilasOrdenadas()
     {
         var filas = FilasOperadores();
@@ -139,9 +137,6 @@
         };
     }
 
-    private OperadorFilaDto TotalFila()
-    {
-        var filas = FilasOperadores();
-        return new OperadorFilaDto("TOTAL", filas.Sum(f => f.Viajes), filas.Sum(f => f.Kms), filas.Sum(f => f.Venta));
-    }
+    private static OperadorFilaDto TotalDe(List<OperadorFilaDto> filas) =>
+        new("TOTAL", filas.Sum(f => f.Viajes), filas.Sum(f => f.Kms), filas.Sum(f => f.Venta));
 }

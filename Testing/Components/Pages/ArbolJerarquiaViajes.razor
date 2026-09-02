@@ -240,7 +240,10 @@ else
         {
             var efectivo = hijoOriginal;
             var nivelEfectivo = nivelFila;
-            while (nivelEfectivo < ProfundidadMaxima - 1 && efectivo.Hijos.Count == 1)
+
+            while (nivelEfectivo < ProfundidadMaxima - 1
+                   && efectivo.Hijos.Count == 1
+                   && efectivo.Hijos.Values.Single().Label == efectivo.Label)
             {
                 efectivo = efectivo.Hijos.Values.Single();
                 nivelEfectivo++;

@@ -49,7 +49,7 @@
 
         <ResumenOperadores Datos="resumen.Operadores" />
 
-        <ResumenRotacionOperadores Rotacion="resumen.Rotacion" MesUltimo="@MesUltimoEtiqueta()" />
+        <ResumenRotacionOperadores Rotacion="resumen.Rotacion" MesUltimo="@MesUltimoEtiqueta()" MesAnterior="@MesAnteriorEtiqueta()" />
     }
 
     <ResumenPresentacion @ref="presentacionRef" Viajes="Viajes" Corte="Corte" />
@@ -62,11 +62,6 @@
     private ResumenEjecutivoDto? resumen;
     private ResumenPresentacion? presentacionRef;
 
-    // Recalcula SIEMPRE que cambien los parámetros — a diferencia de la vista principal, el
-    // Resumen Ejecutivo no reacciona a los 14 filtros (usa Viajes = viajesCargados completo,
-    // nunca viajesFiltrados — mismo comportamiento que RE_render(), que nunca llama a getFilt()).
-    // Ya NO excluye el mes de corte/avance (ver ResumenEjecutivoCalculator) -- esa regla es
-    // exclusiva de Presentación (ver ResumenPresentacion.razor).
     protected override void OnParametersSet() => resumen = ResumenEjecutivoCalculator.Calcular(Viajes, Corte);
 
     private string? MesUltimoEtiqueta() => resumen is { MesesCerrados.Count: > 0 } ? resumen.MesesCerrados[^1].Etiqueta : null;

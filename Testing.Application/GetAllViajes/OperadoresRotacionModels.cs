@@ -11,12 +11,13 @@ public sealed record OperadoresResumenDto(
     IReadOnlyList<MesCerrado> MesesDisponibles,
     IReadOnlyDictionary<string, IReadOnlyDictionary<string, IReadOnlyDictionary<(int Anio, int Mes), TotalesPeriodo>>> PorSucursalOperadorMes);
 
-/// <summary>Bloque 8.10 — una sucursal y su resumen de rotación. VentaBajas = venta acumulada de los operadores dados de baja de esta sucursal.</summary>
 public sealed record RotacionSucursalDto(
     string Sucursal,
     int Activos,
     int Altas,
     int Bajas,
+    decimal ViajesAnterior,
+    decimal ViajesActual,
     decimal? DeltaViajesPorcentaje,
     string Lectura,
     decimal VentaBajas);

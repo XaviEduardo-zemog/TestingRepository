@@ -163,20 +163,46 @@
         letter-spacing: .6px;
     }
 
+/* AJUSTE — Correcciones puntuales: .vz-date tenía un borde/color neutros (--vz-line4/--vz-txt) en
+   vez del dorado de .vz-select (--vz-acc), padding más chico, y sin font-weight/min-width -- se
+   veía como un input HTML genérico junto a los selects. Se iguala byte a byte con .vz-select
+   (mismo padding, borde, color, radio, tipografía, tamaño, min-width), y se agrega hover/focus
+   compartido entre ambos -- ninguno de los dos tenía definido ninguno antes; sin esto, el focus
+   nativo del navegador en el input de fecha es un outline azul genérico ajeno al sistema dorado. */
 .vz-date {
-    padding: 4px 6px;
+    padding: 5px 8px;
     background: var(--vz-panel);
-    border: 1px solid var(--vz-line4);
+    border: 1px solid var(--vz-acc);
     border-radius: 6px;
-    color: var(--vz-txt);
+    color: var(--vz-acc);
     font-size: 11px;
+    font-weight: 600;
+    min-width: 140px;
     color-scheme: dark;
+    transition: border-color .15s ease, background .15s ease;
 }
 
 /* El selector nativo de fecha del navegador (calendario emergente) necesita su propio
    color-scheme -- si no, en tema claro se ve un calendario oscuro sobre un input claro. */
 .vz-page.claro .vz-date {
     color-scheme: light;
+}
+
+/* Icono nativo del calendario: el navegador lo dibuja en negro/gris oscuro por defecto, casi
+   invisible sobre --vz-panel oscuro -- se invierte solo en tema oscuro. En claro no hace falta. */
+.vz-date::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(1.3);
+    opacity: .85;
+    cursor: pointer;
+}
+
+    .vz-date::-webkit-calendar-picker-indicator:hover {
+        opacity: 1;
+    }
+
+.vz-page.claro .vz-date::-webkit-calendar-picker-indicator {
+    filter: none;
+    opacity: .65;
 }
 
 .vz-select {
@@ -188,7 +214,18 @@
     font-size: 11px;
     font-weight: 600;
     min-width: 140px;
+    transition: border-color .15s ease, background .15s ease;
 }
+    .vz-date:hover,
+    .vz-select:hover {
+        background: var(--vz-line);
+    }
+
+    .vz-date:focus-visible,
+    .vz-select:focus-visible {
+        outline: 2px solid var(--vz-acc);
+        outline-offset: 1px;
+    }
 
 /* ---------- botones ---------- */
 .vz-btn {

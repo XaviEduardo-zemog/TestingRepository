@@ -1,27 +1,7 @@
 ﻿namespace Testing.Application.GetAllViajes;
 
-/// <summary>
-/// Operadores (Bloque 8.9) y Rotación (Bloque 8.10). ResumenEjecutivoCalculator.Calcular()
-/// delega aquí -- no consulta la base de datos, transforma viajes ya cargados.
-///
-/// Reglas exactas (Fase 9, sin cambios en esta fase):
-///   Activo:  último mes de actividad == último mes del periodo.
-///   Alta:    primer mes de actividad &gt; primer mes del periodo.
-///   Baja:    último mes de actividad != último mes del periodo.
-///   Lectura: "Sin bajas" si Bajas==0; si no, "Volumen sostenido" si Δ%Viajes &gt;= -5,
-///            si no "⚠ Volumen a la baja".
-/// Los ratios del TOTAL (KM/Viaje, $/KM) se calculan como KmTotal/ViajesTotal y
-/// VentaTotal/KmTotal — NUNCA como promedio de los ratios individuales de cada operador.
-///
-/// AJUSTE DE ESTA FASE: recibe CorteMensual? corte y usa TotalesPeriodo.De(v, corte) -- Viajes/
-/// Kms/Venta ya proyectados con factorMes, igual que el resto del Resumen Ejecutivo desde que se
-/// confirmó que RE_render() (y todo lo que cuelga de él) opera directo sobre DATA ya proyectada,
-/// sin excluir el mes de corte.
-/// </summary>
 public static class OperadoresRotacionCalculator
 {
-    // ---------- Bloque 8.9 — Operadores (replica RE_prepOperadores) ----------
-
     public static OperadoresResumenDto CalcularOperadores(IReadOnlyList<ViajesDto> viajes, IReadOnlyList<MesCerrado> mesesCerrados, CorteMensual? corte)
     {
         var mesPorClave = mesesCerrados.ToDictionary(m => (m.Anio, m.Mes));
@@ -56,11 +36,6 @@ public static class OperadoresRotacionCalculator
                     kv2 => (IReadOnlyDictionary<(int, int), TotalesPeriodo>)kv2.Value)));
     }
 
-    // ---------- Bloque 8.10 — Rotación de operadores (replica RE_seccionRotacion) ----------
-    // Requiere al menos 2 meses (mismo guard que el resto de comparativos del Resumen
-    // Ejecutivo) — el llamador (ResumenEjecutivoCalculator) es responsable de no invocar este
-    // método con menos de 2 meses.
-
     public static RotacionOperadoresDto CalcularRotacion(IReadOnlyList<ViajesDto> viajes, IReadOnlyList<MesCerrado> mesesCerrados, CorteMensual? corte)
     {
         var mesPorClave = mesesCerrados.ToDictionary(m => (m.Anio, m.Mes));
@@ -89,11 +64,9 @@ public static class OperadoresRotacionCalculator
             if (!maxPorOperador.TryGetValue(operador, out var max) || EsAnterior(max, mes))
             {
                 maxPorOperador[operador] = mes;
-                sucursalPorOperador[operador] = sucursal; // sucursal de la aparición más reciente del operador
+                sucursalPorOperador[operador] = sucursal;
             }
 
-            // Venta acumulada del operador en todos los meses del periodo -- usada más abajo solo
-            // para los operadores clasificados como Baja (VentaBajas, replica VtaBajas del HTML).
             ventaPorOperador[operador] = ventaPorOperador.GetValueOrDefault(operador) + ContribucionViajeProyectada.Venta(v, corte);
         }
 
@@ -161,12 +134,10 @@ public static class OperadoresRotacionCalculator
             totalA += a;
             totalB += b;
 
-            filas.Add(new RotacionSucursalDto(sucursal, activos, altas, bajas, CalcularDeltaViajes(a, b), CalcularLectura(bajas, a, b), ventaBajas));
+            filas.Add(new RotacionSucursalDto(sucursal, activos, altas, bajas, a, b, CalcularDeltaViajes(a, b), CalcularLectura(bajas, a, b), ventaBajas));
         }
 
-        // El Δ% y la Lectura del TOTAL se recalculan sobre ΣViajes anterior/ΣViajes último de
-        // TODAS las sucursales — nunca promediando el Δ% de cada sucursal individual.
-        var total = new RotacionSucursalDto("TOTAL", nActTotal, nAltasTotal, nBajasTotal, CalcularDeltaViajes(totalA, totalB), CalcularLectura(nBajasTotal, totalA, totalB), ventaBajasTotal);
+        var total = new RotacionSucursalDto("TOTAL", nActTotal, nAltasTotal, nBajasTotal, totalA, totalB, CalcularDeltaViajes(totalA, totalB), CalcularLectura(nBajasTotal, totalA, totalB), ventaBajasTotal);
 
         return new RotacionOperadoresDto(filas, total);
     }
