@@ -112,6 +112,18 @@
     letter-spacing: 1px;
 }
 
+.vz-page.claro .vz-header {
+    border-bottom-color: #DEA60A;
+}
+
+    .vz-page.claro .vz-header h1 {
+        color: #E8E6E1;
+    }
+
+.vz-page.claro .vz-header-sub {
+    color: #C7A64B;
+}
+
 /* ---------- toolbar / filtros ---------- */
 .vz-toolbar {
     position: sticky;

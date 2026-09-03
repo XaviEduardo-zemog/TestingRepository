@@ -50,6 +50,25 @@
                     </tr>
                 }
             </tbody>
+            <tfoot>
+                @{
+                    var deltaViajesTot = Delta(Raiz.Anterior.Viajes, Raiz.Ultimo.Viajes);
+                    var deltaKmTot = Delta(Raiz.Anterior.Kms, Raiz.Ultimo.Kms);
+                    var deltaVentaTot = Delta(Raiz.Anterior.Venta, Raiz.Ultimo.Venta);
+                }
+                <tr class="re-total">
+                    <td>TOTAL</td>
+                    <td class="align-end tabular">@FormatoNumero(Raiz.Ultimo.Viajes)</td>
+                    <td class="align-end tabular @ClaseDelta(deltaViajesTot)">@FormatoPct(deltaViajesTot)</td>
+                    <td class="align-end tabular">@FormatoNumero(Raiz.Ultimo.Kms)</td>
+                    <td class="align-end tabular @ClaseDelta(deltaKmTot)">@FormatoPct(deltaKmTot)</td>
+                    <td class="align-end tabular">@FormatoDinero(Raiz.Ultimo.Venta)</td>
+                    <td class="align-end tabular @ClaseDelta(deltaVentaTot)">@FormatoPct(deltaVentaTot)</td>
+                    <td class="align-end tabular">@FormatoNumero(Raiz.Anual.Viajes)</td>
+                    <td class="align-end tabular">@FormatoNumero(Raiz.Anual.Kms)</td>
+                    <td class="align-end tabular">@FormatoDinero(Raiz.Anual.Venta)</td>
+                </tr>
+            </tfoot>
         </table>
     </div>
 </section>
@@ -153,9 +172,24 @@
                     </tr>
                 }
             </tbody>
+            <tfoot>
+                @{
+                    var deltaViajesFrecTot = Raiz.Ultimo.Viajes - Raiz.Anterior.Viajes;
+                    var pctFrecTot = Delta(Raiz.Anterior.Viajes, Raiz.Ultimo.Viajes);
+                }
+                <tr class="re-total">
+                    <td>TOTAL</td>
+                    <td class="align-end tabular">@FormatoNumero(Raiz.Anterior.Viajes)</td>
+                    <td class="align-end tabular">@FormatoNumero(Raiz.Ultimo.Viajes)</td>
+                    <td class="align-end tabular @ClaseDelta(pctFrecTot)">@FormatoDeltaAbs(deltaViajesFrecTot)</td>
+                    <td class="align-end tabular @ClaseDelta(pctFrecTot)">@FormatoPct(pctFrecTot)</td>
+                    <td class="align-end tabular">@FormatoDinero(Raiz.Ultimo.Venta)</td>
+                    <td></td>
+                </tr>
+            </tfoot>
         </table>
     </div>
-    <p class="re-nota">Alerta: Δ Viajes ≤ -15% con base del mes anterior ≥ 20 viajes (misma regla que el semáforo -- ahí solo se listan las de nivel Matriz/Sucursal o más profundo; esta tabla muestra todos los niveles). Orden inicial: % ascendente (mayores caídas primero), igual que RE_jerFrec.</p>
+    <p class="re-nota">Alerta: Δ Viajes ≤ -15% con base del mes anterior ≥ 20 viajes (misma regla que el semáforo -- ahí solo se listan las de nivel Matriz/Sucursal o más profundo; esta tabla muestra todos los niveles). Orden inicial: % ascendente (mayores caídas primero), igual que RE_jerFrec. La celda "Señal" del TOTAL queda vacía, igual que RE_pintaJerFrec (no se evalúa alerta para la fila TOTAL).</p>
 </section>
 
 @code {
@@ -288,7 +322,8 @@
         return ordenAsigDescendente ? -cmp : cmp;
     }
 
-    private List<FilaAsignacion> FilasAsignacion() => Aplanar(CompararAsig).Select(f => new FilaAsignacion(f.Nivel, f.Label, f.NodoOriginal, f.EsHoja, ResumenEjecutivoCalculator.CalcularAsignacion(f.Nodo))).ToList();
+    private List<FilaAsignacion> FilasAsignacion() =>
+        Aplanar(CompararAsig).Select(f => new FilaAsignacion(f.Nivel, f.Label, f.NodoOriginal, f.EsHoja, ResumenEjecutivoCalculator.CalcularAsignacion(f.Nodo))).ToList();
 
     private void OrdenarFrecPor(string clave)
     {
