@@ -4,10 +4,17 @@
 <div class="re-tbl-wrap">
     <table class="re-tabla">
         <thead>
-            <tr><th>Operador</th><th>Viajes</th><th>KM</th><th>Venta</th><th>KM/Viaje</th><th>$/KM</th></tr>
+            <tr>
+                <th class="re-th-dim @ClaseOrden("operador")" @onclick='() => OrdenarPor("operador")'>Operador @Flecha("operador")</th>
+                <th class="@ClaseOrden("viajes")" @onclick='() => OrdenarPor("viajes")'>Viajes @Flecha("viajes")</th>
+                <th class="@ClaseOrden("kms")" @onclick='() => OrdenarPor("kms")'>KM @Flecha("kms")</th>
+                <th class="@ClaseOrden("venta")" @onclick='() => OrdenarPor("venta")'>Venta @Flecha("venta")</th>
+                <th class="@ClaseOrden("kmPorViaje")" @onclick='() => OrdenarPor("kmPorViaje")'>KM/Viaje @Flecha("kmPorViaje")</th>
+                <th class="@ClaseOrden("ventaPorKm")" @onclick='() => OrdenarPor("ventaPorKm")'>$/KM @Flecha("ventaPorKm")</th>
+            </tr>
         </thead>
         <tbody>
-            @foreach (var f in Filas)
+            @foreach (var f in FilasOrdenadas())
             {
                 <tr>
                     <td>@f.Operador</td>
@@ -39,9 +46,41 @@
     [Parameter, EditorRequired] public List<OperadorFilaDto> Filas { get; set; } = [];
     [Parameter] public OperadorFilaDto? FilaTotal { get; set; }
 
+    // null = sin override -- se respeta el orden que ya trae Filas (el "Rankear por" del padre).
+    private string? ordenClave;
+    private bool ordenDescendente;
+
     private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-MX");
 
+    private void OrdenarPor(string clave)
+    {
+        if (ordenClave == clave) ordenDescendente = !ordenDescendente;
+        else { ordenClave = clave; ordenDescendente = clave != "operador"; }
+    }
+
+    private string ClaseOrden(string clave) => ordenClave == clave ? "re-th-ord is-active" : "re-th-ord";
+
+    private string Flecha(string clave) => ordenClave == clave ? (ordenDescendente ? " ▼" : " ▲") : "";
+
+    private List<OperadorFilaDto> FilasOrdenadas()
+    {
+        if (ordenClave is null)
+            return Filas;
+
+        IOrderedEnumerable<OperadorFilaDto> query = ordenClave switch
+        {
+            "operador" => Filas.OrderBy(f => f.Operador, StringComparer.CurrentCultureIgnoreCase),
+            "viajes" => Filas.OrderBy(f => f.Viajes),
+            "kms" => Filas.OrderBy(f => f.Kms),
+            "venta" => Filas.OrderBy(f => f.Venta),
+            "kmPorViaje" => Filas.OrderBy(f => f.KmPorViaje),
+            _ => Filas.OrderBy(f => f.VentaPorKm), // "ventaPorKm"
+        };
+
+        return (ordenDescendente ? query.Reverse() : query).ToList();
+    }
+
     private static string FormatoNumero(decimal v) => Math.Round(v).ToString("N0", Cultura);
-    private static string FormatoNumero(int v) => v.ToString("N0", Cultura);
+
     private static string FormatoDinero(decimal v) => v.ToString("C0", Cultura);
 }

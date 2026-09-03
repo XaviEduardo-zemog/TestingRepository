@@ -1,7 +1,7 @@
 ﻿namespace Testing.Application.GetAllViajes;
 
 public sealed record AsignacionExpedicionDto(
-    int Comodato, int Full, int Sencillo, int Total,
+    decimal Comodato, decimal Full, decimal Sencillo, decimal Total,
     decimal? PctComodato, decimal? DeltaPuntosPorcentuales,
     decimal VentaPorViajeComodato, decimal VentaPorViajeFull, decimal VentaPorViajeSencillo);
 
@@ -169,7 +169,7 @@ public static class ResumenEjecutivoCalculator
         {
             nodo.Ultimo = TotalesPeriodo.Sumar(nodo.Ultimo, contribucion);
             if (esIda && armado is { Length: > 0 })
-                nodo.ArmadoUltimo[armado] = nodo.ArmadoUltimo.GetValueOrDefault(armado) + 1;
+                nodo.ArmadoUltimo[armado] = nodo.ArmadoUltimo.GetValueOrDefault(armado) + contribucion.Viajes;
             if (armado is { Length: > 0 })
                 nodo.ArmadoVentaUltimo[armado] = nodo.ArmadoVentaUltimo.GetValueOrDefault(armado) + contribucion.Venta;
         }
@@ -177,7 +177,7 @@ public static class ResumenEjecutivoCalculator
         {
             nodo.Anterior = TotalesPeriodo.Sumar(nodo.Anterior, contribucion);
             if (esIda && armado is { Length: > 0 })
-                nodo.ArmadoAnterior[armado] = nodo.ArmadoAnterior.GetValueOrDefault(armado) + 1;
+                nodo.ArmadoAnterior[armado] = nodo.ArmadoAnterior.GetValueOrDefault(armado) + contribucion.Viajes;
             if (armado is { Length: > 0 })
                 nodo.ArmadoVentaAnterior[armado] = nodo.ArmadoVentaAnterior.GetValueOrDefault(armado) + contribucion.Venta;
         }
@@ -191,13 +191,13 @@ public static class ResumenEjecutivoCalculator
         var fu = nodo.ArmadoUltimo.GetValueOrDefault("Full");
         var se = nodo.ArmadoUltimo.GetValueOrDefault("Sencillo");
         var tt = co + fu + se;
-        var pc = comodatoConfirmado && tt > 0 ? (decimal?)((decimal)co / tt * 100) : null;
+        var pc = comodatoConfirmado && tt > 0 ? (decimal?)(co / tt * 100) : null;
 
         var ca = nodo.ArmadoAnterior.GetValueOrDefault("Comodato");
         var fa = nodo.ArmadoAnterior.GetValueOrDefault("Full");
         var sa = nodo.ArmadoAnterior.GetValueOrDefault("Sencillo");
         var ta = ca + fa + sa;
-        var pa = comodatoConfirmado && ta > 0 ? (decimal?)((decimal)ca / ta * 100) : null;
+        var pa = comodatoConfirmado && ta > 0 ? (decimal?)(ca / ta * 100) : null;
 
         var vCo = nodo.ArmadoVentaUltimo.GetValueOrDefault("Comodato");
         var vFu = nodo.ArmadoVentaUltimo.GetValueOrDefault("Full");
@@ -236,6 +236,7 @@ public static class ResumenEjecutivoCalculator
             .Select(kv => (kv.Key, kv.Value))
             .ToList();
     }
+
 
     private static DestinosCayendoResumenDto CalcularDestinosCayendo(IReadOnlyList<ViajesDto> viajes, IReadOnlyList<MesCerrado> meses, CorteMensual? corte)
     {
@@ -280,14 +281,24 @@ public static class ResumenEjecutivoCalculator
             Top25: candidatos.Take(25).ToList());
     }
 
-    public static List<FilaFrecuenciaDto> ConstruirTablaFrecuencia(NodoComparativo raiz)
+    public static List<FilaFrecuenciaDto> ConstruirTablaFrecuencia(NodoComparativo raiz, Comparison<NodoComparativo>? comparadorHijos = null)
     {
         var filas = new List<FilaFrecuenciaDto>();
         const int profundidadMaxima = 4;
 
+        List<NodoComparativo> OrdenarHijos(NodoComparativo nodo)
+        {
+            var hijos = nodo.Hijos.Values.ToList();
+            if (comparadorHijos is null)
+                hijos = hijos.OrderBy(h => h.Label, StringComparer.CurrentCultureIgnoreCase).ToList();
+            else
+                hijos.Sort(comparadorHijos);
+            return hijos;
+        }
+
         void Caminar(NodoComparativo nodo, int nivelFila)
         {
-            foreach (var hijoOriginal in nodo.Hijos.Values.OrderBy(h => h.Label, StringComparer.CurrentCultureIgnoreCase))
+            foreach (var hijoOriginal in OrdenarHijos(nodo))
             {
                 var efectivo = hijoOriginal;
                 var nivelEfectivo = nivelFila;

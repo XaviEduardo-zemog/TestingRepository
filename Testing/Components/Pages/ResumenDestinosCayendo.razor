@@ -1,14 +1,6 @@
 ﻿@using System.Globalization
 @using Testing.Application.GetAllViajes
 
-@* Bloque 8.5 (RE_seccionDestinos), confirmado línea por línea en esta fase: agrupa por
-   Destino+Matriz (no solo Destino); condición ventaAnterior&gt;0 AND ventaActual&lt;ventaAnterior,
-   SIN umbral mínimo; ordena por Δ Venta ascendente (mayor pérdida primero); Top 25 (no 30 --
-   corregido en esta fase). El "impacto total" de la nota es la suma de TODOS los grupos que
-   cumplen la condición; el TOTAL de la tabla es solo la suma de las 25 filas mostradas -- son
-   números distintos a propósito. "Se dejó de dar" = ViajesActual==0 AND ViajesAnterior&gt;0
-   (una caída de venta NO implica automáticamente que se dejó de dar). *@
-
 <section class="re-bloque re-destinos-cayendo">
     <h3>Destinos que estamos dejando de dar</h3>
 
@@ -27,14 +19,14 @@
             <table class="re-tabla">
                 <thead>
                     <tr>
-                        <th class="re-th-dim @ClaseOrden("destino")" @onclick='() => OrdenarPor("destino")'>Destino</th>
-                        <th class="@ClaseOrden("matriz")" @onclick='() => OrdenarPor("matriz")'>Matriz</th>
-                        <th class="@ClaseOrden("viajesAnt")" @onclick='() => OrdenarPor("viajesAnt")'>Viajes @MesAnterior</th>
-                        <th class="@ClaseOrden("viajesAct")" @onclick='() => OrdenarPor("viajesAct")'>Viajes @MesUltimo</th>
-                        <th class="@ClaseOrden("ventaAnt")" @onclick='() => OrdenarPor("ventaAnt")'>Venta @MesAnterior</th>
-                        <th class="@ClaseOrden("ventaAct")" @onclick='() => OrdenarPor("ventaAct")'>Venta @MesUltimo</th>
-                        <th class="@ClaseOrden("delta")" @onclick='() => OrdenarPor("delta")'>Δ Venta</th>
-                        <th>Se dejó de dar</th>
+                        <th class="re-th-dim @ClaseOrden("destino")" @onclick='() => OrdenarPor("destino")'>Destino @Flecha("destino")</th>
+                        <th class="@ClaseOrden("matriz")" @onclick='() => OrdenarPor("matriz")'>Matriz @Flecha("matriz")</th>
+                        <th class="@ClaseOrden("viajesAnt")" @onclick='() => OrdenarPor("viajesAnt")'>Viajes @MesAnterior @Flecha("viajesAnt")</th>
+                        <th class="@ClaseOrden("viajesAct")" @onclick='() => OrdenarPor("viajesAct")'>Viajes @MesUltimo @Flecha("viajesAct")</th>
+                        <th class="@ClaseOrden("ventaAnt")" @onclick='() => OrdenarPor("ventaAnt")'>Venta @MesAnterior @Flecha("ventaAnt")</th>
+                        <th class="@ClaseOrden("ventaAct")" @onclick='() => OrdenarPor("ventaAct")'>Venta @MesUltimo @Flecha("ventaAct")</th>
+                        <th class="@ClaseOrden("delta")" @onclick='() => OrdenarPor("delta")'>Δ Venta @Flecha("delta")</th>
+                        <th class="@ClaseOrden("dejo")" @onclick='() => OrdenarPor("dejo")'>Se dejó de dar @Flecha("dejo")</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -80,7 +72,9 @@
         else { ordenClave = clave; ordenDescendente = clave is "viajesAnt" or "viajesAct" or "ventaAnt" or "ventaAct"; }
     }
 
-    private string ClaseOrden(string clave) => ordenClave == clave ? "is-active" : "";
+    private string ClaseOrden(string clave) => ordenClave == clave ? "re-th-ord is-active" : "re-th-ord";
+
+    private string Flecha(string clave) => ordenClave == clave ? (ordenDescendente ? " ▼" : " ▲") : "";
 
     private List<DestinoCayendoDto> FilasOrdenadas()
     {
@@ -94,6 +88,7 @@
             "viajesAct" => Datos.Top25.OrderBy(d => d.ViajesActual),
             "ventaAnt" => Datos.Top25.OrderBy(d => d.VentaAnterior),
             "ventaAct" => Datos.Top25.OrderBy(d => d.VentaActual),
+            "dejo" => Datos.Top25.OrderBy(d => d.SeDejoDeDar),
             _ => Datos.Top25.OrderBy(d => d.DeltaVenta),
         };
 

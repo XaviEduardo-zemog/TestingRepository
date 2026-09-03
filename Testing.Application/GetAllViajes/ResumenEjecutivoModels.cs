@@ -136,8 +136,8 @@ public sealed class NodoComparativo
     public TotalesPeriodo Ultimo { get; set; } = TotalesPeriodo.Vacio;
     public TotalesPeriodo Anterior { get; set; } = TotalesPeriodo.Vacio;
     public TotalesPeriodo Anual { get; set; } = TotalesPeriodo.Vacio;
-    public Dictionary<string, int> ArmadoUltimo { get; } = [];
-    public Dictionary<string, int> ArmadoAnterior { get; } = [];
+    public Dictionary<string, decimal> ArmadoUltimo { get; } = [];
+    public Dictionary<string, decimal> ArmadoAnterior { get; } = [];
     public Dictionary<string, decimal> ArmadoVentaUltimo { get; } = [];
     public Dictionary<string, decimal> ArmadoVentaAnterior { get; } = [];
     public bool IsExpanded { get; set; }

@@ -50,10 +50,10 @@ public sealed record SlidePorClienteDto(IReadOnlyList<FilaClientePresentacionDto
 }
 
 public sealed record SlideMezclaExpedicionDto(
-    int Comodato,
-    int Full,
-    int Sencillo,
-    int Total,
+    decimal Comodato,
+    decimal Full,
+    decimal Sencillo,
+    decimal Total,
     decimal? PctComodato,
     decimal? DeltaPuntosPorcentuales,
     decimal VentaPorViajeFull,

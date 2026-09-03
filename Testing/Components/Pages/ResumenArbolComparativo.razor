@@ -8,15 +8,20 @@
         <table class="re-tabla">
             <thead>
                 <tr>
-                    <th class="re-th-dim">Nivel</th>
-                    <th>Viajes @MesUltimo</th><th>%</th>
-                    <th>KM @MesUltimo</th><th>%</th>
-                    <th>Venta @MesUltimo</th><th>%</th>
-                    <th>Viajes año</th><th>KM año</th><th>Venta año</th>
+                    <th class="re-th-dim @ClaseOrdenComp("label")" @onclick='() => OrdenarCompPor("label")'>Nivel @FlechaComp("label")</th>
+                    <th class="@ClaseOrdenComp("viajesUlt")" @onclick='() => OrdenarCompPor("viajesUlt")'>Viajes @MesUltimo @FlechaComp("viajesUlt")</th>
+                    <th class="@ClaseOrdenComp("deltaViajes")" @onclick='() => OrdenarCompPor("deltaViajes")'>%@FlechaComp("deltaViajes")</th>
+                    <th class="@ClaseOrdenComp("kmUlt")" @onclick='() => OrdenarCompPor("kmUlt")'>KM @MesUltimo @FlechaComp("kmUlt")</th>
+                    <th class="@ClaseOrdenComp("deltaKm")" @onclick='() => OrdenarCompPor("deltaKm")'>%@FlechaComp("deltaKm")</th>
+                    <th class="@ClaseOrdenComp("ventaUlt")" @onclick='() => OrdenarCompPor("ventaUlt")'>Venta @MesUltimo @FlechaComp("ventaUlt")</th>
+                    <th class="@ClaseOrdenComp("deltaVenta")" @onclick='() => OrdenarCompPor("deltaVenta")'>%@FlechaComp("deltaVenta")</th>
+                    <th class="@ClaseOrdenComp("viajesAnio")" @onclick='() => OrdenarCompPor("viajesAnio")'>Viajes año @FlechaComp("viajesAnio")</th>
+                    <th class="@ClaseOrdenComp("kmAnio")" @onclick='() => OrdenarCompPor("kmAnio")'>KM año @FlechaComp("kmAnio")</th>
+                    <th class="@ClaseOrdenComp("ventaAnio")" @onclick='() => OrdenarCompPor("ventaAnio")'>Venta año @FlechaComp("ventaAnio")</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var fila in Aplanar())
+                @foreach (var fila in Aplanar(CompararComp))
                 {
                     var deltaViajes = Delta(fila.Nodo.Anterior.Viajes, fila.Nodo.Ultimo.Viajes);
                     var deltaKm = Delta(fila.Nodo.Anterior.Kms, fila.Nodo.Ultimo.Kms);
@@ -56,17 +61,17 @@
         <table class="re-tabla">
             <thead>
                 <tr>
-                    <th class="re-th-dim @ClaseOrdenAsig("label")" @onclick='() => OrdenarAsigPor("label")'>Nivel</th>
-                    <th class="@ClaseOrdenAsig("comodato")" @onclick='() => OrdenarAsigPor("comodato")'>Comodato</th>
-                    <th class="@ClaseOrdenAsig("full")" @onclick='() => OrdenarAsigPor("full")'>Full</th>
-                    <th class="@ClaseOrdenAsig("sencillo")" @onclick='() => OrdenarAsigPor("sencillo")'>Sencillo</th>
-                    <th class="@ClaseOrdenAsig("total")" @onclick='() => OrdenarAsigPor("total")'>Total viajes</th>
-                    <th class="@ClaseOrdenAsig("pct")" @onclick='() => OrdenarAsigPor("pct")'>% Comodato</th>
+                    <th class="re-th-dim @ClaseOrdenAsig("label")" @onclick='() => OrdenarAsigPor("label")'>Nivel @FlechaAsig("label")</th>
+                    <th title="Pendiente fuente de Comodato -- no ordenable mientras esta columna siempre muestre &quot;—&quot;">Comodato</th>
+                    <th class="@ClaseOrdenAsig("full")" @onclick='() => OrdenarAsigPor("full")'>Full @FlechaAsig("full")</th>
+                    <th class="@ClaseOrdenAsig("sencillo")" @onclick='() => OrdenarAsigPor("sencillo")'>Sencillo @FlechaAsig("sencillo")</th>
+                    <th class="@ClaseOrdenAsig("total")" @onclick='() => OrdenarAsigPor("total")'>Total viajes @FlechaAsig("total")</th>
+                    <th title="Pendiente fuente de Comodato -- no ordenable mientras esta columna siempre muestre &quot;—&quot;">% Comodato</th>
                     <th>Δ pp vs @MesAnterior</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var fila in FilasAsignacionOrdenadas())
+                @foreach (var fila in FilasAsignacion())
                 {
                     <tr>
                         <td class="re-th-dim" style="padding-left:@(8 + fila.Nivel * 14)px;">
@@ -107,7 +112,7 @@
             </tfoot>
         </table>
     </div>
-    <p class="re-nota">Comodato: <b>pendiente de fuente de datos</b> -- "armado" (columna real de nuestro SP) por ahora solo distingue Full/Sencillo; Comodato no se inventa desde ningún otro campo. %Comodato y Δ pp se muestran como "—" mientras eso siga así. Si sube la participación de Comodato el día que se confirme su fuente, se mueve más producto por viaje y bajan los viajes sencillos. Δ pp es diferencia de puntos porcentuales (no variación relativa) -- el TOTAL se recalcula desde la raíz, nunca promediando los % de cada fila.</p>
+    <p class="re-nota">Comodato: <b>pendiente de fuente de datos</b> -- "armado" (columna real de nuestro SP) por ahora solo distingue Full/Sencillo; Comodato no se inventa desde ningún otro campo. %Comodato y Δ pp se muestran como "—" mientras eso siga así, y sus columnas no son ordenables (ordenar por un valor siempre igual no aporta nada). Si sube la participación de Comodato el día que se confirme su fuente, se mueve más producto por viaje y bajan los viajes sencillos. Δ pp es diferencia de puntos porcentuales (no variación relativa) -- el TOTAL se recalcula desde la raíz, nunca promediando los % de cada fila.</p>
     @if (ArmadosDesconocidos.Count > 0)
     {
         <p class="re-nota" style="color:var(--vz-later,var(--vz-acc));">
@@ -123,7 +128,17 @@
 
     <div class="re-tbl-wrap">
         <table class="re-tabla">
-            <thead><tr><th class="re-th-dim">Nivel</th><th>Viajes @MesAnterior</th><th>Viajes @MesUltimo</th><th>Δ Viajes</th><th>%</th><th>Venta @MesUltimo</th><th>Señal</th></tr></thead>
+            <thead>
+                <tr>
+                    <th class="re-th-dim @ClaseOrdenFrec("label")" @onclick='() => OrdenarFrecPor("label")'>Nivel @FlechaFrec("label")</th>
+                    <th class="@ClaseOrdenFrec("viajesAnt")" @onclick='() => OrdenarFrecPor("viajesAnt")'>Viajes @MesAnterior@FlechaFrec("viajesAnt")</th>
+                    <th class="@ClaseOrdenFrec("viajesUlt")" @onclick='() => OrdenarFrecPor("viajesUlt")'>Viajes @MesUltimo@FlechaFrec("viajesUlt")</th>
+                    <th class="@ClaseOrdenFrec("deltaViajes")" @onclick='() => OrdenarFrecPor("deltaViajes")'>Δ Viajes @FlechaFrec("deltaViajes")</th>
+                    <th class="@ClaseOrdenFrec("pct")" @onclick='() => OrdenarFrecPor("pct")'>%@FlechaFrec("pct")</th>
+                    <th class="@ClaseOrdenFrec("ventaUlt")" @onclick='() => OrdenarFrecPor("ventaUlt")'>Venta @MesUltimo @FlechaFrec("ventaUlt")</th>
+                    <th>Señal</th>
+                </tr>
+            </thead>
             <tbody>
                 @foreach (var f in tablaFrecuencia)
                 {
@@ -140,7 +155,7 @@
             </tbody>
         </table>
     </div>
-    <p class="re-nota">Alerta: Δ Viajes ≤ -15% con base del mes anterior ≥ 20 viajes (misma regla que el semáforo -- ahí solo se listan las de nivel Matriz/Sucursal o más profundo; esta tabla muestra todos los niveles).</p>
+    <p class="re-nota">Alerta: Δ Viajes ≤ -15% con base del mes anterior ≥ 20 viajes (misma regla que el semáforo -- ahí solo se listan las de nivel Matriz/Sucursal o más profundo; esta tabla muestra todos los niveles). Orden inicial: % ascendente (mayores caídas primero), igual que RE_jerFrec.</p>
 </section>
 
 @code {
@@ -149,8 +164,17 @@
     [Parameter] public string? MesAnterior { get; set; }
     [Parameter] public IReadOnlyList<(string Valor, decimal Viajes)> ArmadosDesconocidos { get; set; } = [];
 
+    // Estado de orden INDEPENDIENTE por tabla -- ordenar una no afecta a las otras 2 (ni a
+    // ninguna otra sección del Resumen). Defaults confirmados contra viajes_v14.html.
+    private string ordenCompClave = "ventaUlt";
+    private bool ordenCompDescendente = true;
+
     private string ordenAsigClave = "total";
     private bool ordenAsigDescendente = true;
+
+    private string ordenFrecClave = "pct";
+    private bool ordenFrecDescendente; // false = ascendente = mayores caídas primero (RE_jerFrec, idx=4 dir=-1)
+
     private List<FilaFrecuenciaDto> tablaFrecuencia = [];
 
     private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-MX");
@@ -158,22 +182,25 @@
     private sealed record FilaComparativa(int Nivel, string Label, NodoComparativo Nodo, NodoComparativo NodoOriginal, bool EsHoja);
     private sealed record FilaAsignacion(int Nivel, string Label, NodoComparativo NodoOriginal, bool EsHoja, AsignacionExpedicionDto Asignacion);
 
-    protected override void OnParametersSet() => tablaFrecuencia = ResumenEjecutivoCalculator.ConstruirTablaFrecuencia(Raiz);
+    protected override void OnParametersSet() => tablaFrecuencia = ResumenEjecutivoCalculator.ConstruirTablaFrecuencia(Raiz, CompararFrec);
 
     private void Alternar(NodoComparativo nodo) => nodo.IsExpanded = !nodo.IsExpanded;
 
     private const int ProfundidadMaxima = 4;
 
-    private List<FilaComparativa> Aplanar()
+    private List<FilaComparativa> Aplanar(Comparison<NodoComparativo> comparador)
     {
         var filas = new List<FilaComparativa>();
-        Caminar(Raiz, 0, filas);
+        Caminar(Raiz, 0, filas, comparador);
         return filas;
     }
 
-    private void Caminar(NodoComparativo nodo, int nivelFila, List<FilaComparativa> filas)
+    private void Caminar(NodoComparativo nodo, int nivelFila, List<FilaComparativa> filas, Comparison<NodoComparativo> comparador)
     {
-        foreach (var hijoOriginal in nodo.Hijos.Values.OrderBy(h => h.Label, StringComparer.CurrentCultureIgnoreCase))
+        var hijos = nodo.Hijos.Values.ToList();
+        hijos.Sort(comparador);
+
+        foreach (var hijoOriginal in hijos)
         {
             var efectivo = hijoOriginal;
             var nivelEfectivo = nivelFila;
@@ -187,12 +214,46 @@
             filas.Add(new FilaComparativa(nivelFila, hijoOriginal.Label, efectivo, hijoOriginal, esHoja));
 
             if (!esHoja && hijoOriginal.IsExpanded)
-                Caminar(efectivo, nivelFila + 1, filas);
+                Caminar(efectivo, nivelFila + 1, filas, comparador);
         }
     }
 
-    private List<FilaAsignacion> FilasAsignacion() =>
-        Aplanar().Select(f => new FilaAsignacion(f.Nivel, f.Label, f.NodoOriginal, f.EsHoja, ResumenEjecutivoCalculator.CalcularAsignacion(f.Nodo))).ToList();
+    // ---------- Comparativo ----------
+
+    private void OrdenarCompPor(string clave)
+    {
+        if (ordenCompClave == clave) ordenCompDescendente = !ordenCompDescendente;
+        else { ordenCompClave = clave; ordenCompDescendente = clave != "label"; }
+    }
+
+    private string ClaseOrdenComp(string clave) => ordenCompClave == clave ? "re-th-ord is-active" : "re-th-ord";
+
+    private string FlechaComp(string clave) => ordenCompClave == clave ? (ordenCompDescendente ? " ▼" : " ▲") : "";
+
+    private decimal ValorOrdenComp(NodoComparativo n) => ordenCompClave switch
+    {
+        "viajesUlt" => n.Ultimo.Viajes,
+        "deltaViajes" => Delta(n.Anterior.Viajes, n.Ultimo.Viajes) ?? 0,
+        "kmUlt" => n.Ultimo.Kms,
+        "deltaKm" => Delta(n.Anterior.Kms, n.Ultimo.Kms) ?? 0,
+        "deltaVenta" => Delta(n.Anterior.Venta, n.Ultimo.Venta) ?? 0,
+        "viajesAnio" => n.Anual.Viajes,
+        "kmAnio" => n.Anual.Kms,
+        "ventaAnio" => n.Anual.Venta,
+        _ => n.Ultimo.Venta, // "ventaUlt" (default)
+    };
+
+    private int CompararComp(NodoComparativo a, NodoComparativo b)
+    {
+        if (ordenCompClave == "label")
+        {
+            var cmpTxt = string.Compare(a.Label, b.Label, StringComparison.CurrentCultureIgnoreCase);
+            return ordenCompDescendente ? -cmpTxt : cmpTxt;
+        }
+
+        var cmp = ValorOrdenComp(a).CompareTo(ValorOrdenComp(b));
+        return ordenCompDescendente ? -cmp : cmp;
+    }
 
     private void OrdenarAsigPor(string clave)
     {
@@ -200,22 +261,68 @@
         else { ordenAsigClave = clave; ordenAsigDescendente = clave != "label"; }
     }
 
-    private string ClaseOrdenAsig(string clave) => ordenAsigClave == clave ? "is-active" : "";
+    private string ClaseOrdenAsig(string clave) => ordenAsigClave == clave ? "re-th-ord is-active" : "re-th-ord";
 
-    private List<FilaAsignacion> FilasAsignacionOrdenadas()
+    private string FlechaAsig(string clave) => ordenAsigClave == clave ? (ordenAsigDescendente ? " ▼" : " ▲") : "";
+
+    private decimal ValorOrdenAsig(NodoComparativo n)
     {
-        var filas = FilasAsignacion();
-        IOrderedEnumerable<FilaAsignacion> query = ordenAsigClave switch
+        var a = ResumenEjecutivoCalculator.CalcularAsignacion(n);
+        return ordenAsigClave switch
         {
-            "comodato" => filas.OrderBy(f => f.Asignacion.Comodato),
-            "full" => filas.OrderBy(f => f.Asignacion.Full),
-            "sencillo" => filas.OrderBy(f => f.Asignacion.Sencillo),
-            "pct" => filas.OrderBy(f => f.Asignacion.PctComodato),
-            "label" => filas.OrderBy(f => f.Label, StringComparer.CurrentCultureIgnoreCase),
-            _ => filas.OrderBy(f => f.Asignacion.Total),
+            "full" => a.Full,
+            "sencillo" => a.Sencillo,
+            _ => a.Total, // "total" (default)
         };
-        return (ordenAsigDescendente ? query.Reverse() : query).ToList();
     }
+
+    private int CompararAsig(NodoComparativo a, NodoComparativo b)
+    {
+        if (ordenAsigClave == "label")
+        {
+            var cmpTxt = string.Compare(a.Label, b.Label, StringComparison.CurrentCultureIgnoreCase);
+            return ordenAsigDescendente ? -cmpTxt : cmpTxt;
+        }
+
+        var cmp = ValorOrdenAsig(a).CompareTo(ValorOrdenAsig(b));
+        return ordenAsigDescendente ? -cmp : cmp;
+    }
+
+    private List<FilaAsignacion> FilasAsignacion() => Aplanar(CompararAsig).Select(f => new FilaAsignacion(f.Nivel, f.Label, f.NodoOriginal, f.EsHoja, ResumenEjecutivoCalculator.CalcularAsignacion(f.Nodo))).ToList();
+
+    private void OrdenarFrecPor(string clave)
+    {
+        if (ordenFrecClave == clave) ordenFrecDescendente = !ordenFrecDescendente;
+        else { ordenFrecClave = clave; ordenFrecDescendente = clave != "label"; }
+        tablaFrecuencia = ResumenEjecutivoCalculator.ConstruirTablaFrecuencia(Raiz, CompararFrec);
+    }
+
+    private string ClaseOrdenFrec(string clave) => ordenFrecClave == clave ? "re-th-ord is-active" : "re-th-ord";
+
+    private string FlechaFrec(string clave) => ordenFrecClave == clave ? (ordenFrecDescendente ? " ▼" : " ▲") : "";
+
+    private decimal ValorOrdenFrec(NodoComparativo n) => ordenFrecClave switch
+    {
+        "viajesAnt" => n.Anterior.Viajes,
+        "viajesUlt" => n.Ultimo.Viajes,
+        "deltaViajes" => n.Ultimo.Viajes - n.Anterior.Viajes,
+        "ventaUlt" => n.Ultimo.Venta,
+        _ => n.Anterior.Viajes > 0 ? (n.Ultimo.Viajes - n.Anterior.Viajes) / n.Anterior.Viajes * 100 : 0, // "pct" (default)
+    };
+
+    private int CompararFrec(NodoComparativo a, NodoComparativo b)
+    {
+        if (ordenFrecClave == "label")
+        {
+            var cmpTxt = string.Compare(a.Label, b.Label, StringComparison.CurrentCultureIgnoreCase);
+            return ordenFrecDescendente ? -cmpTxt : cmpTxt;
+        }
+
+        var cmp = ValorOrdenFrec(a).CompareTo(ValorOrdenFrec(b));
+        return ordenFrecDescendente ? -cmp : cmp;
+    }
+
+    // ---------- Compartidos ----------
 
     private static decimal? Delta(decimal anterior, decimal ultimo) => anterior > 0 ? (ultimo - anterior) / anterior * 100 : null;
 

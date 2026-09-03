@@ -62,7 +62,7 @@ public static class CamposDerivadosViajes
             return RutaParseada.NoReconocida;
 
         var s = ruta.Trim();
-        var movimiento = ObtenerMovimiento(s);
+        var movimiento = ObtenerMovimientoDesdeRuta(s);
 
         var partes = s.Split(" - ", StringSplitOptions.None);
         if (partes.Length < 3)
@@ -95,16 +95,20 @@ public static class CamposDerivadosViajes
 
     public static string? ObtenerDestino(ViajesDto viaje) => ParsearRuta(viaje.ruta).Destino;
 
-    /// <summary>
-    /// Ida/Regreso se decide EXCLUSIVAMENTE por el sufijo final de "ruta" (" - I" / " - R"), sin
-    /// depender del resto del parseo (auditoría P0 de la fase anterior: antes dependía de que
-    /// ParsearRuta matcheara la cadena completa con paréntesis, y una fila sin paréntesis
-    /// devolvía null -> 0 viajes silencioso). Sigue siendo la única pieza de "ruta" confirmada
-    /// en AMBOS formatos conocidos.
-    /// </summary>
-    public static string? ObtenerMovimiento(ViajesDto viaje) => ObtenerMovimiento(viaje.ruta);
+    public static string? ObtenerMovimiento(ViajesDto viaje)
+    {
+        if (string.IsNullOrWhiteSpace(viaje.direccion))
+            return null;
 
-    private static string? ObtenerMovimiento(string? ruta)
+        return viaje.direccion.Trim().ToUpperInvariant() switch
+        {
+            "IDA" => "Ida",
+            "REGRESO" => "Regreso",
+            var otro => otro, // "TRAMO" u otro valor no esperado -- se conserva tal cual, NUNCA se normaliza a "Ida"/"Regreso" por accidente
+        };
+    }
+
+    private static string? ObtenerMovimientoDesdeRuta(string? ruta)
     {
         if (string.IsNullOrWhiteSpace(ruta))
             return null;

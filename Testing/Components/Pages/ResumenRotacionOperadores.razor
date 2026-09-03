@@ -13,10 +13,19 @@
         <div class="re-tbl-wrap">
             <table class="re-tabla">
                 <thead>
-                    <tr><th>Sucursal</th><th>Activos @MesUltimo</th><th>Altas en el año</th><th>Dejaron de aparecer</th><th>Viajes @MesAnterior</th><th>Viajes @MesUltimo</th><th>% Viajes</th><th>Lectura</th></tr>
+                    <tr>
+                        <th class="re-th-dim @ClaseOrden("sucursal")" @onclick='() => OrdenarPor("sucursal")'>Sucursal @Flecha("sucursal")</th>
+                        <th class="@ClaseOrden("activos")" @onclick='() => OrdenarPor("activos")'>Activos @MesUltimo @Flecha("activos")</th>
+                        <th class="@ClaseOrden("altas")" @onclick='() => OrdenarPor("altas")'>Altas en el año @Flecha("altas")</th>
+                        <th class="@ClaseOrden("bajas")" @onclick='() => OrdenarPor("bajas")'>Dejaron de aparecer @Flecha("bajas")</th>
+                        <th class="@ClaseOrden("viajesAnt")" @onclick='() => OrdenarPor("viajesAnt")'>Viajes @MesAnterior @Flecha("viajesAnt")</th>
+                        <th class="@ClaseOrden("viajesAct")" @onclick='() => OrdenarPor("viajesAct")'>Viajes @MesUltimo @Flecha("viajesAct")</th>
+                        <th class="@ClaseOrden("pct")" @onclick='() => OrdenarPor("pct")'>% Viajes @Flecha("pct")</th>
+                        <th class="@ClaseOrden("lectura")" @onclick='() => OrdenarPor("lectura")'>Lectura @Flecha("lectura")</th>
+                    </tr>
                 </thead>
                 <tbody>
-                    @foreach (var f in Rotacion.PorSucursal)
+                    @foreach (var f in FilasOrdenadas())
                     {
                         <tr>
                             <td>@f.Sucursal</td>
@@ -53,7 +62,37 @@
     [Parameter] public string? MesUltimo { get; set; }
     [Parameter] public string? MesAnterior { get; set; }
 
+    private string ordenClave = "bajas";
+    private bool ordenDescendente = true;
+
     private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-MX");
+
+    private void OrdenarPor(string clave)
+    {
+        if (ordenClave == clave) ordenDescendente = !ordenDescendente;
+        else { ordenClave = clave; ordenDescendente = clave != "sucursal" && clave != "lectura"; }
+    }
+
+    private string ClaseOrden(string clave) => ordenClave == clave ? "re-th-ord is-active" : "re-th-ord";
+
+    private string Flecha(string clave) => ordenClave == clave ? (ordenDescendente ? " ▼" : " ▲") : "";
+
+    private List<RotacionSucursalDto> FilasOrdenadas()
+    {
+        IOrderedEnumerable<RotacionSucursalDto> query = ordenClave switch
+        {
+            "activos" => Rotacion.PorSucursal.OrderBy(f => f.Activos),
+            "altas" => Rotacion.PorSucursal.OrderBy(f => f.Altas),
+            "bajas" => Rotacion.PorSucursal.OrderBy(f => f.Bajas),
+            "viajesAnt" => Rotacion.PorSucursal.OrderBy(f => f.ViajesAnterior),
+            "viajesAct" => Rotacion.PorSucursal.OrderBy(f => f.ViajesActual),
+            "pct" => Rotacion.PorSucursal.OrderBy(f => f.DeltaViajesPorcentaje ?? decimal.MinValue),
+            "lectura" => Rotacion.PorSucursal.OrderBy(f => f.Lectura, StringComparer.CurrentCultureIgnoreCase),
+            _ => Rotacion.PorSucursal.OrderBy(f => f.Sucursal, StringComparer.CurrentCultureIgnoreCase),
+        };
+
+        return (ordenDescendente ? query.Reverse() : query).ToList();
+    }
 
     private static string FormatoNumero(decimal v) => Math.Round(v).ToString("N0", Cultura);
 

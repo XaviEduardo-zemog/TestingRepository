@@ -25,6 +25,7 @@
 
 .re-toolbar-acciones {
     display: flex;
+    align-items: center;
     gap: 8px;
     flex-wrap: wrap;
 }
@@ -214,11 +215,23 @@
     color: var(--vz-txt2, #cbd5e1);
 }
 
-/* Headers ordenables (sorting activo dorado) -- Destinos cayendo, Asignación. Solo los th con
-   @onclick (los que de verdad ordenan) reciben cursor:pointer -- .is-active ya implica que ese
-   th es clickeable. */
+.re-page ::deep .re-tabla th.re-th-ord {
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+    .re-page ::deep .re-tabla th.re-th-ord:hover {
+        color: var(--vz-acc, #f59e0b);
+    }
+
 .re-page ::deep .re-tabla th.is-active {
     color: var(--vz-acc, #f59e0b);
+}
+
+.re-page ::deep .re-th-flecha {
+    font-size: 9px;
+    margin-left: 3px;
 }
 
 /* ---------- Tabs (Por Cliente / Árbol comparativo) ---------- */

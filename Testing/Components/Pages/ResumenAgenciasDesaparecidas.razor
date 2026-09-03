@@ -13,10 +13,17 @@
         <div class="re-tbl-wrap">
             <table class="re-tabla">
                 <thead>
-                    <tr><th>Destino</th><th>Matriz</th><th>Último mes activo</th><th>Meses activa</th><th>Venta acumulada</th><th>Venta promedio/mes</th></tr>
+                    <tr>
+                        <th class="re-th-dim @ClaseOrden("destino")" @onclick='() => OrdenarPor("destino")'>Destino @Flecha("destino")</th>
+                        <th class="@ClaseOrden("matriz")" @onclick='() => OrdenarPor("matriz")'>Matriz @Flecha("matriz")</th>
+                        <th class="@ClaseOrden("ultimoMes")" @onclick='() => OrdenarPor("ultimoMes")'>Último mes activo @Flecha("ultimoMes")</th>
+                        <th class="@ClaseOrden("mesesActiva")" @onclick='() => OrdenarPor("mesesActiva")'>Meses activa @Flecha("mesesActiva")</th>
+                        <th class="@ClaseOrden("ventaAcumulada")" @onclick='() => OrdenarPor("ventaAcumulada")'>Venta acumulada @Flecha("ventaAcumulada")</th>
+                        <th class="@ClaseOrden("ventaPromedio")" @onclick='() => OrdenarPor("ventaPromedio")'>Venta promedio/mes @Flecha("ventaPromedio")</th>
+                    </tr>
                 </thead>
                 <tbody>
-                    @foreach (var a in Agencias)
+                    @foreach (var a in FilasOrdenadas())
                     {
                         <tr>
                             <td>@a.Destino</td>
@@ -28,6 +35,13 @@
                         </tr>
                     }
                 </tbody>
+                <tfoot>
+                    <tr class="re-total">
+                        <td colspan="4">TOTAL (@Agencias.Count)</td>
+                        <td class="align-end tabular re-neg">@FormatoDinero(Agencias.Sum(a => a.VentaAcumulada))</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
         <p class="re-nota">@Agencias.Count agencia(s) que tuvieron viajes en algún mes cerrado pero no en @MesUltimo. Venta acumulada = suma de venta en los meses en que SÍ tuvieron actividad.</p>
@@ -38,7 +52,36 @@
     [Parameter, EditorRequired] public IReadOnlyList<AgenciaDesaparecidaDto> Agencias { get; set; } = [];
     [Parameter] public string? MesUltimo { get; set; }
 
+    private string ordenClave = "ventaAcumulada";
+    private bool ordenDescendente = true;
+
     private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-MX");
+
+    private void OrdenarPor(string clave)
+    {
+        if (ordenClave == clave) ordenDescendente = !ordenDescendente;
+        else { ordenClave = clave; ordenDescendente = clave is "mesesActiva" or "ventaAcumulada" or "ventaPromedio" or "ultimoMes"; }
+    }
+
+    private string ClaseOrden(string clave) => ordenClave == clave ? "re-th-ord is-active" : "re-th-ord";
+
+    private string Flecha(string clave) => ordenClave == clave ? (ordenDescendente ? " ▼" : " ▲") : "";
+
+    private List<AgenciaDesaparecidaDto> FilasOrdenadas()
+    {
+        IOrderedEnumerable<AgenciaDesaparecidaDto> query = ordenClave switch
+        {
+            "matriz" => Agencias.OrderBy(a => a.Matriz, StringComparer.CurrentCultureIgnoreCase),
+            "ultimoMes" => Agencias.OrderBy(a => (a.UltimoMesActivo.Anio, a.UltimoMesActivo.Mes)),
+            "mesesActiva" => Agencias.OrderBy(a => a.MesesActiva),
+            "ventaAcumulada" => Agencias.OrderBy(a => a.VentaAcumulada),
+            "ventaPromedio" => Agencias.OrderBy(a => a.VentaPromedio),
+            _ => Agencias.OrderBy(a => a.Destino, StringComparer.CurrentCultureIgnoreCase),
+        };
+
+        return (ordenDescendente ? query.Reverse() : query).ToList();
+    }
+
     private static string FormatoNumero(int v) => v.ToString("N0", Cultura);
     private static string FormatoDinero(decimal v) => v.ToString("C0", Cultura);
 }
