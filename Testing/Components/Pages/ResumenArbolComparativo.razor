@@ -198,8 +198,6 @@
     [Parameter] public string? MesAnterior { get; set; }
     [Parameter] public IReadOnlyList<(string Valor, decimal Viajes)> ArmadosDesconocidos { get; set; } = [];
 
-    // Estado de orden INDEPENDIENTE por tabla -- ordenar una no afecta a las otras 2 (ni a
-    // ninguna otra sección del Resumen). Defaults confirmados contra viajes_v14.html.
     private string ordenCompClave = "ventaUlt";
     private bool ordenCompDescendente = true;
 
