@@ -20,11 +20,22 @@ public static class ResumenEjecutivoCalculator
 
     public static ResumenEjecutivoDto Calcular(IReadOnlyList<ViajesDto> viajesCargados, CorteMensual? corte)
     {
-        var meses = CalcularMeses(viajesCargados);
-        var viajesConFecha = viajesCargados.Where(v => EstaEnMeses(v, meses)).ToList();
+        var fechaCache = new Dictionary<ViajesDto, DateTime?>(viajesCargados.Count);
+        DateTime? FechaDe(ViajesDto v)
+        {
+            if (fechaCache.TryGetValue(v, out var f))
+                return f;
+
+            f = CamposDerivadosViajes.ObtenerFechaNegocio(v);
+            fechaCache[v] = f;
+            return f;
+        }
+
+        var meses = CalcularMeses(viajesCargados, FechaDe);
+        var viajesConFecha = viajesCargados.Where(v => EstaEnMeses(v, meses, FechaDe)).ToList();
         var hayComparativos = meses.Count >= 2;
 
-        var nivelZemog = meses.Count == 0 ? null : CalcularBloqueNivel("Zemog", viajesConFecha, meses, corte);
+        var nivelZemog = meses.Count == 0 ? null : CalcularBloqueNivel("Zemog", viajesConFecha, meses, corte, FechaDe);
 
         var porCliente = meses.Count == 0
             ? []
@@ -33,21 +44,21 @@ public static class ResumenEjecutivoCalculator
                 .Where(c => c is { Length: > 0 })
                 .Distinct()
                 .OrderBy(c => c, StringComparer.CurrentCultureIgnoreCase)
-                .Select(cliente => new NivelPorClienteDto(
-                    cliente!,
-                    CalcularBloqueNivel(
-                        cliente!,
-                        viajesConFecha.Where(v => CamposDerivadosViajes.ObtenerCliente(v) == cliente).ToList(),
-                        meses, corte)))
+                .Select(cliente =>
+                {
+                    var viajesCliente = viajesConFecha.Where(v => CamposDerivadosViajes.ObtenerCliente(v) == cliente).ToList();
+                    var mesesCliente = CalcularMeses(viajesCliente, FechaDe);
+                    return new NivelPorClienteDto(cliente!, CalcularBloqueNivel(cliente!, viajesCliente, mesesCliente, corte, FechaDe));
+                })
                 .ToList();
 
-        var arbol = hayComparativos ? ConstruirArbolComparativo(viajesConFecha, meses, corte) : null;
+        var arbol = hayComparativos ? ConstruirArbolComparativo(viajesConFecha, meses, corte, FechaDe) : null;
 
-        var destinosCayendo = hayComparativos ? CalcularDestinosCayendo(viajesConFecha, meses, corte) : null;
+        var destinosCayendo = hayComparativos ? CalcularDestinosCayendo(viajesConFecha, meses, corte, FechaDe) : null;
 
         var agenciasDesaparecidas = meses.Count == 0
-            ? []
-            : CalcularAgenciasDesaparecidas(viajesConFecha, meses, corte);
+            ? new AgenciasDesaparecidasResumenDto(0, 0, [])
+            : CalcularAgenciasDesaparecidas(viajesConFecha, meses, corte, FechaDe);
 
         var operadores = OperadoresRotacionCalculator.CalcularOperadores(viajesConFecha, meses, corte);
 
@@ -64,9 +75,9 @@ public static class ResumenEjecutivoCalculator
 
     // ---------- Meses presentes en los datos (SIN exclusión -- ver nota de clase) ----------
 
-    private static List<MesCerrado> CalcularMeses(IReadOnlyList<ViajesDto> viajes) =>
+    private static List<MesCerrado> CalcularMeses(IReadOnlyList<ViajesDto> viajes, Func<ViajesDto, DateTime?> fechaDe) =>
         viajes
-            .Select(CamposDerivadosViajes.ObtenerFechaNegocio)
+            .Select(fechaDe)
             .Where(f => f is not null)
             .Select(f => (Anio: f!.Value.Year, Mes: f.Value.Month))
             .Distinct()
@@ -76,22 +87,22 @@ public static class ResumenEjecutivoCalculator
 
     private static string EtiquetaMes(int anio, int mes) => $"{NombresMes[mes - 1]} {anio}";
 
-    private static bool EstaEnMeses(ViajesDto v, IReadOnlyList<MesCerrado> meses)
+    private static bool EstaEnMeses(ViajesDto v, IReadOnlyList<MesCerrado> meses, Func<ViajesDto, DateTime?> fechaDe)
     {
-        var fecha = CamposDerivadosViajes.ObtenerFechaNegocio(v);
+        var fecha = fechaDe(v);
         return fecha is not null && meses.Any(m => m.Anio == fecha.Value.Year && m.Mes == fecha.Value.Month);
     }
 
     // ---------- Bloques 8.2/8.3 — Nivel general / Por Cliente (replica RE_bloqueNivel) ----------
 
-    private static BloqueNivelDto CalcularBloqueNivel(string titulo, IReadOnlyList<ViajesDto> viajes, IReadOnlyList<MesCerrado> meses, CorteMensual? corte)
+    private static BloqueNivelDto CalcularBloqueNivel(string titulo, IReadOnlyList<ViajesDto> viajes, IReadOnlyList<MesCerrado> meses, CorteMensual? corte, Func<ViajesDto, DateTime?> fechaDe)
     {
         var mesPorClave = meses.ToDictionary(m => (m.Anio, m.Mes));
         var totalesPorMes = meses.ToDictionary(m => m, _ => TotalesPeriodo.Vacio);
 
         foreach (var v in viajes)
         {
-            var fecha = CamposDerivadosViajes.ObtenerFechaNegocio(v);
+            var fecha = fechaDe(v);
             if (fecha is null || !mesPorClave.TryGetValue((fecha.Value.Year, fecha.Value.Month), out var claveMes))
                 continue;
 
@@ -101,9 +112,6 @@ public static class ResumenEjecutivoCalculator
 
         var ultimo = meses[^1];
         var anterior = meses.Count > 1 ? meses[^2] : (MesCerrado?)null;
-        // "Primer mes" = mesesOrdenados[0], SIN filtrar por año (confirmado en esta fase -- ver
-        // nota de clase de BloqueNivelDto). La UI sigue llamándolo "avance del año" (texto
-        // heredado del HTML), pero el dato real es el primer mes de TODO el rango cargado.
         var primerMes = meses[0];
 
         return new BloqueNivelDto(
@@ -114,7 +122,7 @@ public static class ResumenEjecutivoCalculator
 
     // ---------- Bloques 8.4/8.6/8.7 — árbol comparativo compartido (replica RE_arbol) ----------
 
-    private static NodoComparativo ConstruirArbolComparativo(IReadOnlyList<ViajesDto> viajes, IReadOnlyList<MesCerrado> meses, CorteMensual? corte)
+    private static NodoComparativo ConstruirArbolComparativo(IReadOnlyList<ViajesDto> viajes, IReadOnlyList<MesCerrado> meses, CorteMensual? corte, Func<ViajesDto, DateTime?> fechaDe)
     {
         var mesPorClave = meses.ToDictionary(m => (m.Anio, m.Mes));
         var ultimo = meses[^1];
@@ -124,7 +132,7 @@ public static class ResumenEjecutivoCalculator
 
         foreach (var v in viajes)
         {
-            var fecha = CamposDerivadosViajes.ObtenerFechaNegocio(v);
+            var fecha = fechaDe(v);
             if (fecha is null || !mesPorClave.TryGetValue((fecha.Value.Year, fecha.Value.Month), out var claveMes))
                 continue;
 
@@ -238,7 +246,7 @@ public static class ResumenEjecutivoCalculator
     }
 
 
-    private static DestinosCayendoResumenDto CalcularDestinosCayendo(IReadOnlyList<ViajesDto> viajes, IReadOnlyList<MesCerrado> meses, CorteMensual? corte)
+    private static DestinosCayendoResumenDto CalcularDestinosCayendo(IReadOnlyList<ViajesDto> viajes, IReadOnlyList<MesCerrado> meses, CorteMensual? corte, Func<ViajesDto, DateTime?> fechaDe)
     {
         var ultimo = meses[^1];
         var anterior = meses[^2];
@@ -247,7 +255,7 @@ public static class ResumenEjecutivoCalculator
 
         foreach (var v in viajes)
         {
-            var fecha = CamposDerivadosViajes.ObtenerFechaNegocio(v);
+            var fecha = fechaDe(v);
             if (fecha is null)
                 continue;
 
@@ -333,7 +341,7 @@ public static class ResumenEjecutivoCalculator
 
     // ---------- Bloque 8.8 — Agencias que ya no aparecen ----------
 
-    private static List<AgenciaDesaparecidaDto> CalcularAgenciasDesaparecidas(IReadOnlyList<ViajesDto> viajes, IReadOnlyList<MesCerrado> meses, CorteMensual? corte)
+    private static AgenciasDesaparecidasResumenDto CalcularAgenciasDesaparecidas(IReadOnlyList<ViajesDto> viajes, IReadOnlyList<MesCerrado> meses, CorteMensual? corte, Func<ViajesDto, DateTime?> fechaDe)
     {
         var mesPorClave = meses.ToDictionary(m => (m.Anio, m.Mes));
         var ultimo = meses[^1];
@@ -343,7 +351,7 @@ public static class ResumenEjecutivoCalculator
 
         foreach (var v in viajes)
         {
-            var fecha = CamposDerivadosViajes.ObtenerFechaNegocio(v);
+            var fecha = fechaDe(v);
             if (fecha is null || !mesPorClave.TryGetValue((fecha.Value.Year, fecha.Value.Month), out var claveMes))
                 continue;
 
@@ -378,10 +386,15 @@ public static class ResumenEjecutivoCalculator
             resultado.Add(new AgenciaDesaparecidaDto(destino, matriz, ultimoVisto, porMes[ultimoVisto], porMes.Count, ventaAcumulada));
         }
 
-        return resultado
+        var ordenado = resultado
             .OrderByDescending(a => a.VentaAcumulada)
             .ThenBy(a => a.Destino, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
+
+        return new AgenciasDesaparecidasResumenDto(
+            TotalDesaparecidas: ordenado.Count,
+            VentaAcumuladaTotal: ordenado.Sum(a => a.VentaAcumulada),
+            Top30: ordenado.Take(30).ToList());
     }
 
     // ---------- Bloque 8.1 — Semáforo (replica los sem.push(...) de RE_render()) ----------
@@ -391,7 +404,7 @@ public static class ResumenEjecutivoCalculator
         IReadOnlyList<NivelPorClienteDto> porCliente,
         NodoComparativo? arbol,
         DestinosCayendoResumenDto? destinosCayendo,
-        IReadOnlyList<AgenciaDesaparecidaDto> agenciasDesaparecidas,
+        AgenciasDesaparecidasResumenDto agenciasDesaparecidas,
         RotacionOperadoresDto rotacion,
         bool hayComparativos)
     {
@@ -445,11 +458,10 @@ public static class ResumenEjecutivoCalculator
                 SeveridadAlerta.Negativa));
         }
 
-        if (agenciasDesaparecidas.Count > 0)
+        if (agenciasDesaparecidas.TotalDesaparecidas > 0)
         {
-            var ventaTotal = agenciasDesaparecidas.Sum(a => a.VentaAcumulada);
             alertas.Add(new AlertaSemaforo(
-                $"{agenciasDesaparecidas.Count} agencias/destinos ya no aparecen en {nivelZemog.MesUltimo.Etiqueta} (venta acumulada: {FormatoDinero(ventaTotal)})",
+                $"{agenciasDesaparecidas.TotalDesaparecidas} agencias/destinos ya no aparecen en {nivelZemog.MesUltimo.Etiqueta} (venta acumulada: {FormatoDinero(agenciasDesaparecidas.VentaAcumuladaTotal)})",
                 SeveridadAlerta.Negativa));
         }
 

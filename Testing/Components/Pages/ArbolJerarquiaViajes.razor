@@ -11,7 +11,7 @@ else
         <table class="aj-table">
             <thead>
                 <tr>
-                    <th class="aj-th-dim @(ordenDescendente ? "is-desc" : "is-asc")" rowspan="2" @onclick="AlternarOrden" title="Ordenar alfabéticamente">@EtiquetaJerarquia</th>
+                    <th class="aj-th-dim @ClaseOrden("label")" rowspan="2" @onclick="@(() => OrdenarPor("label"))" title="Ordenar alfabéticamente">@EtiquetaJerarquia</th>
                     @if (!SoloComparativa)
                     {
                         @foreach (var mes in Meses)
@@ -40,7 +40,8 @@ else
                             {
                                 @for (var ci = 0; ci < columnas.Count; ci++)
                                 {
-                                    <th class="align-end @(ci == 0 ? "aj-mes0" : "")">@columnas[ci].Etiqueta</th>
+                                    var col = columnas[ci];
+                                    <th class="align-end @(ci == 0 ? "aj-mes0" : "") @ClaseOrden($"{mes.Clave}|{col.Clave}")" @onclick="@(() => OrdenarPor($"{mes.Clave}|{col.Clave}"))">@col.Etiqueta</th>
                                 }
                             }
                         }
@@ -49,8 +50,11 @@ else
                     {
                         @for (var ci = 0; ci < columnas.Count; ci++)
                         {
-                            <th class="align-end aj-cmp @(ci == 0 ? "aj-cmp-start" : "")">Δ @columnas[ci].Etiqueta</th>
-                            <th class="align-end aj-cmp @(ci == columnas.Count - 1 ? "aj-cmp-end" : "")">%</th>
+                            var col = columnas[ci];
+                            var esInicio = ci == 0;
+                            var esFin = ci == columnas.Count - 1;
+                            <th class="align-end aj-cmp @(esInicio ? "aj-cmp-start" : "") @ClaseOrden($"cmp|{col.Clave}|delta")" @onclick="@(() => OrdenarPor($"cmp|{col.Clave}|delta"))">Δ @col.Etiqueta</th>
+                            <th class="align-end aj-cmp @(esFin ? "aj-cmp-end" : "") @ClaseOrden($"cmp|{col.Clave}|pct")" @onclick="@(() => OrdenarPor($"cmp|{col.Clave}|pct"))">%</th>
                         }
                     }
                 </tr>
@@ -170,6 +174,8 @@ else
     private sealed record ColumnaMetrica(string Clave, string Etiqueta, Func<MetricasMes, decimal> Selector, Func<decimal, string> Formato, bool EsSumable);
 
     private List<ColumnaMetrica> columnas = [];
+
+    private string ordenClave = "label";
     private bool ordenDescendente;
     private readonly HashSet<string> mesesColapsados = [];
 
@@ -200,7 +206,20 @@ else
 
     private void Alternar(NodoJerarquia nodo) => nodo.IsExpanded = !nodo.IsExpanded;
 
-    private void AlternarOrden() => ordenDescendente = !ordenDescendente;
+    private void OrdenarPor(string clave)
+    {
+        if (ordenClave == clave)
+        {
+            ordenDescendente = !ordenDescendente;
+        }
+        else
+        {
+            ordenClave = clave;
+            ordenDescendente = clave != "label";
+        }
+    }
+
+    private string ClaseOrden(string clave) => ordenClave == clave ? "is-active" : "";
 
     public void ExpandirTodo()
     {
@@ -232,7 +251,10 @@ else
 
     private void Caminar(NodoJerarquia nodo, int nivelFila, List<FilaArbol> filas)
     {
-        var hijos = nodo.Hijos.Values.OrderBy(h => h.Label, StringComparer.CurrentCultureIgnoreCase).ToList();
+        var hijos = ordenClave == "label"
+            ? nodo.Hijos.Values.OrderBy(h => h.Label, StringComparer.CurrentCultureIgnoreCase).ToList()
+            : nodo.Hijos.Values.OrderBy(ObtenerValorOrdenable).ToList();
+
         if (ordenDescendente)
             hijos.Reverse();
 
@@ -241,9 +263,7 @@ else
             var efectivo = hijoOriginal;
             var nivelEfectivo = nivelFila;
 
-            while (nivelEfectivo < ProfundidadMaxima - 1
-                   && efectivo.Hijos.Count == 1
-                   && efectivo.Hijos.Values.Single().Label == efectivo.Label)
+            while (nivelEfectivo < ProfundidadMaxima - 1 && efectivo.Hijos.Count == 1)
             {
                 efectivo = efectivo.Hijos.Values.Single();
                 nivelEfectivo++;
@@ -256,6 +276,34 @@ else
                 Caminar(efectivo, nivelFila + 1, filas);
         }
     }
+
+    private decimal ObtenerValorOrdenable(NodoJerarquia nodo)
+    {
+        var partes = ordenClave.Split('|');
+
+        if (partes[0] == "cmp")
+        {
+            var a = MesA is null ? MetricasMes.Vacio : nodo.ObtenerMes(MesA);
+            var b = MesB is null ? MetricasMes.Vacio : nodo.ObtenerMes(MesB);
+            var va = ObtenerMetricaPorClave(a, partes[1]);
+            var vb = ObtenerMetricaPorClave(b, partes[1]);
+            return partes[2] == "delta" ? vb - va : PorcentajeCambio(va, vb);
+        }
+
+        return ObtenerMetricaPorClave(nodo.ObtenerMes(partes[0]), partes[1]);
+    }
+
+    private static decimal ObtenerMetricaPorClave(MetricasMes m, string clave) => clave switch
+    {
+        "viajes" => m.Viajes,
+        "kms" => m.Km,
+        "peaje" => m.Peaje,
+        "venta" => m.Venta,
+        "pkm" => m.VentaPorKm,
+        "kmv" => m.KmPorViaje,
+        "pvj" => m.VentaPorViaje,
+        _ => 0,
+    };
 
     private static decimal Participacion(decimal valor, decimal total) => total > 0 ? valor / total * 100 : 0;
 

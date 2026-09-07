@@ -4,12 +4,17 @@
 <section class="re-bloque re-agencias">
     <h3>Agencias que ya no aparecen</h3>
 
-    @if (Agencias.Count == 0)
+    @if (Agencias.TotalDesaparecidas == 0)
     {
         <p class="re-vacio">Ninguna agencia dejó de aparecer en @MesUltimo.</p>
     }
     else
     {
+        <p class="re-nota re-nota-superior">
+            <b>@Agencias.TotalDesaparecidas</b> agencia(s)/destino(s) con viajes en el año ya no aparecen en @MesUltimo
+            · representaban <span class="re-neg">@FormatoDinero(Agencias.VentaAcumuladaTotal)</span> acumulados
+            · se listan las @Agencias.Top30.Count de mayor venta (el TOTAL de la tabla corresponde solo a esas @Agencias.Top30.Count)
+        </p>
         <div class="re-tbl-wrap">
             <table class="re-tabla">
                 <thead>
@@ -37,19 +42,18 @@
                 </tbody>
                 <tfoot>
                     <tr class="re-total">
-                        <td colspan="4">TOTAL (@Agencias.Count)</td>
-                        <td class="align-end tabular re-neg">@FormatoDinero(Agencias.Sum(a => a.VentaAcumulada))</td>
+                        <td colspan="4">TOTAL (Top @Agencias.Top30.Count)</td>
+                        <td class="align-end tabular re-neg">@FormatoDinero(Agencias.Top30.Sum(a => a.VentaAcumulada))</td>
                         <td></td>
                     </tr>
                 </tfoot>
             </table>
         </div>
-        <p class="re-nota">@Agencias.Count agencia(s) que tuvieron viajes en algún mes cerrado pero no en @MesUltimo. Venta acumulada = suma de venta en los meses en que SÍ tuvieron actividad.</p>
     }
 </section>
 
 @code {
-    [Parameter, EditorRequired] public IReadOnlyList<AgenciaDesaparecidaDto> Agencias { get; set; } = [];
+    [Parameter, EditorRequired] public AgenciasDesaparecidasResumenDto Agencias { get; set; } = null!;
     [Parameter] public string? MesUltimo { get; set; }
 
     private string ordenClave = "ventaAcumulada";
@@ -71,12 +75,12 @@
     {
         IOrderedEnumerable<AgenciaDesaparecidaDto> query = ordenClave switch
         {
-            "matriz" => Agencias.OrderBy(a => a.Matriz, StringComparer.CurrentCultureIgnoreCase),
-            "ultimoMes" => Agencias.OrderBy(a => (a.UltimoMesActivo.Anio, a.UltimoMesActivo.Mes)),
-            "mesesActiva" => Agencias.OrderBy(a => a.MesesActiva),
-            "ventaAcumulada" => Agencias.OrderBy(a => a.VentaAcumulada),
-            "ventaPromedio" => Agencias.OrderBy(a => a.VentaPromedio),
-            _ => Agencias.OrderBy(a => a.Destino, StringComparer.CurrentCultureIgnoreCase),
+            "matriz" => Agencias.Top30.OrderBy(a => a.Matriz, StringComparer.CurrentCultureIgnoreCase),
+            "ultimoMes" => Agencias.Top30.OrderBy(a => (a.UltimoMesActivo.Anio, a.UltimoMesActivo.Mes)),
+            "mesesActiva" => Agencias.Top30.OrderBy(a => a.MesesActiva),
+            "ventaAcumulada" => Agencias.Top30.OrderBy(a => a.VentaAcumulada),
+            "ventaPromedio" => Agencias.Top30.OrderBy(a => a.VentaPromedio),
+            _ => Agencias.Top30.OrderBy(a => a.Destino, StringComparer.CurrentCultureIgnoreCase),
         };
 
         return (ordenDescendente ? query.Reverse() : query).ToList();

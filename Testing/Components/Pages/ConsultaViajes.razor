@@ -437,12 +437,12 @@
 
     private List<ViajesDto> ObtenerViajesFiltrados()
     {
-        var resultado = viajesCargados;
+        IEnumerable<ViajesDto> resultado = viajesCargados;
 
         foreach (var f in filtros.Where(f => f.Disponible && f.Seleccionados.Count > 0))
-            resultado = resultado.Where(v => f.Selector(v) is { } val && f.Seleccionados.Contains(val)).ToList();
+            resultado = resultado.Where(v => f.Selector(v) is { } val && f.Seleccionados.Contains(val));
 
-        return resultado;
+        return resultado.ToList();
     }
 
     private string? ObtenerValorAgrupacion(ViajesDto v) => agruparPor switch
@@ -479,8 +479,9 @@
         var esTemporal = agruparPor is "dia" or "semana";
 
         var grupos = viajesFiltrados
-            .Where(v => ObtenerValorAgrupacion(v) is not null)
-            .GroupBy(v => ObtenerValorAgrupacion(v)!)
+            .Select(v => (Viaje: v, Clave: ObtenerValorAgrupacion(v)))
+            .Where(x => x.Clave is not null)
+            .GroupBy(x => x.Clave!, x => x.Viaje)
             .ToList();
 
         var filas = new List<FilaPivote>();
@@ -574,10 +575,12 @@
         return nuevoHijo;
     }
 
+    // Viajes ya NO se redondea por fila (ver C-P0-02): se acumula el valor decimal proyectado tal
+    // cual y se redondea una sola vez, al mostrar, en el Razor consumidor.
     private void Acumular(NodoJerarquia nodo, string mesClave, ViajesDto viaje)
     {
         var metrica = new MetricasMes(
-            (int)Math.Round(ContribucionViajeProyectada.Viajes(viaje, corte)),
+            ContribucionViajeProyectada.Viajes(viaje, corte),
             ContribucionViajeProyectada.Kms(viaje, corte),
             ContribucionViajeProyectada.Peaje(viaje, corte),
             ContribucionViajeProyectada.Venta(viaje, corte));
@@ -602,10 +605,6 @@
         }
     }
 
-    // Viajes cuenta solo tramos de Ida (ContribucionViajeProyectada.Viajes) y aplica el
-    // factor de proyección del mes abierto por viaje, no por grupo — un grupo (ej. Semana)
-    // puede mezclar viajes de más de un mes, cada uno con su propio factor. Venta/Kms/Peaje
-    // proyectan igual (auditoría de Venta de esta fase: TotalVenta = subtotal_factura).
     private static MetricasMes CalcularMetricas(IEnumerable<ViajesDto> grupo, CorteMensual? corte)
     {
         var lista = grupo as IReadOnlyCollection<ViajesDto> ?? grupo.ToList();
@@ -613,7 +612,7 @@
         var kms = lista.Sum(v => ContribucionViajeProyectada.Kms(v, corte));
         var peaje = lista.Sum(v => ContribucionViajeProyectada.Peaje(v, corte));
         var venta = lista.Sum(v => ContribucionViajeProyectada.Venta(v, corte));
-        return new MetricasMes((int)Math.Round(viajes), kms, peaje, venta);
+        return new MetricasMes(viajes, kms, peaje, venta);
     }
 
     private async Task ConsultarAsync()

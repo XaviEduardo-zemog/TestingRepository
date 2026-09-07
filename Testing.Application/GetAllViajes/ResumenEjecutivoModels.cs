@@ -1,4 +1,4 @@
-﻿namespace Testing.Application.GetAllViajes;
+﻿using Testing.Application.GetAllViajes;
 
 /// <summary>
 /// Un mes presente en los datos cargados. El nombre "MesCerrado" es heredado de una fase
@@ -39,17 +39,9 @@ public sealed record TotalesPeriodo(decimal Viajes, decimal Kms, decimal Venta)
 
 public enum SeveridadAlerta { Neutral, Positiva, Negativa }
 
-/// <summary>Una línea del semáforo (Bloque 8.1). Replica los sem.push(...) de RE_render() en viajes_v14.html.</summary>
+/// <summary>Una línea del semáforo (Bloque 8.1).</summary>
 public sealed record AlertaSemaforo(string Texto, SeveridadAlerta Severidad);
 
-/// <summary>
-/// Replica RE_bloqueNivel() — usado tal cual para "Zemog · Nivel general" (8.2) y, una vez por
-/// cliente, para "Por Cliente" (8.3). "PrimerMesDelAnio"/"HayComparativoVsEnero" son nombres
-/// heredados: el HTML llama a esto "vs Enero (avance del año)" en la UI, pero la variable real es
-/// literal "mesesOrdenados[0]" (el primer mes de TODO el rango cargado, sin filtrar por año) --
-/// confirmado en esta fase. Se conserva el nombre de la propiedad, se corrige el cálculo (ya NO
-/// filtra por año).
-/// </summary>
 public sealed record BloqueNivelDto(
     string Titulo,
     MesCerrado? MesAnterior,
@@ -174,6 +166,11 @@ public sealed record AgenciaDesaparecidaDto(
     public decimal VentaPromedio => MesesActiva > 0 ? VentaAcumulada / MesesActiva : 0;
 }
 
+public sealed record AgenciasDesaparecidasResumenDto(
+    int TotalDesaparecidas,
+    decimal VentaAcumuladaTotal,
+    IReadOnlyList<AgenciaDesaparecidaDto> Top30);
+
 public sealed record ResumenEjecutivoDto(
     IReadOnlyList<MesCerrado> MesesCerrados,
     bool HayComparativos,
@@ -182,7 +179,7 @@ public sealed record ResumenEjecutivoDto(
     IReadOnlyList<NivelPorClienteDto> PorCliente,
     NodoComparativo? ArbolComparativo,
     DestinosCayendoResumenDto? DestinosCayendo,
-    IReadOnlyList<AgenciaDesaparecidaDto> AgenciasDesaparecidas,
+    AgenciasDesaparecidasResumenDto AgenciasDesaparecidas,
     OperadoresResumenDto Operadores,
     RotacionOperadoresDto Rotacion,
     IReadOnlyList<(string Valor, decimal Viajes)> ArmadosDesconocidos);

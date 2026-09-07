@@ -1,20 +1,5 @@
 ﻿namespace Testing.Application.GetAllViajes;
 
-/// <summary>
-/// Arma los 8 slides del modo presentación reutilizando ResumenEjecutivoCalculator.Calcular --
-/// mismo motor que el Resumen Ejecutivo normal, pero Presentación SÍ tiene una regla propia de
-/// exclusión que el Resumen Ejecutivo normal NO tiene (confirmado en esta fase, ver
-/// ResumenEjecutivoCalculator): si el día de corte &lt; 28, el último mes se trata como "avance" y
-/// las comparativas usan los 2 meses cerrados anteriores -- replica PR_corteInfo().
-///
-/// Esta clase NO modifica ResumenEjecutivoCalculator para saber de "avance" -- en vez de eso,
-/// PrepararParaPresentacion() filtra los viajes del mes de avance ANTES de llamar a Calcular(),
-/// así el mismo motor (bloqueNivel, árbol, asignación, destinos, agencias, operadores, rotación)
-/// se reutiliza tal cual, sin ninguna bifurcación interna. corte se sigue pasando sin cambios: al
-/// ya no existir ninguna fila del mes de avance en los datos filtrados, CorteMensual.FactorPara
-/// nunca vuelve a aplicar sobre ese mes (no queda ninguna fila con ese Año/Mes) -- el resto de
-/// los meses (ya cerrados) se tratan con factor 1, como corresponde.
-/// </summary>
 public static class SlidesPresentacionCalculator
 {
     /// <summary>
@@ -81,8 +66,8 @@ public static class SlidesPresentacionCalculator
             Fugas: new SlideFugasDto(
                 // VentaPerdida se guarda en POSITIVO (magnitud de la pérdida) -- DeltaVenta del DTO es negativo (actual-anterior).
                 PeorDestinoCayendo: resumen.DestinosCayendo is { TotalConCaida: > 0 } d ? (d.Top25[0].Destino, -d.Top25[0].DeltaVenta) : null,
-                AgenciasDesaparecidas: resumen.AgenciasDesaparecidas.Count,
-                VentaAcumuladaPerdida: resumen.AgenciasDesaparecidas.Sum(a => a.VentaAcumulada)),
+                AgenciasDesaparecidas: resumen.AgenciasDesaparecidas.TotalDesaparecidas,
+                VentaAcumuladaPerdida: resumen.AgenciasDesaparecidas.VentaAcumuladaTotal),
             QueSigue: new SlideQueSigueDto());
     }
 

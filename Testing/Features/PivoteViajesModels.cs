@@ -2,7 +2,7 @@
 
 public sealed record MesColumna(string Clave, string Etiqueta);
 
-public sealed record MetricasMes(int Viajes, decimal Km, decimal Peaje, decimal Venta)
+public sealed record MetricasMes(decimal Viajes, decimal Km, decimal Peaje, decimal Venta)
 {
     public decimal KmPorViaje => Viajes > 0 ? Km / Viajes : 0;
     public decimal VentaPorKm => Km > 0 ? Venta / Km : 0;

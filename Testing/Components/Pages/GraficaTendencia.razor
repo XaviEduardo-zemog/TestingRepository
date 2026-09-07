@@ -1,19 +1,6 @@
 ﻿@using ApexCharts
 @using Testing.Application.GetAllViajes
 
-@* Replica RE_chartSVG(): serie real dorada (grosor 2.6, markers radio 3.2) + serie de tendencia
-   gris punteada (grosor 1.6, sin markers), calculada con TendenciaCalculator (regresión exacta:
-   lineal 2-3 puntos, cuadrática 4+ -- NUNCA promedio móvil). Altura ~210px, sin grid excesiva,
-   caption fijo "Línea punteada = tendencia" (texto literal del HTML). El eje Y se autoescala
-   sobre AMBAS series (ApexCharts ya hace esto por defecto al graficar 2 series juntas -- mismo
-   resultado que "todos=valores.concat(tend)" del HTML).
-
-   ⚠ Riesgo de compilación: Blazor-ApexCharts (paquete ya instalado, v7.0.0) no se pudo compilar
-   en esta fase (sin acceso a build) -- la forma de ApexChartOptions&lt;T&gt;/Stroke/Markers/Chart
-   aquí usada es la API pública conocida de esa librería, pero si el build falla, es el primer
-   lugar a revisar (IntelliSense del paquete instalado) antes que cualquier otro archivo de esta
-   entrega. *@
-
 <div class="re-grafica">
     <p class="re-grafica-titulo">@Titulo</p>
     <ApexChart TItem="PuntoGrafica" Options="opciones" Height="210">
@@ -38,11 +25,19 @@
     [Parameter, EditorRequired] public string NombreSerieReal { get; set; } = "";
     [Parameter, EditorRequired] public IReadOnlyList<(string Etiqueta, decimal Valor)> Datos { get; set; } = [];
 
+    [Parameter] public bool EsDinero { get; set; } = true;
+
     private sealed record PuntoGrafica(string Etiqueta, decimal Valor);
 
     private List<PuntoGrafica> real = [];
     private List<PuntoGrafica> tendencia = [];
     private ApexChartOptions<PuntoGrafica> opciones = new();
+
+    private const string FormatoJsDinero =
+        "function(v){ if(v==null) return ''; var n=Number(v); if(Math.abs(n)>=1e6) return '$'+(n/1e6).toFixed(1)+' M'; return '$'+Math.round(n).toLocaleString('es-MX'); }";
+
+    private const string FormatoJsPkm =
+        "function(v){ if(v==null) return ''; return '$'+Number(v).toFixed(1); }";
 
     protected override void OnParametersSet()
     {
@@ -52,6 +47,8 @@
         // lineal por mínimos cuadrados, 4+ pts = cuadrática -- nunca promedio móvil.
         var valoresTendencia = TendenciaCalculator.Calcular(Datos.Select(d => d.Valor).ToList());
         tendencia = Datos.Select((d, i) => new PuntoGrafica(d.Etiqueta, valoresTendencia[i])).ToList();
+
+        var formatoJs = EsDinero ? FormatoJsDinero : FormatoJsPkm;
 
         opciones = new ApexChartOptions<PuntoGrafica>
         {
@@ -73,7 +70,8 @@
             Legend = new Legend { Show = false }, // el caption fijo reemplaza la leyenda, igual que el HTML
             DataLabels = new DataLabels { Enabled = false },
             Xaxis = new XAxis { Labels = new XAxisLabels { Style = new AxisLabelStyle { FontSize = "10px" } } },
-            Yaxis = [new YAxis { Labels = new YAxisLabels { Style = new AxisLabelStyle { FontSize = "10px" } } }],
+            Yaxis = [new YAxis { Labels = new YAxisLabels { Style = new AxisLabelStyle { FontSize = "10px" }, Formatter = formatoJs } }],
+            Tooltip = new Tooltip { Y = new TooltipY { Formatter = formatoJs } },
         };
     }
 }
