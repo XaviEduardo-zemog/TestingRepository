@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Testing.Application.Abstractions.Data;
 using Testing.Infrastructure.Persistence;
 using Testing.Infrastructure.Persistence.Zam;
+using Testing.Infrastructure.Persistence.CIS_DB;
 
 namespace Testing.Infrastructure;
 
@@ -16,6 +17,12 @@ public static class DependencyInjection
 
         services.AddDbContextFactory<ZemogContext>(options => options.UseSqlServer(connectionString));
         services.AddScoped<IApplicationDbContext, ApplicationDbContext>();
+
+        var cisConnectionString = configuration.GetConnectionString("CisDB")
+            ?? throw new InvalidOperationException("No se encontró la cadena de conexión 'CisDB'.");
+
+        services.AddDbContextFactory<CisContext>(options => options.UseSqlServer(cisConnectionString));
+
 
         return services;
     }
