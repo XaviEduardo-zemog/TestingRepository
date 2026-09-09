@@ -2,8 +2,35 @@
 
 namespace Testing.Application.GetAllViajes;
 
+/// <summary>
+/// Resultado de intentar enriquecer un ViajesDto con datos de CIS_DB, vía
+/// ICisViajeEnrichmentRepository + ViajesEnriquecidoMapper. Siempre queda establecido.
+/// </summary>
+public enum EstadoEnriquecimientoCis
+{
+    /// <summary>no_remision venía null en el SP -- confirmado por el usuario: ocurre exactamente
+    /// cuando estatus_viaje está cancelado (el viaje no se tomó, nunca se generó una remisión).
+    /// No se buscó nada en CIS para esta fila; no es un error.</summary>
+    NoAplica,
+
+    /// <summary>Se encontró exactamente una fila en CIS_DB para este Folio -- los campos cis_*
+    /// quedan poblados.</summary>
+    Encontrado,
+
+    /// <summary>no_remision no era null, pero ninguna fila de ZemogViajesEnZamAnual tiene ese
+    /// Folio. Los campos cis_* quedan en null a propósito -- no se inventa un valor.</summary>
+    NoEncontrado,
+
+    /// <summary>Más de una fila de ZemogViajesEnZamAnual comparte el mismo Folio -- caso
+    /// inesperado (la unicidad de Folio es una regla de negocio confirmada por el usuario, no
+    /// forzada por un índice único en la base).</summary>
+    Duplicado,
+}
+
 public sealed class ViajesDto
 {
+    // ---------- Contrato original del SP (sin cambios) ----------
+
     [Column("base")]
     public string? _base { get; set; }
 
@@ -72,4 +99,38 @@ public sealed class ViajesDto
     public string? cargado_vacio { get; set; }
 
     public string? tipo_operacion { get; set; }
+
+    // ---------- Enriquecimiento CIS_DB ----------
+    // Llave usada para obtenerlos: no_remision (arriba) <-> ZemogViajesEnZamAnual.Folio,
+    // confirmada por el usuario. Todos null si cis_estado no es Encontrado.
+
+    /// <summary>Nunca null: siempre queda establecido por ViajesEnriquecidoMapper, en los 4 valores posibles.</summary>
+    public EstadoEnriquecimientoCis cis_estado { get; set; } = EstadoEnriquecimientoCis.NoAplica;
+
+    /// <summary>Sucursales.NombreCorto (vía FK ZemogViajesEnZamAnual.IdSucursal).</summary>
+    public string? cis_cliente { get; set; }
+
+    /// <summary>Sucursales.Region.</summary>
+    public string? cis_zona { get; set; }
+
+    /// <summary>Sucursales.Nomenclatura.</summary>
+    public string? cis_matriz { get; set; }
+
+    /// <summary>ZemogViajesEnZamAnual.Sucursal (texto; viene de la tabla de viajes, no de Sucursales).</summary>
+    public string? cis_sucursal { get; set; }
+
+    /// <summary>ZemogViajesEnZamAnual.IdSucursal.</summary>
+    public int? cis_id_sucursal { get; set; }
+
+    public string? cis_destino { get; set; }
+
+    public string? cis_estado_destino { get; set; }
+
+    public decimal? cis_total_venta { get; set; }
+
+    public int? cis_ejes_equipos { get; set; }
+
+    public DateOnly? cis_fecha_calendario { get; set; }
+
+    public string? cis_trayecto { get; set; }
 }

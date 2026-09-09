@@ -3,11 +3,6 @@ using System.Text.RegularExpressions;
 
 namespace Testing.Application.GetAllViajes;
 
-/// <summary>
-/// Resultado de parsear el campo "ruta". CodigoDestino se deja separado de "EstadoDestino"
-/// a propósito: no se ha confirmado que sean el mismo concepto — ver §54.20 del Artifact
-/// y Fase 4 punto 4.
-/// </summary>
 public sealed record RutaParseada(
     bool Reconocida,
     string? CodigoRuta,
@@ -20,27 +15,8 @@ public sealed record RutaParseada(
     public static readonly RutaParseada NoReconocida = new(false, null, null, null, null, null, null);
 }
 
-/// <summary>
-/// Campos derivados de ViajesDto que no requieren TotalVenta. Vive en Application (no en
-/// Presentation) para que ConsultaViajes.razor no tenga Split/regex directo en Razor, y para
-/// poder probarlos con pruebas unitarias reales (ver Testing.Application.Tests).
-/// </summary>
 public static class CamposDerivadosViajes
 {
-    // AUDITORÍA de Destino (esta fase, "ajuste fino"): se detectaron 2 formatos reales distintos
-    // de "ruta", confirmados por el usuario en dos ocasiones separadas:
-    //   Con paréntesis (Fase 4, chat 2026-08-28):
-    //     "800059 Victor Rosales (CCZ) - Torreon (DCMNorte) - I"
-    //   Sin paréntesis, con prefijo de tarifa (ejemplos de Tarifa de esta fase):
-    //     "33083301 C. Chihuahua - Juarez Chh. - I"
-    // AMBOS comparten la misma estructura de 3 partes separadas por " - ":
-    //   <código[+prefijo tarifa opcional] Origen> - <Destino[+código opcional]> - <I|R>
-    // Se parsea dividiendo por " - " (en vez del regex monolítico anterior, que exigía
-    // paréntesis en AMBOS lados y fallaba con el formato sin paréntesis) -- el Destino es
-    // siempre el segmento del MEDIO, con o sin "(codigo)" al final. Esto reemplaza el parser
-    // anterior (que solo reconocía el formato con paréntesis) por uno tolerante a ambos formatos
-    // conocidos -- sigue sin validarse contra el universo COMPLETO de valores reales de "ruta"
-    // (solo se conocen 4 ejemplos, 2 por formato), ver auditoría de Destino en el Artifact.
     private static readonly Regex PatronCodigoEntreParentesis = new(
         @"^(?<texto>.+?)\s*\((?<codigo>[^()]*)\)\s*$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -93,7 +69,13 @@ public static class CamposDerivadosViajes
             : (NuloSiVacio(valor), null);
     }
 
-    public static string? ObtenerDestino(ViajesDto viaje) => ParsearRuta(viaje.ruta).Destino;
+    public static string? ObtenerDestino(ViajesDto viaje) =>
+        viaje.cis_estado == EstadoEnriquecimientoCis.Encontrado && viaje.cis_destino is { Length: > 0 }
+            ? viaje.cis_destino
+            : ParsearRuta(viaje.ruta).Destino;
+
+    public static string? ObtenerEstadoDestino(ViajesDto viaje) =>
+        viaje.cis_estado == EstadoEnriquecimientoCis.Encontrado ? viaje.cis_estado_destino : null;
 
     public static string? ObtenerMovimiento(ViajesDto viaje)
     {
@@ -122,11 +104,6 @@ public static class CamposDerivadosViajes
         return null;
     }
 
-    /// <summary>
-    /// El código entre paréntesis junto al destino (ej. "DCMNorte"), si lo hay -- null si el
-    /// formato de esta fila no trae paréntesis. Deliberadamente NO se llama "EstadoDestino" —
-    /// esa equivalencia no está confirmada (Fase 4 punto 4).
-    /// </summary>
     public static string? ObtenerCodigoDestino(ViajesDto viaje) => ParsearRuta(viaje.ruta).CodigoDestino;
 
     private static string? NuloSiVacio(string valor)
@@ -135,11 +112,6 @@ public static class CamposDerivadosViajes
         return recortado.Length > 0 ? recortado : null;
     }
 
-    /// <summary>
-    /// Deriva Cliente/Zona de "tipo_operacion" (regla confirmada por el usuario, chat
-    /// 2026-08-28): primer token = Cliente, resto = Zona. tipo_operacion confirmado como ya
-    /// devuelto por sp_ConsultaViajesZemog — ver Fase 4 punto 1 / §54.68.
-    /// </summary>
     public static (string? Cliente, string? Zona) ParsearClienteZona(string? tipoOperacion)
     {
         if (string.IsNullOrWhiteSpace(tipoOperacion))
@@ -155,17 +127,50 @@ public static class CamposDerivadosViajes
         };
     }
 
-    public static string? ObtenerCliente(ViajesDto viaje) => ParsearClienteZona(viaje.tipo_operacion).Cliente;
+    public static string? NormalizarCliente(string? valor)
+    {
+        if (string.IsNullOrWhiteSpace(valor))
+            return null;
 
-    public static string? ObtenerZona(ViajesDto viaje) => ParsearClienteZona(viaje.tipo_operacion).Zona;
+        var recortado = valor.Trim();
+
+        return recortado.ToUpperInvariant() switch
+        {
+            "MD" or "ME" or "MODELO" => "Modelo",
+            "ARCA" => "Arca",
+            _ => recortado,
+        };
+    }
+
+    public static string? ObtenerCliente(ViajesDto viaje)
+    {
+        var crudo = viaje.cis_estado == EstadoEnriquecimientoCis.Encontrado && viaje.cis_cliente is { Length: > 0 }
+            ? viaje.cis_cliente
+            : ParsearClienteZona(viaje.tipo_operacion).Cliente;
+
+        return NormalizarCliente(crudo);
+    }
+
+    public static string? ObtenerZona(ViajesDto viaje) =>
+        viaje.cis_estado == EstadoEnriquecimientoCis.Encontrado && viaje.cis_zona is { Length: > 0 }
+            ? viaje.cis_zona
+            : null;
+
+    public static string? ObtenerMatriz(ViajesDto viaje) =>
+        viaje.cis_estado == EstadoEnriquecimientoCis.Encontrado && viaje.cis_matriz is { Length: > 0 }
+            ? viaje.cis_matriz
+            : viaje._base;
+
+    public static string? ObtenerSucursal(ViajesDto viaje) =>
+        viaje.cis_estado == EstadoEnriquecimientoCis.Encontrado && viaje.cis_sucursal is { Length: > 0 }
+            ? viaje.cis_sucursal
+            : viaje._base;
+
+    public static bool EsFallbackCis(ViajesDto viaje) => viaje.cis_estado is EstadoEnriquecimientoCis.NoEncontrado or EstadoEnriquecimientoCis.Duplicado;
 
     private static readonly string[] FormatosFecha = ["d/M/yyyy h:mm tt"];
     private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-MX");
 
-    /// <summary>
-    /// Fecha de negocio usada para Año/Mes/Semana/Día: fecha_ingreso. Riesgo documentado, no
-    /// resuelto — ver Fase 4 punto 6.
-    /// </summary>
     public static DateTime? ObtenerFechaNegocio(ViajesDto viaje)
     {
         if (string.IsNullOrWhiteSpace(viaje.fecha_ingreso))
@@ -196,13 +201,6 @@ public static class CamposDerivadosViajes
         return fecha is null ? null : ISOWeek.GetWeekOfYear(fecha.Value).ToString();
     }
 
-    /// <summary>
-    /// Tipo de tarifa desde "ruta" — replica tarifaDeRuta() de viajes_v14.html: recorta espacios,
-    /// vacío -> "(sin tarifa)"; busca el PRIMER espacio, sin espacio -> "Viaje"; toma exactamente
-    /// los 2 caracteres inmediatamente después de ese espacio y compara sensible a mayúsculas
-    /// contra "C." (Comodato) o "P." (Propio); cualquier otro valor -> "Viaje". Regla de
-    /// POSICIÓN, no de búsqueda de letras en cualquier parte de la cadena.
-    /// </summary>
     public static string ObtenerTarifa(ViajesDto viaje)
     {
         var s = viaje.ruta?.Trim();

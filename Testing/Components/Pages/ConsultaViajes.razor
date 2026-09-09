@@ -259,26 +259,20 @@
     private NodoJerarquia? raizJerarquia;
     private ArbolJerarquiaViajes? arbolRef;
 
-    // Cliente/Zona: CamposDerivadosViajes.ObtenerCliente/ObtenerZona. Sucursal = Matriz = _base
-    // (confirmado por el usuario en esta fase -- "no inventar otra Sucursal"). La cadena
-    // Matriz→Sucursal siempre tiene 1 solo hijo (mismo valor dos veces), así que el colapso de
-    // cadenas de hijo único (ArbolJerarquiaViajes.Caminar) la fusiona visualmente sola -- ver
-    // Fase 7 / §54.109 y la auditoría de Sucursal/Matriz de esta fase.
     private static readonly Func<ViajesDto, string?>[] NivelesJerarquia =
     [
         CamposDerivadosViajes.ObtenerCliente,
         CamposDerivadosViajes.ObtenerZona,
-        v => v._base,
-        v => v._base,
+        CamposDerivadosViajes.ObtenerMatriz,
+        CamposDerivadosViajes.ObtenerSucursal,
     ];
 
-    // "Jerarquía + Tarifa": mismo árbol de 4 niveles + un 5º nivel (Tipo de tarifa, desde Ruta).
     private static readonly Func<ViajesDto, string?>[] NivelesJerarquiaConTarifa =
     [
         CamposDerivadosViajes.ObtenerCliente,
         CamposDerivadosViajes.ObtenerZona,
-        v => v._base,
-        v => v._base,
+        CamposDerivadosViajes.ObtenerMatriz,
+        CamposDerivadosViajes.ObtenerSucursal,
         CamposDerivadosViajes.ObtenerTarifa,
     ];
 
@@ -314,31 +308,30 @@
 
     protected override void OnInitialized()
     {
-        // Orden de cascada confirmado en esta fase (auditoría de filtros):
-        // Cliente -> Sucursal -> Mes -> Destino -> Expedición -> Zona -> Matriz -> Año -> Semana
-        // -> EdoDestino -> Operador -> Unidad -> Tarifa -> Movimiento.
-        // Sucursal = _base (ya NO Pendiente, confirmado por el usuario en esta fase -- ver
-        // auditoría Sucursal/Matriz). Tipo de tarifa = CamposDerivadosViajes.ObtenerTarifa (ya NO
-        // Pendiente, parser nuevo de esta fase -- ver auditoría de Tarifa para el conflicto de
-        // formato de Ruta detectado y no resuelto por inspección). Edo. Destino sigue Pendiente:
-        // el código entre paréntesis de Ruta (CodigoDestino) sigue sin confirmarse como
-        // EstadoDestino, a propósito separado (Fase 4 punto 4) -- ninguna de las reglas
-        // confirmadas en esta fase (Venta, Sucursal, Tarifa) resuelve esa duda en particular.
+        // AJUSTE — Corrección funcional Cliente/Zona (2026-09-08): Cliente/Zona/Matriz/Sucursal
+        // se reordenan para quedar CONTIGUOS y en ese orden exacto -- RecalcularCascada recorre
+        // "filtros" en orden de arreglo y solo recalcula opciones de los filtros POSTERIORES al
+        // que cambió. Con el orden anterior (cliente, sucursal, mes, destino, expedicion, zona,
+        // matriz, ...), Sucursal quedaba ANTES de Zona/Matriz: cambiar Zona nunca recalculaba
+        // Sucursal (bug de cascada real, sección 8 del prompt). Con este orden, cambiar Cliente
+        // recalcula Zona/Matriz/Sucursal; cambiar Zona recalcula Matriz/Sucursal -- tal como
+        // exige la jerarquía Cliente → Zona → Matriz → Sucursal. Efecto lateral esperado:
+        // FiltrosPrimarios (Take(5)) ahora muestra Cliente/Zona/Matriz/Sucursal/Mes por defecto.
         filtros =
         [
             new() { Clave = "cliente", Etiqueta = "Cliente", Selector = CamposDerivadosViajes.ObtenerCliente, ConBuscador = true },
-            new() { Clave = "sucursal", Etiqueta = "Sucursal", Selector = v => v._base },
+            new() { Clave = "zona", Etiqueta = "Zona", Selector = CamposDerivadosViajes.ObtenerZona, ConBuscador = true },
+            new() { Clave = "matriz", Etiqueta = "Matriz", Selector = CamposDerivadosViajes.ObtenerMatriz },
+            new() { Clave = "sucursal", Etiqueta = "Sucursal", Selector = CamposDerivadosViajes.ObtenerSucursal },
             new() { Clave = "mes", Etiqueta = "Mes", Selector = CamposDerivadosViajes.ObtenerMesEtiqueta },
             new() { Clave = "destino", Etiqueta = "Destino", Selector = CamposDerivadosViajes.ObtenerDestino, ConBuscador = true },
             new() { Clave = "expedicion", Etiqueta = "Expedición", Selector = v => v.expedicion },
-            new() { Clave = "zona", Etiqueta = "Zona", Selector = CamposDerivadosViajes.ObtenerZona, ConBuscador = true },
-            new() { Clave = "matriz", Etiqueta = "Matriz", Selector = v => v._base },
             new() { Clave = "anio", Etiqueta = "Año", Selector = CamposDerivadosViajes.ObtenerAnio },
             new() { Clave = "semana", Etiqueta = "Semana", Selector = CamposDerivadosViajes.ObtenerSemana },
-            new() { Clave = "edestino", Etiqueta = "Edo. Destino", Selector = _ => null, Disponible = false,
-                    MotivoPendiente = "Pendiente: el código entre paréntesis de Ruta (CodigoDestino) no está confirmado como EstadoDestino — se dejan separados a propósito, ver Fase 4 punto 4" },
+            new() { Clave = "edestino", Etiqueta = "Edo. Destino", Selector = CamposDerivadosViajes.ObtenerEstadoDestino },
             new() { Clave = "operador", Etiqueta = "Operador", Selector = v => v.operador1, ConBuscador = true },
             new() { Clave = "unidad", Etiqueta = "Unidad", Selector = v => v.id_unidad, ConBuscador = true },
+            new() { Clave = "ejes", Etiqueta = "Ejes", Selector = v => v.cis_ejes_equipos?.ToString(CultureInfo.InvariantCulture) },
             new() { Clave = "tarifa", Etiqueta = "Tipo de tarifa", Selector = CamposDerivadosViajes.ObtenerTarifa },
             new() { Clave = "movimiento", Etiqueta = "Movimiento", Selector = CamposDerivadosViajes.ObtenerMovimiento },
         ];
@@ -447,10 +440,10 @@
 
     private string? ObtenerValorAgrupacion(ViajesDto v) => agruparPor switch
     {
-        "sucursal" => v._base,
+        "sucursal" => CamposDerivadosViajes.ObtenerSucursal(v),
         "cliente" => CamposDerivadosViajes.ObtenerCliente(v),
         "zona" => CamposDerivadosViajes.ObtenerZona(v),
-        "matriz" => v._base,
+        "matriz" => CamposDerivadosViajes.ObtenerMatriz(v),
         "tarifa" => CamposDerivadosViajes.ObtenerTarifa(v),
         "expedicion" => v.expedicion,
         "operador" => v.operador1,
@@ -575,8 +568,6 @@
         return nuevoHijo;
     }
 
-    // Viajes ya NO se redondea por fila (ver C-P0-02): se acumula el valor decimal proyectado tal
-    // cual y se redondea una sola vez, al mostrar, en el Razor consumidor.
     private void Acumular(NodoJerarquia nodo, string mesClave, ViajesDto viaje)
     {
         var metrica = new MetricasMes(

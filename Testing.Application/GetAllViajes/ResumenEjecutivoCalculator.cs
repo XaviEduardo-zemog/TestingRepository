@@ -14,8 +14,8 @@ public static class ResumenEjecutivoCalculator
     [
         CamposDerivadosViajes.ObtenerCliente,
         CamposDerivadosViajes.ObtenerZona,
-        v => v._base,
-        v => v._base, // Sucursal = Matriz = _base, confirmado por el usuario.
+        CamposDerivadosViajes.ObtenerMatriz,
+        CamposDerivadosViajes.ObtenerSucursal,
     ];
 
     public static ResumenEjecutivoDto Calcular(IReadOnlyList<ViajesDto> viajesCargados, CorteMensual? corte)
@@ -70,7 +70,9 @@ public static class ResumenEjecutivoCalculator
 
         var armadosDesconocidos = CalcularArmadosDesconocidos(viajesConFecha);
 
-        return new ResumenEjecutivoDto(meses, hayComparativos, semaforo, nivelZemog, porCliente, arbol, destinosCayendo, agenciasDesaparecidas, operadores, rotacion, armadosDesconocidos);
+        var diagnosticoCis = CalcularDiagnosticoCis(viajesCargados);
+
+        return new ResumenEjecutivoDto(meses, hayComparativos, semaforo, nivelZemog, porCliente, arbol, destinosCayendo, agenciasDesaparecidas, operadores, rotacion, armadosDesconocidos, diagnosticoCis);
     }
 
     // ---------- Meses presentes en los datos (SIN exclusión -- ver nota de clase) ----------
@@ -139,8 +141,6 @@ public static class ResumenEjecutivoCalculator
             var mes = meses.First(m => m.Anio == claveMes.Anio && m.Mes == claveMes.Mes);
             var esIda = CamposDerivadosViajes.ObtenerMovimiento(v) == "Ida";
             var contribucion = TotalesPeriodo.De(v, corte);
-            // AJUSTE — Correcciones puntuales finales: Asignación se clasifica desde "armado"
-            // (fuente real de nuestro SP), NO desde "expedicion" -- ver CamposDerivadosViajes.ClasificarArmado.
             var armado = CamposDerivadosViajes.ClasificarArmado(v);
 
             AcumularComparativo(raiz, mes, ultimo, anterior, contribucion, armado, esIda);
@@ -245,6 +245,23 @@ public static class ResumenEjecutivoCalculator
             .ToList();
     }
 
+    private static DiagnosticoEnriquecimientoCisDto CalcularDiagnosticoCis(IReadOnlyList<ViajesDto> viajes)
+    {
+        int encontrado = 0, noEncontrado = 0, duplicado = 0, noAplica = 0;
+
+        foreach (var v in viajes)
+        {
+            switch (v.cis_estado)
+            {
+                case EstadoEnriquecimientoCis.Encontrado: encontrado++; break;
+                case EstadoEnriquecimientoCis.NoEncontrado: noEncontrado++; break;
+                case EstadoEnriquecimientoCis.Duplicado: duplicado++; break;
+                default: noAplica++; break;
+            }
+        }
+
+        return new DiagnosticoEnriquecimientoCisDto(viajes.Count, encontrado, noEncontrado, duplicado, noAplica);
+    }
 
     private static DestinosCayendoResumenDto CalcularDestinosCayendo(IReadOnlyList<ViajesDto> viajes, IReadOnlyList<MesCerrado> meses, CorteMensual? corte, Func<ViajesDto, DateTime?> fechaDe)
     {
@@ -265,7 +282,7 @@ public static class ResumenEjecutivoCalculator
             else continue;
 
             var destino = CamposDerivadosViajes.ObtenerDestino(v) ?? "(sin dato)";
-            var matriz = v._base ?? "(sin dato)";
+            var matriz = CamposDerivadosViajes.ObtenerMatriz(v) ?? "(sin dato)";
             var clave = (destino, matriz, mes);
             acumPorGrupoMes[clave] = TotalesPeriodo.Sumar(acumPorGrupoMes.GetValueOrDefault(clave, TotalesPeriodo.Vacio), TotalesPeriodo.De(v, corte));
         }
@@ -357,7 +374,7 @@ public static class ResumenEjecutivoCalculator
 
             var mes = meses.First(m => m.Anio == claveMes.Anio && m.Mes == claveMes.Mes);
             var destino = CamposDerivadosViajes.ObtenerDestino(v) ?? "(sin dato)";
-            var matriz = v._base ?? "(sin dato)";
+            var matriz = CamposDerivadosViajes.ObtenerMatriz(v) ?? "(sin dato)";
             var clave = (destino, matriz);
 
             if (!ventaPorAgenciaMes.TryGetValue(clave, out var porMesVenta))

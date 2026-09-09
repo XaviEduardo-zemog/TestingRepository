@@ -177,6 +177,7 @@ else
 
     private string ordenClave = "label";
     private bool ordenDescendente;
+    private bool ordenElegidoPorUsuario;
     private readonly HashSet<string> mesesColapsados = [];
 
     protected override void OnParametersSet()
@@ -189,6 +190,12 @@ else
         if (MostrarPkm) columnas.Add(new("pkm", "$/KM", m => m.VentaPorKm, FormatoDinero, false));
         if (MostrarKmPorViaje) columnas.Add(new("kmv", "km/Viaje", m => m.KmPorViaje, FormatoNumero, false));
         if (MostrarPvj) columnas.Add(new("pvj", "$/Viaje", m => m.VentaPorViaje, FormatoDinero, false));
+
+        if (!ordenElegidoPorUsuario && Meses.Count > 0)
+        {
+            ordenClave = $"{Meses[^1].Clave}|venta";
+            ordenDescendente = true;
+        }
     }
 
     private string? MesA => Meses.Count >= 2 ? Meses[^2].Clave : null;
@@ -208,6 +215,8 @@ else
 
     private void OrdenarPor(string clave)
     {
+        ordenElegidoPorUsuario = true;
+
         if (ordenClave == clave)
         {
             ordenDescendente = !ordenDescendente;

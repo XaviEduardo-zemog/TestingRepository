@@ -4,7 +4,7 @@ using Testing.Domain.Common;
 
 namespace Testing.Application.GetAllViajes;
 
-public sealed class GetViajesQueryHandler(IApplicationDbContext dbContext)
+public sealed class GetViajesQueryHandler(IApplicationDbContext dbContext, ICisViajeEnrichmentRepository cisRepository)
     : IRequestHandler<GetViajesQuery, Result<IReadOnlyList<ViajesDto>>>
 {
     private const string FormatoFecha = "yyyy-MM-dd";
@@ -29,9 +29,35 @@ public sealed class GetViajesQueryHandler(IApplicationDbContext dbContext)
             new("@no_remision", ToDbValue(request.NoRemision)),
         ];
 
-        var viajes = await dbContext.QueryAsync<ViajesDto>(SpConsultaViajes, parametros, cancellationToken);
+        var filasSp = await dbContext.QueryAsync<SpViajesDto>(SpConsultaViajes, parametros, cancellationToken);
+
+        var folios = filasSp
+            .Select(v => v.no_remision)
+            .Where(f => !string.IsNullOrWhiteSpace(f))
+            .Select(f => f!)
+            .Distinct()
+            .ToList();
+
+        var enriquecimiento = folios.Count == 0 ? CisEnrichmentBatchResult.Vacio : await cisRepository.ObtenerPorFoliosAsync(folios, cancellationToken);
+
+        var viajes = filasSp
+            .Select(sp => Enriquecer(sp, enriquecimiento))
+            .ToList();
 
         return Result.Success<IReadOnlyList<ViajesDto>>(viajes);
+    }
+
+    private static ViajesDto Enriquecer(SpViajesDto sp, CisEnrichmentBatchResult enriquecimiento)
+    {
+        if (string.IsNullOrWhiteSpace(sp.no_remision))
+            return ViajesEnriquecidoMapper.Enriquecer(sp, null, EstadoEnriquecimientoCis.NoAplica);
+
+        if (enriquecimiento.FoliosDuplicados.Contains(sp.no_remision))
+            return ViajesEnriquecidoMapper.Enriquecer(sp, null, EstadoEnriquecimientoCis.Duplicado);
+
+        return enriquecimiento.PorFolio.TryGetValue(sp.no_remision, out var cis)
+            ? ViajesEnriquecidoMapper.Enriquecer(sp, cis, EstadoEnriquecimientoCis.Encontrado)
+            : ViajesEnriquecidoMapper.Enriquecer(sp, null, EstadoEnriquecimientoCis.NoEncontrado);
     }
 
     private static object? ToDbValue(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;

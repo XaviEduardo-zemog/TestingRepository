@@ -13,7 +13,7 @@ public static class OperadoresRotacionCalculator
             if (fecha is null || !mesPorClave.ContainsKey((fecha.Value.Year, fecha.Value.Month)))
                 continue;
 
-            var sucursal = v._base ?? "(sin dato)";
+            var sucursal = CamposDerivadosViajes.ObtenerSucursal(v) ?? "(sin dato)";
             var operador = v.operador1 ?? "(sin dato)";
             var claveMes = (fecha.Value.Year, fecha.Value.Month);
             var contribucion = TotalesPeriodo.De(v, corte);
@@ -56,7 +56,7 @@ public static class OperadoresRotacionCalculator
 
             var mes = mesesCerrados.First(m => m.Anio == claveMes.Anio && m.Mes == claveMes.Mes);
             var operador = v.operador1 ?? "(sin dato)";
-            var sucursal = v._base ?? "(sin dato)";
+            var sucursal = CamposDerivadosViajes.ObtenerSucursal(v) ?? "(sin dato)";
 
             if (!minPorOperador.TryGetValue(operador, out var min) || EsAnterior(mes, min))
                 minPorOperador[operador] = mes;
@@ -119,7 +119,7 @@ public static class OperadoresRotacionCalculator
             else
                 continue;
 
-            var sucursal = v._base ?? "(sin dato)";
+            var sucursal = CamposDerivadosViajes.ObtenerSucursal(v) ?? "(sin dato)";
             var clave = (sucursal, mes);
             viajesPorSucursalMes[clave] = viajesPorSucursalMes.GetValueOrDefault(clave) + ContribucionViajeProyectada.Viajes(v, corte);
         }

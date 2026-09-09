@@ -22,7 +22,7 @@ public static class DependencyInjection
             ?? throw new InvalidOperationException("No se encontró la cadena de conexión 'CisDB'.");
 
         services.AddDbContextFactory<CisContext>(options => options.UseSqlServer(cisConnectionString));
-
+        services.AddScoped<ICisViajeEnrichmentRepository, CisViajeEnrichmentRepository>();
 
         return services;
     }

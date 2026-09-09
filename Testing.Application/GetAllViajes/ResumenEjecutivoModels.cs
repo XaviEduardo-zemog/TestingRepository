@@ -1,4 +1,4 @@
-﻿using Testing.Application.GetAllViajes;
+﻿namespace Testing.Application.GetAllViajes;
 
 /// <summary>
 /// Un mes presente en los datos cargados. El nombre "MesCerrado" es heredado de una fase
@@ -39,9 +39,21 @@ public sealed record TotalesPeriodo(decimal Viajes, decimal Kms, decimal Venta)
 
 public enum SeveridadAlerta { Neutral, Positiva, Negativa }
 
-/// <summary>Una línea del semáforo (Bloque 8.1).</summary>
+/// <summary>Una línea del semáforo (Bloque 8.1). Replica los sem.push(...) de RE_render() en viajes_v14.html.</summary>
 public sealed record AlertaSemaforo(string Texto, SeveridadAlerta Severidad);
 
+/// <summary>
+/// Replica RE_bloqueNivel() — usado tal cual para "Zemog · Nivel general" (8.2) y, una vez por
+/// cliente, para "Por Cliente" (8.3). "PrimerMesDelAnio"/"HayComparativoVsEnero" son nombres
+/// heredados: el HTML llama a esto "vs Enero (avance del año)" en la UI, pero la variable real es
+/// literal "mesesOrdenados[0]" (el primer mes de TODO el rango cargado, sin filtrar por año) --
+/// confirmado en esta fase. Se conserva el nombre de la propiedad, se corrige el cálculo (ya NO
+/// filtra por año).
+/// AJUSTE — P1 §10: para "Por Cliente", "TODO el rango cargado" significa el rango del propio
+/// cliente (ResumenEjecutivoCalculator.Calcular ya no pasa la lista global de meses a cada
+/// cliente -- ver mesesCliente=CalcularMeses(viajesCliente), replica mesesCli=mesesOrdenados.
+/// filter(m=&gt;pmCli[m]) de RE_render en viajes_v14.html).
+/// </summary>
 public sealed record BloqueNivelDto(
     string Titulo,
     MesCerrado? MesAnterior,
@@ -171,6 +183,12 @@ public sealed record AgenciasDesaparecidasResumenDto(
     decimal VentaAcumuladaTotal,
     IReadOnlyList<AgenciaDesaparecidaDto> Top30);
 
+public sealed record DiagnosticoEnriquecimientoCisDto(int Total, int Encontrado, int NoEncontrado, int Duplicado, int NoAplica)
+{
+    /// <summary>Filas que cayeron en fallback a las derivaciones antiguas (Cliente/Zona/Matriz/Sucursal/Destino). NoAplica (viaje cancelado, sin remisión) NO cuenta aquí -- es el comportamiento esperado para esas filas, no un problema de enriquecimiento.</summary>
+    public int Fallback => NoEncontrado + Duplicado;
+}
+
 public sealed record ResumenEjecutivoDto(
     IReadOnlyList<MesCerrado> MesesCerrados,
     bool HayComparativos,
@@ -182,4 +200,5 @@ public sealed record ResumenEjecutivoDto(
     AgenciasDesaparecidasResumenDto AgenciasDesaparecidas,
     OperadoresResumenDto Operadores,
     RotacionOperadoresDto Rotacion,
-    IReadOnlyList<(string Valor, decimal Viajes)> ArmadosDesconocidos);
+    IReadOnlyList<(string Valor, decimal Viajes)> ArmadosDesconocidos,
+    DiagnosticoEnriquecimientoCisDto DiagnosticoCis);
