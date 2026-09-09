@@ -122,7 +122,13 @@ public sealed class ViajesDto
     /// <summary>ZemogViajesEnZamAnual.IdSucursal.</summary>
     public int? cis_id_sucursal { get; set; }
 
+    public string? cis_ruta { get; set; }
+
+    public string? cis_origen { get; set; }
+
     public string? cis_destino { get; set; }
+
+    public string? cis_estado_origen { get; set; }
 
     public string? cis_estado_destino { get; set; }
 

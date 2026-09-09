@@ -308,15 +308,6 @@
 
     protected override void OnInitialized()
     {
-        // AJUSTE — Corrección funcional Cliente/Zona (2026-09-08): Cliente/Zona/Matriz/Sucursal
-        // se reordenan para quedar CONTIGUOS y en ese orden exacto -- RecalcularCascada recorre
-        // "filtros" en orden de arreglo y solo recalcula opciones de los filtros POSTERIORES al
-        // que cambió. Con el orden anterior (cliente, sucursal, mes, destino, expedicion, zona,
-        // matriz, ...), Sucursal quedaba ANTES de Zona/Matriz: cambiar Zona nunca recalculaba
-        // Sucursal (bug de cascada real, sección 8 del prompt). Con este orden, cambiar Cliente
-        // recalcula Zona/Matriz/Sucursal; cambiar Zona recalcula Matriz/Sucursal -- tal como
-        // exige la jerarquía Cliente → Zona → Matriz → Sucursal. Efecto lateral esperado:
-        // FiltrosPrimarios (Take(5)) ahora muestra Cliente/Zona/Matriz/Sucursal/Mes por defecto.
         filtros =
         [
             new() { Clave = "cliente", Etiqueta = "Cliente", Selector = CamposDerivadosViajes.ObtenerCliente, ConBuscador = true },
@@ -386,37 +377,19 @@
         RecalcularPivote();
     }
 
-    // TEMPORAL MVP: cascada calculada en memoria sobre viajesCargados (el resultado
-    // ya traído por GetViajesQuery). FINAL: si el volumen de datos crece, mover el
-    // cálculo de opciones disponibles a Application/SQL (ver §54.27).
     private void RecalcularCascada(string? claveModificada)
     {
-        if (claveModificada is null)
+        foreach (var f in filtros.Where(f => f.Disponible))
         {
-            foreach (var f in filtros.Where(f => f.Disponible))
-            {
-                f.OpcionesDisponibles = CalcularOpciones(viajesCargados, f);
+            IEnumerable<ViajesDto> baseCruzada = viajesCargados;
+
+            foreach (var otro in filtros.Where(o => o.Disponible && o.Clave != f.Clave && o.Seleccionados.Count > 0))
+                baseCruzada = baseCruzada.Where(v => otro.Selector(v) is { } val && otro.Seleccionados.Contains(val));
+
+            f.OpcionesDisponibles = CalcularOpciones(baseCruzada, f);
+
+            if (f.Clave != claveModificada)
                 f.Seleccionados.IntersectWith(f.OpcionesDisponibles);
-            }
-            return;
-        }
-
-        var pasoElCambio = false;
-        var filtrado = viajesCargados;
-
-        foreach (var f in filtros)
-        {
-            if (f.Disponible && f.Seleccionados.Count > 0)
-                filtrado = filtrado.Where(v => f.Selector(v) is { } val && f.Seleccionados.Contains(val)).ToList();
-
-            if (f.Clave == claveModificada)
-                pasoElCambio = true;
-
-            if (pasoElCambio && f.Clave != claveModificada && f.Disponible)
-            {
-                f.OpcionesDisponibles = CalcularOpciones(filtrado, f);
-                f.Seleccionados.IntersectWith(f.OpcionesDisponibles);
-            }
         }
     }
 
