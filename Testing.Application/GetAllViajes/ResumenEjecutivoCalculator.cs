@@ -15,7 +15,6 @@ public static class ResumenEjecutivoCalculator
         CamposDerivadosViajes.ObtenerCliente,
         CamposDerivadosViajes.ObtenerZona,
         CamposDerivadosViajes.ObtenerMatriz,
-        CamposDerivadosViajes.ObtenerSucursal,
     ];
 
     public static ResumenEjecutivoDto Calcular(IReadOnlyList<ViajesDto> viajesCargados, CorteMensual? corte)
@@ -293,7 +292,7 @@ public static class ResumenEjecutivoCalculator
     public static List<FilaFrecuenciaDto> ConstruirTablaFrecuencia(NodoComparativo raiz, Comparison<NodoComparativo>? comparadorHijos = null)
     {
         var filas = new List<FilaFrecuenciaDto>();
-        const int profundidadMaxima = 4;
+        const int profundidadMaxima = 3;
 
         List<NodoComparativo> OrdenarHijos(NodoComparativo nodo, int nivelFila)
         {

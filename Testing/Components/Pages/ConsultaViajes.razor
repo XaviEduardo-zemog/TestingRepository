@@ -48,8 +48,8 @@
                 <div class="vz-field-group">
                     <label for="vzAgrupar">Agrupar por</label>
                     <select id="vzAgrupar" class="vz-select" @bind="agruparPor" @bind:after="RecalcularPivote">
-                        <option value="jerarquia">Jerarquía (Cliente › Zona › Matriz › Sucursal)</option>
-                        <option value="jerarquia_tarifa">Jerarquía + Tarifa (Cliente › Zona › Matriz › Sucursal › Tarifa)</option>
+                        <option value="jerarquia">Jerarquía (Cliente › Zona › Matriz)</option>
+                        <option value="jerarquia_tarifa">Jerarquía + Tarifa (Cliente › Zona › Matriz › Tarifa)</option>
                         <option value="sucursal">Sucursal</option>
                         <option value="cliente">Cliente</option>
                         <option value="zona">Zona</option>
@@ -185,8 +185,8 @@
             <ArbolJerarquiaViajes @ref="arbolRef"
                                   Raiz="raizJerarquia"
                                   Meses="mesesPivote"
-                                  EtiquetaJerarquia="@(agruparPor == "jerarquia_tarifa" ? "Cliente › Zona › Matriz › Sucursal › Tarifa" : "Cliente › Zona › Matriz › Sucursal")"
-                                  ProfundidadMaxima="@(agruparPor == "jerarquia_tarifa" ? 5 : 4)"
+                                  EtiquetaJerarquia="@(agruparPor == "jerarquia_tarifa" ? "Cliente › Zona › Matriz › Tarifa" : "Cliente › Zona › Matriz")"
+                                  ProfundidadMaxima="@(agruparPor == "jerarquia_tarifa" ? 4 : 3)"
                                   MostrarViajes="EfectivoMostrarViajes"
                                   MostrarKms="EfectivoMostrarKms"
                                   MostrarPeaje="EfectivoMostrarPeaje"
@@ -257,6 +257,10 @@
     private bool mostrarParticipacion;
     private bool soloComparativa;
 
+    // AJUSTE (Prompt 3): "Jerarquía + Tarifa" en viajes_v14.html usa columnas FIJAS -- Venta/KMS/
+    // Peaje únicamente, sin importar lo que el usuario haya marcado en la barra de métricas (que
+    // además queda oculta para esta modalidad, ver el @if de arriba). Fuera de esa modalidad,
+    // Peaje nunca se muestra -- el HTML no lo ofrece como una de las 6 métricas normales.
     private bool EsJerarquiaTarifa => agruparPor == "jerarquia_tarifa";
     private bool EfectivoMostrarViajes => !EsJerarquiaTarifa && mostrarViajes;
     private bool EfectivoMostrarKms => EsJerarquiaTarifa || mostrarKms;
@@ -276,7 +280,6 @@
         CamposDerivadosViajes.ObtenerCliente,
         CamposDerivadosViajes.ObtenerZona,
         CamposDerivadosViajes.ObtenerMatriz,
-        CamposDerivadosViajes.ObtenerSucursal,
     ];
 
     private static readonly Func<ViajesDto, string?>[] NivelesJerarquiaConTarifa =
@@ -284,7 +287,6 @@
         CamposDerivadosViajes.ObtenerCliente,
         CamposDerivadosViajes.ObtenerZona,
         CamposDerivadosViajes.ObtenerMatriz,
-        CamposDerivadosViajes.ObtenerSucursal,
         CamposDerivadosViajes.ObtenerTarifa,
     ];
 
