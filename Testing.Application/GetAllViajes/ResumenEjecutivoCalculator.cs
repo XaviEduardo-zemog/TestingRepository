@@ -14,8 +14,8 @@ public static class ResumenEjecutivoCalculator
     [
         CamposDerivadosViajes.ObtenerCliente,
         CamposDerivadosViajes.ObtenerZona,
-        v => v._base,
-        v => v._base, // Sucursal = Matriz = _base, confirmado por el usuario.
+        CamposDerivadosViajes.ObtenerMatriz,
+        CamposDerivadosViajes.ObtenerSucursal,
     ];
 
     public static ResumenEjecutivoDto Calcular(IReadOnlyList<ViajesDto> viajesCargados, CorteMensual? corte)
@@ -43,7 +43,8 @@ public static class ResumenEjecutivoCalculator
                 .Select(CamposDerivadosViajes.ObtenerCliente)
                 .Where(c => c is { Length: > 0 })
                 .Distinct()
-                .OrderBy(c => c, StringComparer.CurrentCultureIgnoreCase)
+                .OrderBy(CamposDerivadosViajes.PrioridadCliente)
+                .ThenBy(c => c, StringComparer.CurrentCultureIgnoreCase)
                 .Select(cliente =>
                 {
                     var viajesCliente = viajesConFecha.Where(v => CamposDerivadosViajes.ObtenerCliente(v) == cliente).ToList();
@@ -265,7 +266,7 @@ public static class ResumenEjecutivoCalculator
             else continue;
 
             var destino = CamposDerivadosViajes.ObtenerDestino(v) ?? "(sin dato)";
-            var matriz = v._base ?? "(sin dato)";
+            var matriz = CamposDerivadosViajes.ObtenerMatriz(v) ?? "(sin dato)";
             var clave = (destino, matriz, mes);
             acumPorGrupoMes[clave] = TotalesPeriodo.Sumar(acumPorGrupoMes.GetValueOrDefault(clave, TotalesPeriodo.Vacio), TotalesPeriodo.De(v, corte));
         }
@@ -294,8 +295,24 @@ public static class ResumenEjecutivoCalculator
         var filas = new List<FilaFrecuenciaDto>();
         const int profundidadMaxima = 4;
 
-        List<NodoComparativo> OrdenarHijos(NodoComparativo nodo)
+        List<NodoComparativo> OrdenarHijos(NodoComparativo nodo, int nivelFila)
         {
+            if (nivelFila == 0)
+            {
+                var porPrioridad = nodo.Hijos.Values.GroupBy(h => CamposDerivadosViajes.PrioridadCliente(h.Label)).OrderBy(g => g.Key);
+                var resultado = new List<NodoComparativo>();
+                foreach (var grupo in porPrioridad)
+                {
+                    var grupoOrdenado = grupo.ToList();
+                    if (comparadorHijos is null)
+                        grupoOrdenado = grupoOrdenado.OrderBy(h => h.Label, StringComparer.CurrentCultureIgnoreCase).ToList();
+                    else
+                        grupoOrdenado.Sort(comparadorHijos);
+                    resultado.AddRange(grupoOrdenado);
+                }
+                return resultado;
+            }
+
             var hijos = nodo.Hijos.Values.ToList();
             if (comparadorHijos is null)
                 hijos = hijos.OrderBy(h => h.Label, StringComparer.CurrentCultureIgnoreCase).ToList();
@@ -306,7 +323,7 @@ public static class ResumenEjecutivoCalculator
 
         void Caminar(NodoComparativo nodo, int nivelFila)
         {
-            foreach (var hijoOriginal in OrdenarHijos(nodo))
+            foreach (var hijoOriginal in OrdenarHijos(nodo, nivelFila))
             {
                 var efectivo = hijoOriginal;
                 var nivelEfectivo = nivelFila;
@@ -357,7 +374,7 @@ public static class ResumenEjecutivoCalculator
 
             var mes = meses.First(m => m.Anio == claveMes.Anio && m.Mes == claveMes.Mes);
             var destino = CamposDerivadosViajes.ObtenerDestino(v) ?? "(sin dato)";
-            var matriz = v._base ?? "(sin dato)";
+            var matriz = CamposDerivadosViajes.ObtenerMatriz(v) ?? "(sin dato)";
             var clave = (destino, matriz);
 
             if (!ventaPorAgenciaMes.TryGetValue(clave, out var porMesVenta))
