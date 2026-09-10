@@ -17,7 +17,8 @@ public readonly record struct MesCerrado(int Anio, int Mes, string Etiqueta);
 /// Viajes es decimal (no int) para poder proyectarse con factorMes fraccionario (ej. ×3.1) sin
 /// perder precisión por redondeos intermedios -- se redondea UNA sola vez, al formatear para
 /// mostrar (Math.Round en cada Razor), nunca durante la acumulación.
-/// Venta = CIS.TotalVenta (viaje.cis_total_venta), vía ContribucionViajeProyectada.Venta.
+/// Venta = CIS.TotalVent
+/// a (viaje.cis_total_venta), vía ContribucionViajeProyectada.Venta.
 /// $/KM es SIEMPRE razón de acumulados (Venta/Kms de este mismo TotalesPeriodo ya sumado) --
 /// nunca promedio de razones de fila individual.
 /// </summary>
