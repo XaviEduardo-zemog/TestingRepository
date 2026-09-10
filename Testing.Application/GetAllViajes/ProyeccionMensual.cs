@@ -52,9 +52,6 @@ public static class ContribucionViajeProyectada
     public static decimal Venta(ViajesDto viaje, CorteMensual? corte)
     {
         var venta = viaje.cis_total_venta ?? 0m;
-        if (venta == 1.00m)
-            venta = 0m;
-
         return venta * (corte?.FactorPara(viaje) ?? 1m);
     }
 }
