@@ -2,8 +2,8 @@
 
 /// <summary>
 /// Un KPI comparado mes actual vs. mes anterior, listo para pintar en KpiCard.
-/// Disponible=false solo si no hubo datos que agregar (nunca por falta de Venta -- TotalVenta =
-/// subtotal_factura, confirmado por el usuario para esta fase, ver §54.85 / auditoría Venta).
+/// Disponible=false solo si no hubo datos que agregar (nunca por falta de Venta -- Venta =
+/// CIS.TotalVenta, vía ContribucionViajeProyectada.Venta).
 /// </summary>
 public sealed record KpiComparativo(
     string Clave,

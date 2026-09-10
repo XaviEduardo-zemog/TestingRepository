@@ -13,7 +13,7 @@ public static class ResumenEjecutivoWordExporter
     private const string ColorHeaderTxt = "#FFFFFF";
     private const string ColorTotalBg = "#F1EFE9";
 
-    private const int ProfundidadMaximaArbol = 4;
+    private const int ProfundidadMaximaArbol = 3; // Cliente > Zona > Matriz -- Sucursal ya no es nivel del árbol.
 
     public static string Generar(ResumenEjecutivoDto resumen)
     {
@@ -41,7 +41,7 @@ public static class ResumenEjecutivoWordExporter
         EscribirOperadores(sb, resumen);
         EscribirRotacion(sb, resumen);
 
-        sb.Append($"<p style=\"color:#75787E;font-size:9pt;margin-top:24px;\">Generado automáticamente desde Viajes Zemog el {DateTime.Now:dd/MM/yyyy HH:mm}. TotalVenta = subtotal_factura (fuente temporal, ver §54.85).</p>");
+        sb.Append($"<p style=\"color:#75787E;font-size:9pt;margin-top:24px;\">Generado automáticamente desde Viajes Zemog el {DateTime.Now:dd/MM/yyyy HH:mm}. Venta = CIS.TotalVenta.</p>");
 
         sb.Append("</body></html>");
         return sb.ToString();
@@ -162,10 +162,9 @@ public static class ResumenEjecutivoWordExporter
         sb.Append(FilaTabla("Total", FormatoN0(a.Total), a.DeltaPuntosPorcentuales is null ? "" : $"Δ {FormatoPct(a.DeltaPuntosPorcentuales)} pp vs mes anterior", ""));
         sb.Append(CerrarTabla());
         // Nota: sigue siendo solo el total a nivel raíz -- el desglose de Asignación por
-        // Cliente/Zona/Matriz/Sucursal (la otra tabla de ResumenArbolComparativo.razor) queda
-        // fuera de esta etapa; Comodato en sí sigue PENDIENTE DE FUENTE DE NEGOCIO (P0/P1, sin
-        // cambio aquí).
-        sb.Append("<p style=\"font-size:9pt;color:#75787E;\">Total a nivel raíz. El desglose por Cliente/Zona/Matriz/Sucursal está disponible en pantalla. Comodato sigue pendiente de fuente de negocio confirmada.</p>");
+        // Cliente/Zona/Matriz (la otra tabla de ResumenArbolComparativo.razor) queda fuera de
+        // esta etapa; Comodato en sí sigue PENDIENTE DE FUENTE DE NEGOCIO (P0/P1, sin cambio aquí).
+        sb.Append("<p style=\"font-size:9pt;color:#75787E;\">Total a nivel raíz. El desglose por Cliente/Zona/Matriz está disponible en pantalla. Comodato sigue pendiente de fuente de negocio confirmada.</p>");
     }
 
     private static void EscribirFrecuencia(StringBuilder sb, NodoComparativo raiz)

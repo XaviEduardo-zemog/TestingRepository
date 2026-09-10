@@ -189,7 +189,7 @@
             </tfoot>
         </table>
     </div>
-    <p class="re-nota">Alerta: Δ Viajes ≤ -15% con base del mes anterior ≥ 20 viajes (misma regla que el semáforo -- ahí solo se listan las de nivel Matriz/Sucursal o más profundo; esta tabla muestra todos los niveles). Orden inicial: % ascendente (mayores caídas primero), igual que RE_jerFrec. La celda "Señal" del TOTAL queda vacía, igual que RE_pintaJerFrec (no se evalúa alerta para la fila TOTAL).</p>
+    <p class="re-nota">Alerta: Δ Viajes ≤ -15% con base del mes anterior ≥ 20 viajes (misma regla que el semáforo -- ahí solo se listan las de nivel Matriz; esta tabla muestra todos los niveles). Orden inicial: % ascendente (mayores caídas primero), igual que RE_jerFrec. La celda "Señal" del TOTAL queda vacía, igual que RE_pintaJerFrec (no se evalúa alerta para la fila TOTAL).</p>
 </section>
 
 @code {
@@ -218,7 +218,7 @@
 
     private void Alternar(NodoComparativo nodo) => nodo.IsExpanded = !nodo.IsExpanded;
 
-    private const int ProfundidadMaxima = 4;
+    private const int ProfundidadMaxima = 3; // Cliente > Zona > Matriz -- Sucursal ya no es nivel del árbol.
 
     private List<FilaComparativa> Aplanar(Comparison<NodoComparativo> comparador)
     {

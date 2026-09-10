@@ -158,8 +158,8 @@ else
 @code {
     [Parameter, EditorRequired] public NodoJerarquia Raiz { get; set; } = null!;
     [Parameter, EditorRequired] public List<MesColumna> Meses { get; set; } = [];
-    [Parameter] public string EtiquetaJerarquia { get; set; } = "Cliente › Zona › Matriz › Sucursal";
-    [Parameter] public int ProfundidadMaxima { get; set; } = 4;
+    [Parameter] public string EtiquetaJerarquia { get; set; } = "Cliente › Zona › Matriz";
+    [Parameter] public int ProfundidadMaxima { get; set; } = 3;
     [Parameter] public bool MostrarViajes { get; set; } = true;
     [Parameter] public bool MostrarKms { get; set; } = true;
     [Parameter] public bool MostrarPeaje { get; set; } = true;
