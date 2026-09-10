@@ -1,4 +1,5 @@
 ﻿@using System.Globalization
+@using Testing.Application.GetAllViajes
 @using Testing.Features
 
 @if (columnas.Count == 0)
@@ -205,6 +206,10 @@ else
     [Parameter] public bool MostrarParticipacion { get; set; }
     [Parameter] public bool SoloComparativa { get; set; }
 
+    [Parameter] public bool OrdenLabelNumerico { get; set; }
+
+    [Parameter] public bool EsCliente { get; set; }
+
     private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-MX");
 
     private sealed record ColumnaMetrica(string Clave, string Etiqueta, Func<MetricasMes, decimal> Selector, Func<decimal, string> Formato, bool EsSumable);
@@ -213,9 +218,15 @@ else
     private Dictionary<string, MetricasMes> totalesPorMes = [];
     private MetricasMes totalGeneral = MetricasMes.Vacio;
 
-    private string ordenClave = "label";
-    private bool ordenDescendente;
+    private const string ClaveOrdenPorDefecto = "__default__";
+    private string ordenClave = ClaveOrdenPorDefecto;
+    private bool ordenDescendente = true;
     private readonly HashSet<string> mesesColapsados = [];
+
+    private string ClaveOrdenEfectiva() =>
+        ordenClave != ClaveOrdenPorDefecto ? ordenClave
+        : Meses.Count > 0 ? $"{Meses[^1].Clave}|venta"
+        : "label";
 
     // TEMPORAL MVP: se recalculan totales en memoria cada vez que cambian Filas/Meses.
     // FINAL: si el volumen crece, estos agregados deberían venir ya calculados de
@@ -253,9 +264,10 @@ else
 
     private void OrdenarPor(string clave)
     {
-        if (ordenClave == clave)
+        if (ClaveOrdenEfectiva() == clave)
         {
             ordenDescendente = !ordenDescendente;
+            ordenClave = clave;
         }
         else
         {
@@ -264,16 +276,38 @@ else
         }
     }
 
-    private string ClaseOrden(string clave) => ordenClave == clave ? "is-active" : "";
+    private string ClaseOrden(string clave) => ClaveOrdenEfectiva() == clave ? "is-active" : "";
 
     private List<FilaPivote> FilasOrdenadas()
     {
-        IOrderedEnumerable<FilaPivote> query = ordenClave == "label"
-            ? Filas.OrderBy(f => f.Dimension, StringComparer.CurrentCultureIgnoreCase)
-            : Filas.OrderBy(f => ObtenerValorOrdenable(f, ordenClave));
+        var claveEfectiva = ClaveOrdenEfectiva();
+
+        if (EsCliente)
+        {
+            var resultado = new List<FilaPivote>();
+            foreach (var grupo in Filas.GroupBy(f => CamposDerivadosViajes.PrioridadCliente(f.Dimension)).OrderBy(g => g.Key))
+            {
+                var grupoOrdenado = claveEfectiva == "label"
+                    ? grupo.OrderBy(f => f.Dimension, StringComparer.CurrentCultureIgnoreCase).ToList()
+                    : grupo.OrderBy(f => ObtenerValorOrdenable(f, claveEfectiva)).ToList();
+                if (ordenDescendente)
+                    grupoOrdenado.Reverse();
+                resultado.AddRange(grupoOrdenado);
+            }
+            return resultado;
+        }
+
+        IOrderedEnumerable<FilaPivote> query = claveEfectiva == "label"
+            ? (OrdenLabelNumerico
+                ? Filas.OrderBy(f => ParsearNumeroLabel(f.Dimension))
+                : Filas.OrderBy(f => f.Dimension, StringComparer.CurrentCultureIgnoreCase))
+            : Filas.OrderBy(f => ObtenerValorOrdenable(f, claveEfectiva));
 
         return (ordenDescendente ? query.Reverse() : query).ToList();
     }
+
+    private static decimal ParsearNumeroLabel(string valor) =>
+        decimal.TryParse(valor, NumberStyles.Any, CultureInfo.InvariantCulture, out var n) ? n : decimal.MaxValue;
 
     private decimal ObtenerValorOrdenable(FilaPivote fila, string clave)
     {

@@ -1,4 +1,5 @@
 ﻿@using System.Globalization
+@using Testing.Application.GetAllViajes
 @using Testing.Features
 
 @if (columnas.Count == 0)
@@ -175,9 +176,15 @@ else
 
     private List<ColumnaMetrica> columnas = [];
 
-    private string ordenClave = "label";
-    private bool ordenDescendente;
+    private const string ClaveOrdenPorDefecto = "__default__";
+    private string ordenClave = ClaveOrdenPorDefecto;
+    private bool ordenDescendente = true;
     private readonly HashSet<string> mesesColapsados = [];
+
+    private string ClaveOrdenEfectiva() =>
+        ordenClave != ClaveOrdenPorDefecto ? ordenClave
+        : Meses.Count > 0 ? $"{Meses[^1].Clave}|venta"
+        : "label";
 
     protected override void OnParametersSet()
     {
@@ -208,9 +215,10 @@ else
 
     private void OrdenarPor(string clave)
     {
-        if (ordenClave == clave)
+        if (ClaveOrdenEfectiva() == clave)
         {
             ordenDescendente = !ordenDescendente;
+            ordenClave = clave;
         }
         else
         {
@@ -219,7 +227,7 @@ else
         }
     }
 
-    private string ClaseOrden(string clave) => ordenClave == clave ? "is-active" : "";
+    private string ClaseOrden(string clave) => ClaveOrdenEfectiva() == clave ? "is-active" : "";
 
     public void ExpandirTodo()
     {
@@ -249,14 +257,34 @@ else
         return filas;
     }
 
+    private List<NodoJerarquia> OrdenarHijosDeNivel(NodoJerarquia nodo, int nivelFila)
+    {
+        if (nivelFila != 0)
+        {
+            var hijosNormal = ClaveOrdenEfectiva() == "label"
+                ? nodo.Hijos.Values.OrderBy(h => h.Label, StringComparer.CurrentCultureIgnoreCase).ToList()
+                : nodo.Hijos.Values.OrderBy(ObtenerValorOrdenable).ToList();
+            if (ordenDescendente)
+                hijosNormal.Reverse();
+            return hijosNormal;
+        }
+
+        var resultado = new List<NodoJerarquia>();
+        foreach (var grupo in nodo.Hijos.Values.GroupBy(h => CamposDerivadosViajes.PrioridadCliente(h.Label)).OrderBy(g => g.Key))
+        {
+            var grupoOrdenado = ClaveOrdenEfectiva() == "label"
+                ? grupo.OrderBy(h => h.Label, StringComparer.CurrentCultureIgnoreCase).ToList()
+                : grupo.OrderBy(ObtenerValorOrdenable).ToList();
+            if (ordenDescendente)
+                grupoOrdenado.Reverse();
+            resultado.AddRange(grupoOrdenado);
+        }
+        return resultado;
+    }
+
     private void Caminar(NodoJerarquia nodo, int nivelFila, List<FilaArbol> filas)
     {
-        var hijos = ordenClave == "label"
-            ? nodo.Hijos.Values.OrderBy(h => h.Label, StringComparer.CurrentCultureIgnoreCase).ToList()
-            : nodo.Hijos.Values.OrderBy(ObtenerValorOrdenable).ToList();
-
-        if (ordenDescendente)
-            hijos.Reverse();
+        var hijos = OrdenarHijosDeNivel(nodo, nivelFila);
 
         foreach (var hijoOriginal in hijos)
         {
@@ -279,7 +307,7 @@ else
 
     private decimal ObtenerValorOrdenable(NodoJerarquia nodo)
     {
-        var partes = ordenClave.Split('|');
+        var partes = ClaveOrdenEfectiva().Split('|');
 
         if (partes[0] == "cmp")
         {
