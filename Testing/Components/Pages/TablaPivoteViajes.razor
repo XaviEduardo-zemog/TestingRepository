@@ -77,7 +77,7 @@ else
                 @foreach (var fila in FilasOrdenadas())
                 {
                     <tr>
-                        <td>@fila.Dimension</td>
+                        <td class="@(EsCliente ? "tp-cliente" : "")">@fila.Dimension</td>
                         @if (EsDimensionTemporal)
                         {
                             @foreach (var col in columnas)
@@ -112,7 +112,7 @@ else
                                             var col = columnas[ci];
                                             var valorActual = col.Selector(metricasMes);
                                             var valorAnterior = metricasMesAnterior is null ? 0 : col.Selector(metricasMesAnterior);
-                                            <td class="align-end tabular @(ci == 0 ? "tp-mes0" : "") @(col.EsSumable ? ClaseCelda(valorActual, valorAnterior, esPrimerMes) : "")">
+                                            <td class="align-end tabular @(ci == 0 ? "tp-mes0" : "") @ClaseCelda(valorActual, valorAnterior, esPrimerMes)">
                                                 @col.Formato(valorActual)
                                                 @if (MostrarParticipacion && col.EsSumable)
                                                 {
@@ -373,10 +373,6 @@ else
         return b > a ? "tp-pos" : "tp-neg";
     }
 
-    // Celdas mensuales: primer mes de la fila -> neutro; sin mes anterior en Meses -> neutro;
-    // valor anterior o actual == 0 -> neutro; igual -> neutro; si no, verde si sube, rojo si baja.
-    // Solo se aplica a columnas EsSumable (Viajes/KMS/Peaje/Venta) -- los ratios no se pintan por
-    // celda, igual que el HTML original.
     private static string ClaseCelda(decimal actual, decimal anterior, bool esPrimerMes)
     {
         if (esPrimerMes)

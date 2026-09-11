@@ -46,12 +46,13 @@
             color: var(--vz-acc, #f59e0b);
         }
 
-    /* segunda fila del header: TEMPORAL — 29px asume la altura real de la
-   primera fila con este padding/font-size. FINAL: medir dinámicamente
-   si el header cambia de tamaño (mismo ajuste que ajustarSticky() del HTML). */
-    .tp-table thead tr:nth-child(2) th {
-        top: 29px;
-    }
+.vz-page.claro .tp-table th {
+    color: var(--vz-acc2, #8A6604);
+}
+
+.tp-table thead tr:nth-child(2) th {
+    top: 29px;
+}
 
 .tp-th-dim {
     position: sticky;
@@ -77,9 +78,6 @@
     border-right: 1px solid var(--vz-line, #1a1a1a);
 }
 
-/* Inicio de cada bloque de mes (primera métrica de ENE, FEB, MAR...) -- separación vertical
-   marcada, distinta del borde tenue entre columnas normales. Aplica a la 2ª fila del header Y a
-   las celdas de datos/TOTAL -- selector genérico th.tp-mes0/td.tp-mes0 (no solo thead). */
 th.tp-mes0,
 td.tp-mes0 {
     border-left: 2px solid var(--vz-line3, #2a2a2a);
@@ -128,6 +126,11 @@ td.tp-cmp-end {
         font-weight: 600;
         color: var(--vz-txt, #e2e8f0);
         text-align: left;
+    }
+
+    .tp-table td.tp-cliente:first-child {
+        color: var(--vz-acc2, #fbbf24);
+        font-weight: 700;
     }
 
 .tp-table tbody tr:nth-child(even) td {
@@ -187,4 +190,14 @@ td.tp-cmp-end {
    (izquierdo/derecho en las celdas, superior en el header, inferior aquí). */
     .tp-table tfoot tr.tp-total td.tp-cmp {
         border-bottom: 2px solid var(--vz-acc, #f59e0b);
+    }
+
+.vz-page.claro .tp-table tfoot tr.tp-total td {
+    background: #141519 !important;
+    color: #DEA60A;
+    border-top-color: #8A6604;
+}
+
+    .vz-page.claro .tp-table tfoot tr.tp-total td:first-child {
+        color: #E8E6E0;
     }

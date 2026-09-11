@@ -42,6 +42,14 @@
         top: 29px;
     }
 
+/* Corrección visual — tema claro: mismo criterio que TablaPivoteViajes.razor.css. Los headers de
+   mes (.aj-mes-header) y de comparativa (.aj-cmp-header) ya usan var(--vz-acc) y ya se ven
+   dorados en ambos temas; solo falta el header "plano" (.aj-table th / .aj-th-dim: Cliente ›
+   Zona › Matriz, Viajes, KMS, Venta, $/KM, KM/Viaje, $/Viaje). Tema oscuro sin cambios. */
+.vz-page.claro .aj-table th {
+    color: var(--vz-acc2, #8A6604);
+}
+
 .aj-th-dim {
     position: sticky;
     left: 0;
@@ -223,4 +231,14 @@ td.aj-cmp-end {
 
     .aj-table tfoot tr.aj-total td.aj-cmp {
         border-bottom: 2px solid var(--vz-acc, #f59e0b);
+    }
+
+.vz-page.claro .aj-table tfoot tr.aj-total td {
+    background: #141519 !important;
+    color: #DEA60A;
+    border-top-color: #8A6604;
+}
+
+    .vz-page.claro .aj-table tfoot tr.aj-total td:first-child {
+        color: #E8E6E0;
     }

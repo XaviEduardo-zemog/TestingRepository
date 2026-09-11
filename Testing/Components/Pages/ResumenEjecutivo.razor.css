@@ -88,16 +88,21 @@
 
 .re-page ::deep .re-sem-pos {
     border-left-color: var(--vz-verde, #4ade80) !important;
-    color: var(--vz-verde, #4ade80);
+    color: var(--vz-txt2, #cbd5e1);
 }
 
 .re-page ::deep .re-sem-neg {
     border-left-color: var(--vz-rojo, #f87171) !important;
-    color: var(--vz-rojo, #f87171);
+    color: var(--vz-txt2, #cbd5e1);
 }
 
 .re-page ::deep .re-sem-neutro {
     color: var(--vz-txt2, #cbd5e1);
+}
+
+.re-page ::deep .re-sem-acc {
+    color: var(--vz-acc, #f59e0b);
+    font-weight: 700;
 }
 
 .re-page ::deep .re-tbl-wrap {
@@ -161,8 +166,12 @@
 .vz-page.claro ::deep .re-tabla tfoot tr.re-total td {
     background: #141519;
     color: #DEA60A;
-    border-top-color: #DEA60A;
+    border-top-color: #8A6604;
 }
+
+    .vz-page.claro ::deep .re-tabla tfoot tr.re-total td:first-child {
+        color: #E8E6E0;
+    }
 
     .vz-page.claro ::deep .re-tabla tfoot tr.re-total td.re-pos,
     .vz-page.claro ::deep .re-tabla tfoot tr.re-total td.re-neg {
@@ -260,6 +269,10 @@
         color: #141414;
         font-weight: 700;
     }
+
+.vz-page.claro ::deep .re-tabla th {
+    color: #8A6604;
+}
 
 .vz-page.claro ::deep .re-tab.is-active {
     background: var(--vz-acc2, #8A6604);

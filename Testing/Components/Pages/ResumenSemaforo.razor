@@ -1,4 +1,5 @@
 ﻿@using Testing.Application.GetAllViajes
+@using System.Text.RegularExpressions
 
 <section class="re-bloque re-semaforo">
     <h3>Lo más importante</h3>
@@ -11,7 +12,19 @@
         <ul class="re-semaforo-lista">
             @foreach (var alerta in Alertas)
             {
-                <li class="@ClaseSeveridad(alerta.Severidad)">@alerta.Texto</li>
+                <li class="@ClaseSeveridad(alerta.Severidad)">
+                    @foreach (var segmento in Segmentar(alerta.Texto))
+                    {
+                        @if (segmento.Resaltado)
+                        {
+                            <b class="re-sem-acc">@segmento.Texto</b>
+                        }
+                        else
+                        {
+                            @segmento.Texto
+                        }
+                    }
+                </li>
             }
         </ul>
     }
@@ -20,10 +33,66 @@
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<AlertaSemaforo> Alertas { get; set; } = [];
 
+    /// <summary>Clientes conocidos (resumen.PorCliente.Select(p => p.Cliente)) -- solo para
+    /// resaltado visual de este componente. No agrega ninguna regla de negocio nueva: son los
+    /// mismos nombres, ya normalizados (ME/MD→Modelo), que ResumenEjecutivoCalculator ya calculó.</summary>
+    [Parameter] public IReadOnlyList<string> Clientes { get; set; } = [];
+
     private static string ClaseSeveridad(SeveridadAlerta severidad) => severidad switch
     {
         SeveridadAlerta.Positiva => "re-sem-pos",
         SeveridadAlerta.Negativa => "re-sem-neg",
         _ => "re-sem-neutro",
     };
+
+    private Regex? patronResaltado;
+    private IReadOnlyList<string> patronClientesUsados = [];
+
+    private static readonly Regex PatronMesAnio = new(
+        @"\b(?:Ene|Feb|Mar|Abr|May|Jun|Jul|Ago|Sep|Oct|Nov|Dic)\s\d{4}\b",
+        RegexOptions.Compiled);
+
+    private static readonly Regex PatronPorcentaje = new(
+        @"[+-]?\d+(?:[.,]\d+)?%",
+        RegexOptions.Compiled);
+
+    private List<(string Texto, bool Resaltado)> Segmentar(string texto)
+    {
+        if (string.IsNullOrEmpty(texto))
+            return [(texto, false)];
+
+        var regex = ObtenerPatron();
+        var resultado = new List<(string, bool)>();
+        var pos = 0;
+
+        foreach (Match m in regex.Matches(texto))
+        {
+            if (m.Index > pos)
+                resultado.Add((texto[pos..m.Index], false));
+            resultado.Add((m.Value, true));
+            pos = m.Index + m.Length;
+        }
+
+        if (pos < texto.Length)
+            resultado.Add((texto[pos..], false));
+
+        return resultado;
+    }
+
+    private Regex ObtenerPatron()
+    {
+        if (patronResaltado is not null && patronClientesUsados.SequenceEqual(Clientes))
+            return patronResaltado;
+
+        var partes = new List<string>
+        {
+            PatronMesAnio.ToString(),
+            PatronPorcentaje.ToString(),
+        };
+        partes.AddRange(Clientes.Where(c => !string.IsNullOrWhiteSpace(c)).Select(c => $@"\b{Regex.Escape(c)}\b"));
+
+        patronClientesUsados = Clientes.ToList();
+        patronResaltado = new Regex(string.Join("|", partes), RegexOptions.Compiled);
+        return patronResaltado;
+    }
 }

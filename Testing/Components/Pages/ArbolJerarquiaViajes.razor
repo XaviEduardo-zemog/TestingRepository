@@ -92,7 +92,7 @@ else
                                         var col = columnas[ci];
                                         var valorActual = col.Selector(metricasMes);
                                         var valorAnterior = metricasMesAnterior is null ? 0 : col.Selector(metricasMesAnterior);
-                                        <td class="align-end tabular aj-lvl-@fila.Nivel @(ci == 0 ? "aj-mes0" : "") @(col.EsSumable ? ClaseCelda(valorActual, valorAnterior, esPrimerMes) : "")">
+                                        <td class="align-end tabular aj-lvl-@fila.Nivel @(ci == 0 ? "aj-mes0" : "") @ClaseCelda(valorActual, valorAnterior, esPrimerMes)">
                                             @col.Formato(valorActual)
                                             @if (MostrarParticipacion && col.EsSumable)
                                             {
