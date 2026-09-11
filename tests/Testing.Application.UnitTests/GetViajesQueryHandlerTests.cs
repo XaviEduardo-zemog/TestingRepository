@@ -169,7 +169,8 @@ public sealed class GetViajesQueryHandlerTests
         var filas = new List<SpViajesDto> { Viaje(noRemision: null), Viaje(noRemision: "   ") };
         var db = new FakeApplicationDbContext(filas);
         var cis = new FakeCisViajeEnrichmentRepository(CisEnrichmentBatchResult.Vacio);
-        var handler = new GetViajesQueryHandler(db, cis);
+        var segundaFuente = new FakeSegundaFuenteEnrichmentRepository(SegundaFuenteBatchResult.Vacio);
+        var handler = new GetViajesQueryHandler(db, cis, segundaFuente);
 
         var resultado = await handler.Handle(ConsultaDePrueba(), CancellationToken.None);
 
@@ -185,7 +186,8 @@ public sealed class GetViajesQueryHandlerTests
         var filas = new List<SpViajesDto> { Viaje(noRemision: "5001053341", estatus: "Cancelado") };
         var db = new FakeApplicationDbContext(filas);
         var cis = new FakeCisViajeEnrichmentRepository(CisEnrichmentBatchResult.Vacio);
-        var handler = new GetViajesQueryHandler(db, cis);
+        var segundaFuente = new FakeSegundaFuenteEnrichmentRepository(SegundaFuenteBatchResult.Vacio);
+        var handler = new GetViajesQueryHandler(db, cis, segundaFuente);
 
         var resultado = await handler.Handle(ConsultaDePrueba(), CancellationToken.None);
 
@@ -200,7 +202,8 @@ public sealed class GetViajesQueryHandlerTests
         var porFolio = new Dictionary<string, DatosCisViaje> { ["4292946"] = CisPara("4292946") };
         var db = new FakeApplicationDbContext(filas);
         var cis = new FakeCisViajeEnrichmentRepository(new CisEnrichmentBatchResult(porFolio, new HashSet<string>()));
-        var handler = new GetViajesQueryHandler(db, cis);
+        var segundaFuente = new FakeSegundaFuenteEnrichmentRepository(SegundaFuenteBatchResult.Vacio);
+        var handler = new GetViajesQueryHandler(db, cis, segundaFuente);
 
         var resultado = await handler.Handle(ConsultaDePrueba(), CancellationToken.None);
 
@@ -217,7 +220,8 @@ public sealed class GetViajesQueryHandlerTests
         var filas = new List<SpViajesDto> { Viaje(noRemision: "999999999") };
         var db = new FakeApplicationDbContext(filas);
         var cis = new FakeCisViajeEnrichmentRepository(CisEnrichmentBatchResult.Vacio);
-        var handler = new GetViajesQueryHandler(db, cis);
+        var segundaFuente = new FakeSegundaFuenteEnrichmentRepository(SegundaFuenteBatchResult.Vacio);
+        var handler = new GetViajesQueryHandler(db, cis, segundaFuente);
 
         var resultado = await handler.Handle(ConsultaDePrueba(), CancellationToken.None);
 
@@ -232,7 +236,8 @@ public sealed class GetViajesQueryHandlerTests
         var duplicados = new HashSet<string> { "20355226" };
         var db = new FakeApplicationDbContext(filas);
         var cis = new FakeCisViajeEnrichmentRepository(new CisEnrichmentBatchResult(new Dictionary<string, DatosCisViaje>(), duplicados));
-        var handler = new GetViajesQueryHandler(db, cis);
+        var segundaFuente = new FakeSegundaFuenteEnrichmentRepository(SegundaFuenteBatchResult.Vacio);
+        var handler = new GetViajesQueryHandler(db, cis, segundaFuente);
 
         var resultado = await handler.Handle(ConsultaDePrueba(), CancellationToken.None);
 
@@ -248,7 +253,8 @@ public sealed class GetViajesQueryHandlerTests
         var filas = new List<SpViajesDto> { Viaje(noRemision: "4292946", noViaje: 999999) };
         var db = new FakeApplicationDbContext(filas);
         var cis = new FakeCisViajeEnrichmentRepository(CisEnrichmentBatchResult.Vacio);
-        var handler = new GetViajesQueryHandler(db, cis);
+        var segundaFuente = new FakeSegundaFuenteEnrichmentRepository(SegundaFuenteBatchResult.Vacio);
+        var handler = new GetViajesQueryHandler(db, cis, segundaFuente);
 
         await handler.Handle(ConsultaDePrueba(), CancellationToken.None);
 
@@ -268,7 +274,8 @@ public sealed class GetViajesQueryHandlerTests
         };
         var db = new FakeApplicationDbContext(filas);
         var cis = new FakeCisViajeEnrichmentRepository(CisEnrichmentBatchResult.Vacio);
-        var handler = new GetViajesQueryHandler(db, cis);
+        var segundaFuente = new FakeSegundaFuenteEnrichmentRepository(SegundaFuenteBatchResult.Vacio);
+        var handler = new GetViajesQueryHandler(db, cis, segundaFuente);
 
         await handler.Handle(ConsultaDePrueba(), CancellationToken.None);
 
@@ -300,5 +307,15 @@ public sealed class GetViajesQueryHandlerTests
             VecesLlamado++;
             return Task.FromResult(resultado);
         }
+    }
+
+    private sealed class FakeSegundaFuenteEnrichmentRepository(SegundaFuenteBatchResult resultado) : ISegundaFuenteEnrichmentRepository
+    {
+        public Task<SegundaFuenteBatchResult> ObtenerAsync(
+            IReadOnlyCollection<string> basesDistintas,
+            IReadOnlyCollection<string> codigosRutaDistintos,
+            IReadOnlyCollection<string> facturasDistintas,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(resultado);
     }
 }

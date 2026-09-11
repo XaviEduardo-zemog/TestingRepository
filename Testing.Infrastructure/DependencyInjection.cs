@@ -17,6 +17,7 @@ public static class DependencyInjection
 
         services.AddDbContextFactory<ZemogContext>(options => options.UseSqlServer(connectionString));
         services.AddScoped<IApplicationDbContext, ApplicationDbContext>();
+        services.AddScoped<ISegundaFuenteEnrichmentRepository, SegundaFuenteEnrichmentRepository>();
 
         var cisConnectionString = configuration.GetConnectionString("CisDB")
             ?? throw new InvalidOperationException("No se encontró la cadena de conexión 'CisDB'.");

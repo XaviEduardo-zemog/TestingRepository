@@ -26,6 +26,18 @@ public enum EstadoEnriquecimientoCis
     /// raro (confirmado con datos: 29 casos históricos, 0 en 2026). Nunca se resuelve con
     /// First()/Single(); se reporta y se excluye.</summary>
     Duplicado,
+
+    /// <summary>
+    /// Prompt 2 (2026-09-11, integración trafico_guia) -- la fila NO se encontró en CIS_DB
+    /// (llegó aquí siendo NoEncontrado o Duplicado), pero SÍ se resolvió por la 2ª fuente de
+    /// enriquecimiento (Sucursales por _base + RutasZam por código de ruta + trafico_guia por
+    /// Factura+NoViaje). Se distingue deliberadamente de <see cref="Encontrado"/> -- NUNCA se
+    /// marca una fila resuelta por esta vía como si viniera directamente de CIS_DB. La condición
+    /// para este estado es específicamente haber encontrado Venta real en trafico_guia (Factura
+    /// + NoViaje verificados); Sucursales/RutasZam solas, sin Venta, no bastan -- ver
+    /// GetViajesQueryHandler y ViajesEnriquecidoMapper.EnriquecerConFallback.
+    /// </summary>
+    EncontradoFallback,
 }
 
 public sealed class ViajesDto
@@ -114,6 +126,16 @@ public sealed class ViajesDto
 
     /// <summary>Explica por qué NO se encontró/aplicó -- null únicamente cuando cis_estado es Encontrado.</summary>
     public string? cis_motivo_no_coincidencia { get; set; }
+
+    /// <summary>
+    /// Prompt 2 (integración trafico_guia) -- campo de auditoría explícito que distingue de dónde
+    /// viene el enriquecimiento final: "CIS_DB" cuando cis_estado es Encontrado (vía Folio),
+    /// "Fallback:Sucursales+RutasZam+TraficoGuia" cuando cis_estado es EncontradoFallback, o null
+    /// si no se encontró por ningún medio. Los campos cis_* de abajo representan el
+    /// enriquecimiento FINAL (cualquiera de las 2 fuentes) -- este campo es exclusivamente para
+    /// diagnóstico/auditoría, no para lógica de negocio.
+    /// </summary>
+    public string? cis_fuente_enriquecimiento { get; set; }
 
     /// <summary>Sucursales.NombreCorto (vía FK ZemogViajesEnZamAnual.IdSucursal).</summary>
     public string? cis_cliente { get; set; }
