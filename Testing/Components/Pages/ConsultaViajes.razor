@@ -329,7 +329,7 @@
             new() { Clave = "sucursal", Etiqueta = "Sucursal", Selector = CamposDerivadosViajes.ObtenerSucursal },
             new() { Clave = "mes", Etiqueta = "Mes", Selector = CamposDerivadosViajes.ObtenerMesEtiqueta },
             new() { Clave = "destino", Etiqueta = "Destino", Selector = CamposDerivadosViajes.ObtenerDestino, ConBuscador = true },
-            new() { Clave = "expedicion", Etiqueta = "Expedición", Selector = v => v.expedicion },
+            new() { Clave = "expedicion", Etiqueta = "Expedición", Selector = CamposDerivadosViajes.ObtenerExpedicion },
             new() { Clave = "zona", Etiqueta = "Zona", Selector = CamposDerivadosViajes.ObtenerZona, ConBuscador = true },
             new() { Clave = "matriz", Etiqueta = "Matriz", Selector = CamposDerivadosViajes.ObtenerMatriz },
             new() { Clave = "anio", Etiqueta = "Año", Selector = CamposDerivadosViajes.ObtenerAnio },
@@ -454,7 +454,7 @@
         "zona" => CamposDerivadosViajes.ObtenerZona(v),
         "matriz" => CamposDerivadosViajes.ObtenerMatriz(v),
         "tarifa" => CamposDerivadosViajes.ObtenerTarifa(v),
-        "expedicion" => v.expedicion,
+        "expedicion" => CamposDerivadosViajes.ObtenerExpedicion(v),
         "operador" => v.operador1,
         "unidad" => v.id_unidad,
         "destino" => CamposDerivadosViajes.ObtenerDestino(v),
@@ -625,10 +625,7 @@
             isLoading = true;
             errorMessage = null;
 
-            var query = new GetViajesQuery(
-                filtro.FechaInicio, filtro.FechaFin, filtro.TipoFecha,
-                filtro.Areas, filtro.IdUnidad, filtro.Estados,
-                filtro.IdRuta, filtro.IdOperador, filtro.NoRemision);
+            var query = new GetViajesQuery(filtro.FechaInicio, filtro.FechaFin);
 
             var resultado = await Sender.Send(query);
 
