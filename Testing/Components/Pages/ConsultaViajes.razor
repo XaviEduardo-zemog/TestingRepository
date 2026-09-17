@@ -414,57 +414,16 @@
         if (agruparPor is "jerarquia" or "jerarquia_tarifa")
         {
             RecalcularArbol();
-            mesesPivote = CalcularMesesPivote();
+            mesesPivote = PivoteViajesBuilder.CalcularMeses(viajesFiltrados);
             return;
         }
 
         var esTemporal = agruparPor is "dia" or "semana";
 
-        var grupos = viajesFiltrados
-            .Select(v => (Viaje: v, Clave: ObtenerValorAgrupacion(v)))
-            .Where(x => x.Clave is not null)
-            .GroupBy(x => x.Clave!, x => x.Viaje)
-            .ToList();
+        filasPivote = PivoteViajesBuilder.Construir(viajesFiltrados, agruparPor, ObtenerValorAgrupacion, corte);
 
-        var filas = new List<FilaPivote>();
-
-        foreach (var grupo in grupos)
-        {
-            var fila = new FilaPivote { Dimension = grupo.Key };
-
-            if (esTemporal)
-            {
-                fila.Total = CalcularMetricas(grupo, corte);
-            }
-            else
-            {
-                foreach (var porMes in grupo.GroupBy(CamposDerivadosViajes.ObtenerMesClave))
-                {
-                    if (porMes.Key is null)
-                        continue;
-
-                    fila.PorMes[porMes.Key] = CalcularMetricas(porMes, corte);
-                }
-
-                fila.Total = fila.PorMes.Values.Aggregate(MetricasMes.Vacio, MetricasMes.Sumar);
-            }
-
-            filas.Add(fila);
-        }
-
-        filasPivote = filas;
-
-        mesesPivote = esTemporal ? [] : CalcularMesesPivote();
+        mesesPivote = esTemporal ? [] : PivoteViajesBuilder.CalcularMeses(viajesFiltrados);
     }
-
-    private List<MesColumna> CalcularMesesPivote() =>
-        viajesFiltrados
-            .Select(v => (Clave: CamposDerivadosViajes.ObtenerMesClave(v), Etiqueta: CamposDerivadosViajes.ObtenerMesEtiqueta(v)))
-            .Where(t => t.Clave is not null)
-            .DistinctBy(t => t.Clave)
-            .OrderBy(t => t.Clave)
-            .Select(t => new MesColumna(t.Clave!, t.Etiqueta!))
-            .ToList();
 
     // Replica la construcción del árbol de tablaJerarquia() en viajes_v14.html: cada viaje
     // acumula en la RAÍZ y en TODOS sus ancestros (Cliente, Cliente>Zona, ...), no solo en su
@@ -473,88 +432,8 @@
     // selectores más largo.
     private void RecalcularArbol()
     {
-        var anterior = raizJerarquia;
-        var nuevo = new NodoJerarquia { Id = "", Label = "TOTAL", Nivel = -1 };
         var niveles = agruparPor == "jerarquia_tarifa" ? NivelesJerarquiaConTarifa : NivelesJerarquia;
-
-        foreach (var viaje in viajesFiltrados)
-        {
-            var fecha = CamposDerivadosViajes.ObtenerFechaNegocio(viaje);
-            if (fecha is null)
-                continue;
-
-            var mesClave = fecha.Value.ToString("yyyy-MM");
-            Acumular(nuevo, mesClave, viaje);
-
-            var nodo = nuevo;
-            foreach (var nivel in niveles)
-            {
-                var clave = nivel(viaje) is { Length: > 0 } valor ? valor : "(sin dato)";
-                nodo = ObtenerOCrearHijo(nodo, clave);
-                Acumular(nodo, mesClave, viaje);
-            }
-        }
-
-        if (anterior is not null)
-            PreservarExpansion(nuevo, anterior);
-
-        raizJerarquia = nuevo;
-    }
-
-    private static NodoJerarquia ObtenerOCrearHijo(NodoJerarquia padre, string clave)
-    {
-        if (padre.Hijos.TryGetValue(clave, out var existente))
-            return existente;
-
-        var nuevoHijo = new NodoJerarquia
-        {
-            Id = $"{padre.Id}>{clave}",
-            Label = clave,
-            Nivel = padre.Nivel + 1,
-            IsExpanded = padre.Nivel + 1 == 0,
-        };
-        padre.Hijos[clave] = nuevoHijo;
-        return nuevoHijo;
-    }
-
-    // Viajes ya NO se redondea por fila (ver C-P0-02): se acumula el valor decimal proyectado tal
-    // cual y se redondea una sola vez, al mostrar, en el Razor consumidor.
-    private void Acumular(NodoJerarquia nodo, string mesClave, ViajesDto viaje)
-    {
-        var metrica = new MetricasMes(
-            ContribucionViajeProyectada.Viajes(viaje, corte),
-            ContribucionViajeProyectada.Kms(viaje, corte),
-            ContribucionViajeProyectada.Peaje(viaje, corte),
-            ContribucionViajeProyectada.Venta(viaje, corte));
-
-        nodo.PorMes[mesClave] = MetricasMes.Sumar(nodo.ObtenerMes(mesClave), metrica);
-        nodo.Total = MetricasMes.Sumar(nodo.Total, metrica);
-    }
-
-    // Conserva IsExpanded entre reconstrucciones del árbol (nuevos filtros/consulta) para que
-    // el usuario no pierda lo que ya expandió — el HTML no lo necesita porque EXPAND vive
-    // aparte del árbol; aquí IsExpanded vive en el nodo, así que hay que copiarlo explícitamente
-    // del árbol viejo al nuevo, emparejando por clave de nivel.
-    private static void PreservarExpansion(NodoJerarquia nuevo, NodoJerarquia anterior)
-    {
-        foreach (var (clave, hijoNuevo) in nuevo.Hijos)
-        {
-            if (anterior.Hijos.TryGetValue(clave, out var hijoAnterior))
-            {
-                hijoNuevo.IsExpanded = hijoAnterior.IsExpanded;
-                PreservarExpansion(hijoNuevo, hijoAnterior);
-            }
-        }
-    }
-
-    private static MetricasMes CalcularMetricas(IEnumerable<ViajesDto> grupo, CorteMensual? corte)
-    {
-        var lista = grupo as IReadOnlyCollection<ViajesDto> ?? grupo.ToList();
-        var viajes = lista.Sum(v => ContribucionViajeProyectada.Viajes(v, corte));
-        var kms = lista.Sum(v => ContribucionViajeProyectada.Kms(v, corte));
-        var peaje = lista.Sum(v => ContribucionViajeProyectada.Peaje(v, corte));
-        var venta = lista.Sum(v => ContribucionViajeProyectada.Venta(v, corte));
-        return new MetricasMes(viajes, kms, peaje, venta);
+        raizJerarquia = JerarquiaViajesBuilder.Construir(viajesFiltrados, niveles, corte, raizJerarquia);
     }
 
     private async Task ConsultarAsync()
