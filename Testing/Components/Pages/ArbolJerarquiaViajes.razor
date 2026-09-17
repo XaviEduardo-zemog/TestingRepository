@@ -96,7 +96,7 @@ else
                                             @col.Formato(valorActual)
                                             @if (MostrarParticipacion && col.EsSumable)
                                             {
-                                                <span class="aj-pct">@FormatoPorcentaje(Participacion(valorActual, col.Selector(Raiz.ObtenerMes(mes.Clave))))</span>
+                                                <span class="aj-pct">@MetricasColumnasHelper.FormatoPorcentaje(MetricasColumnasHelper.Participacion(valorActual, col.Selector(Raiz.ObtenerMes(mes.Clave))))</span>
                                             }
                                         </td>
                                     }
@@ -112,8 +112,8 @@ else
                                 var col = columnas[ci];
                                 var va = col.Selector(a);
                                 var vb = col.Selector(b);
-                                <td class="align-end tabular aj-cmp @(ci == 0 ? "aj-cmp-start" : "") @ClaseDelta(va, vb)">@FormatoDeltaCelda(va, vb, col.Formato)</td>
-                                <td class="align-end tabular aj-cmp @(ci == columnas.Count - 1 ? "aj-cmp-end" : "") @ClaseDelta(va, vb)">@FormatoPctCelda(va, vb)</td>
+                                <td class="align-end tabular aj-cmp @(ci == 0 ? "aj-cmp-start" : "") @ClaseDelta(va, vb)">@MetricasColumnasHelper.FormatoDeltaCelda(va, vb, col.Formato)</td>
+                                <td class="align-end tabular aj-cmp @(ci == columnas.Count - 1 ? "aj-cmp-end" : "") @ClaseDelta(va, vb)">@MetricasColumnasHelper.FormatoPctCelda(va, vb)</td>
                             }
                         }
                     </tr>
@@ -145,8 +145,8 @@ else
                             var col = columnas[ci];
                             var va = col.Selector(totalA);
                             var vb = col.Selector(totalB);
-                            <td class="align-end tabular aj-cmp @(ci == 0 ? "aj-cmp-start" : "")">@FormatoDeltaCelda(va, vb, col.Formato)</td>
-                            <td class="align-end tabular aj-cmp @(ci == columnas.Count - 1 ? "aj-cmp-end" : "")">@FormatoPctCelda(va, vb)</td>
+                            <td class="align-end tabular aj-cmp @(ci == 0 ? "aj-cmp-start" : "")">@MetricasColumnasHelper.FormatoDeltaCelda(va, vb, col.Formato)</td>
+                            <td class="align-end tabular aj-cmp @(ci == columnas.Count - 1 ? "aj-cmp-end" : "")">@MetricasColumnasHelper.FormatoPctCelda(va, vb)</td>
                         }
                     }
                 </tr>
@@ -170,10 +170,6 @@ else
     [Parameter] public bool MostrarParticipacion { get; set; }
     [Parameter] public bool SoloComparativa { get; set; }
 
-    private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-MX");
-
-    private sealed record ColumnaMetrica(string Clave, string Etiqueta, Func<MetricasMes, decimal> Selector, Func<decimal, string> Formato, bool EsSumable);
-
     private List<ColumnaMetrica> columnas = [];
 
     private const string ClaveOrdenPorDefecto = "__default__";
@@ -188,14 +184,7 @@ else
 
     protected override void OnParametersSet()
     {
-        columnas = [];
-        if (MostrarViajes) columnas.Add(new("viajes", "Viajes", m => m.Viajes, FormatoNumero, true));
-        if (MostrarKms) columnas.Add(new("kms", "KMS", m => m.Km, FormatoNumero, true));
-        if (MostrarPeaje) columnas.Add(new("peaje", "Peaje", m => m.Peaje, FormatoDinero, true));
-        if (MostrarVenta) columnas.Add(new("venta", "Venta", m => m.Venta, FormatoDinero, true));
-        if (MostrarPkm) columnas.Add(new("pkm", "$/KM", m => m.VentaPorKm, FormatoDinero, false));
-        if (MostrarKmPorViaje) columnas.Add(new("kmv", "km/Viaje", m => m.KmPorViaje, FormatoNumero, false));
-        if (MostrarPvj) columnas.Add(new("pvj", "$/Viaje", m => m.VentaPorViaje, FormatoDinero, false));
+        columnas = MetricasColumnasHelper.ConstruirColumnas(MostrarViajes, MostrarKms, MostrarPeaje, MostrarVenta, MostrarPkm, MostrarKmPorViaje, MostrarPvj);
     }
 
     private string? MesA => Meses.Count >= 2 ? Meses[^2].Clave : null;
@@ -313,46 +302,12 @@ else
         {
             var a = MesA is null ? MetricasMes.Vacio : nodo.ObtenerMes(MesA);
             var b = MesB is null ? MetricasMes.Vacio : nodo.ObtenerMes(MesB);
-            var va = ObtenerMetricaPorClave(a, partes[1]);
-            var vb = ObtenerMetricaPorClave(b, partes[1]);
-            return partes[2] == "delta" ? vb - va : PorcentajeCambio(va, vb);
+            var va = MetricasColumnasHelper.ObtenerMetricaPorClave(a, partes[1]);
+            var vb = MetricasColumnasHelper.ObtenerMetricaPorClave(b, partes[1]);
+            return partes[2] == "delta" ? vb - va : MetricasColumnasHelper.PorcentajeCambio(va, vb);
         }
 
-        return ObtenerMetricaPorClave(nodo.ObtenerMes(partes[0]), partes[1]);
-    }
-
-    private static decimal ObtenerMetricaPorClave(MetricasMes m, string clave) => clave switch
-    {
-        "viajes" => m.Viajes,
-        "kms" => m.Km,
-        "peaje" => m.Peaje,
-        "venta" => m.Venta,
-        "pkm" => m.VentaPorKm,
-        "kmv" => m.KmPorViaje,
-        "pvj" => m.VentaPorViaje,
-        _ => 0,
-    };
-
-    private static decimal Participacion(decimal valor, decimal total) => total > 0 ? valor / total * 100 : 0;
-
-    private static decimal PorcentajeCambio(decimal a, decimal b) => a != 0 ? (b - a) / a * 100 : 0;
-
-    private static string FormatoDeltaCelda(decimal a, decimal b, Func<decimal, string> formato)
-    {
-        if (a == 0 && b == 0)
-            return "—";
-
-        var d = b - a;
-        return (d >= 0 ? "+" : "-") + formato(Math.Abs(d));
-    }
-
-    private static string FormatoPctCelda(decimal a, decimal b)
-    {
-        if (a == 0)
-            return b != 0 ? "nuevo" : "—";
-
-        var pct = PorcentajeCambio(a, b);
-        return (pct >= 0 ? "+" : "") + pct.ToString("0.0", Cultura) + "%";
+        return MetricasColumnasHelper.ObtenerMetricaPorClave(nodo.ObtenerMes(partes[0]), partes[1]);
     }
 
     private static string ClaseDelta(decimal a, decimal b)
@@ -376,9 +331,4 @@ else
 
         return actual > anterior ? "aj-pos" : "aj-neg";
     }
-
-    private static string FormatoPorcentaje(decimal v) => $" {v.ToString("0.0", Cultura)}%";
-
-    private static string FormatoNumero(decimal v) => Math.Round(v).ToString("N0", Cultura);
-    private static string FormatoDinero(decimal v) => v.ToString("C0", Cultura);
 }

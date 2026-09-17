@@ -18,11 +18,11 @@
             {
                 <tr>
                     <td>@f.Operador</td>
-                    <td class="align-end tabular">@FormatoNumero(f.Viajes)</td>
-                    <td class="align-end tabular">@FormatoNumero(f.Kms)</td>
-                    <td class="align-end tabular">@FormatoDinero(f.Venta)</td>
-                    <td class="align-end tabular">@FormatoNumero(f.KmPorViaje)</td>
-                    <td class="align-end tabular">@FormatoDinero(f.VentaPorKm)</td>
+                    <td class="align-end tabular">@FormatoUi.Numero(f.Viajes)</td>
+                    <td class="align-end tabular">@FormatoUi.Numero(f.Kms)</td>
+                    <td class="align-end tabular">@FormatoUi.Dinero(f.Venta)</td>
+                    <td class="align-end tabular">@FormatoUi.Numero(f.KmPorViaje)</td>
+                    <td class="align-end tabular">@FormatoUi.Dinero(f.VentaPorKm)</td>
                 </tr>
             }
         </tbody>
@@ -31,11 +31,11 @@
             <tfoot>
                 <tr class="re-total">
                     <td>@FilaTotal.Operador</td>
-                    <td class="align-end tabular">@FormatoNumero(FilaTotal.Viajes)</td>
-                    <td class="align-end tabular">@FormatoNumero(FilaTotal.Kms)</td>
-                    <td class="align-end tabular">@FormatoDinero(FilaTotal.Venta)</td>
-                    <td class="align-end tabular">@FormatoNumero(FilaTotal.KmPorViaje)</td>
-                    <td class="align-end tabular">@FormatoDinero(FilaTotal.VentaPorKm)</td>
+                    <td class="align-end tabular">@FormatoUi.Numero(FilaTotal.Viajes)</td>
+                    <td class="align-end tabular">@FormatoUi.Numero(FilaTotal.Kms)</td>
+                    <td class="align-end tabular">@FormatoUi.Dinero(FilaTotal.Venta)</td>
+                    <td class="align-end tabular">@FormatoUi.Numero(FilaTotal.KmPorViaje)</td>
+                    <td class="align-end tabular">@FormatoUi.Dinero(FilaTotal.VentaPorKm)</td>
                 </tr>
             </tfoot>
         }
@@ -49,8 +49,6 @@
     // null = sin override -- se respeta el orden que ya trae Filas (el "Rankear por" del padre).
     private string? ordenClave;
     private bool ordenDescendente;
-
-    private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-MX");
 
     private void OrdenarPor(string clave)
     {
@@ -79,8 +77,4 @@
 
         return (ordenDescendente ? query.Reverse() : query).ToList();
     }
-
-    private static string FormatoNumero(decimal v) => Math.Round(v).ToString("N0", Cultura);
-
-    private static string FormatoDinero(decimal v) => v.ToString("C0", Cultura);
 }

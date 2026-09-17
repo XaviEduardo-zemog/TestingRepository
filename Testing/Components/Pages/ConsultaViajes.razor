@@ -159,7 +159,7 @@
                              aria-hidden="true">
                             @if (seg.Porcentaje >= 8)
                             {
-                                <span>@seg.Etiqueta @FormatoPct(seg.Porcentaje)</span>
+                                <span>@seg.Etiqueta @FormatoUi.Porcentaje(seg.Porcentaje)</span>
                             }
                         </div>
                     }
@@ -168,7 +168,7 @@
                     @foreach (var seg in segmentosEjes)
                     {
                         <span class="vz-ejes-leyenda-item" title="@seg.Tooltip">
-                            <span class="vz-ejes-dot @seg.Clase" aria-hidden="true"></span>@seg.Etiqueta · @FormatoNumero(seg.Viajes) (@FormatoPct(seg.Porcentaje))
+                            <span class="vz-ejes-dot @seg.Clase" aria-hidden="true"></span>@seg.Etiqueta · @FormatoUi.Numero(seg.Viajes) (@FormatoUi.Porcentaje(seg.Porcentaje))
                         </span>
                     }
                 </div>
@@ -735,7 +735,7 @@
             {
                 var viajes = acumulado[etiqueta];
                 var porcentaje = viajes / total * 100;
-                var tooltip = $"{etiqueta}: {FormatoNumero(viajes)} viajes ({FormatoPct(porcentaje)})";
+                var tooltip = $"{etiqueta}: {FormatoUi.Numero(viajes)} viajes ({FormatoUi.Porcentaje(porcentaje)})";
                 return new SegmentoEjes(etiqueta, viajes, porcentaje, ClasesEjes[etiqueta], tooltip);
             })
             .ToList();
@@ -744,8 +744,6 @@
     private static string TextoAccesibleEjes(IReadOnlyList<SegmentoEjes> segmentos) =>
         "Distribución de viajes por Ejes/Asignación: " + string.Join(" · ", segmentos.Select(s => s.Tooltip));
 
-    private static string FormatoPct(decimal v) => v.ToString("0.0", Cultura) + "%";
-
     private static string TituloKpi(KpiComparativo kpi) =>
         kpi.EtiquetaMesActual is null
             ? kpi.Etiqueta
@@ -753,8 +751,8 @@
 
     private string ValorKpi(KpiComparativo kpi) => kpi.Clave switch
     {
-        "kms" or "kpv" or "viajes" => FormatoNumero(kpi.ValorActual ?? 0),
-        _ => FormatoDinero(kpi.ValorActual ?? 0),
+        "kms" or "kpv" or "viajes" => FormatoUi.Numero(kpi.ValorActual ?? 0),
+        _ => FormatoUi.Dinero(kpi.ValorActual ?? 0),
     };
 
     private string DeltaKpi(KpiComparativo kpi)
@@ -777,9 +775,6 @@
     };
 
     private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-MX");
-
-    private static string FormatoNumero(decimal v) => Math.Round(v).ToString("N0", Cultura);
-    private static string FormatoDinero(decimal v) => v.ToString("C0", Cultura);
 
     private string TextoCorte()
     {

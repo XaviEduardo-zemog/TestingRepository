@@ -38,15 +38,15 @@
                             }
                             @fila.Label
                         </td>
-                        <td class="align-end tabular">@FormatoNumero(fila.Nodo.Ultimo.Viajes)</td>
-                        <td class="align-end tabular @ClaseDelta(deltaViajes)">@FormatoPct(deltaViajes)</td>
-                        <td class="align-end tabular">@FormatoNumero(fila.Nodo.Ultimo.Kms)</td>
-                        <td class="align-end tabular @ClaseDelta(deltaKm)">@FormatoPct(deltaKm)</td>
-                        <td class="align-end tabular">@FormatoDinero(fila.Nodo.Ultimo.Venta)</td>
-                        <td class="align-end tabular @ClaseDelta(deltaVenta)">@FormatoPct(deltaVenta)</td>
-                        <td class="align-end tabular">@FormatoNumero(fila.Nodo.Anual.Viajes)</td>
-                        <td class="align-end tabular">@FormatoNumero(fila.Nodo.Anual.Kms)</td>
-                        <td class="align-end tabular">@FormatoDinero(fila.Nodo.Anual.Venta)</td>
+                        <td class="align-end tabular">@FormatoUi.Numero(fila.Nodo.Ultimo.Viajes)</td>
+                        <td class="align-end tabular @FormatoUi.ClaseDeltaResumen(deltaViajes)">@FormatoUi.DeltaPorcentaje(deltaViajes)</td>
+                        <td class="align-end tabular">@FormatoUi.Numero(fila.Nodo.Ultimo.Kms)</td>
+                        <td class="align-end tabular @FormatoUi.ClaseDeltaResumen(deltaKm)">@FormatoUi.DeltaPorcentaje(deltaKm)</td>
+                        <td class="align-end tabular">@FormatoUi.Dinero(fila.Nodo.Ultimo.Venta)</td>
+                        <td class="align-end tabular @FormatoUi.ClaseDeltaResumen(deltaVenta)">@FormatoUi.DeltaPorcentaje(deltaVenta)</td>
+                        <td class="align-end tabular">@FormatoUi.Numero(fila.Nodo.Anual.Viajes)</td>
+                        <td class="align-end tabular">@FormatoUi.Numero(fila.Nodo.Anual.Kms)</td>
+                        <td class="align-end tabular">@FormatoUi.Dinero(fila.Nodo.Anual.Venta)</td>
                     </tr>
                 }
             </tbody>
@@ -58,15 +58,15 @@
                 }
                 <tr class="re-total">
                     <td>TOTAL</td>
-                    <td class="align-end tabular">@FormatoNumero(Raiz.Ultimo.Viajes)</td>
-                    <td class="align-end tabular @ClaseDelta(deltaViajesTot)">@FormatoPct(deltaViajesTot)</td>
-                    <td class="align-end tabular">@FormatoNumero(Raiz.Ultimo.Kms)</td>
-                    <td class="align-end tabular @ClaseDelta(deltaKmTot)">@FormatoPct(deltaKmTot)</td>
-                    <td class="align-end tabular">@FormatoDinero(Raiz.Ultimo.Venta)</td>
-                    <td class="align-end tabular @ClaseDelta(deltaVentaTot)">@FormatoPct(deltaVentaTot)</td>
-                    <td class="align-end tabular">@FormatoNumero(Raiz.Anual.Viajes)</td>
-                    <td class="align-end tabular">@FormatoNumero(Raiz.Anual.Kms)</td>
-                    <td class="align-end tabular">@FormatoDinero(Raiz.Anual.Venta)</td>
+                    <td class="align-end tabular">@FormatoUi.Numero(Raiz.Ultimo.Viajes)</td>
+                    <td class="align-end tabular @FormatoUi.ClaseDeltaResumen(deltaViajesTot)">@FormatoUi.DeltaPorcentaje(deltaViajesTot)</td>
+                    <td class="align-end tabular">@FormatoUi.Numero(Raiz.Ultimo.Kms)</td>
+                    <td class="align-end tabular @FormatoUi.ClaseDeltaResumen(deltaKmTot)">@FormatoUi.DeltaPorcentaje(deltaKmTot)</td>
+                    <td class="align-end tabular">@FormatoUi.Dinero(Raiz.Ultimo.Venta)</td>
+                    <td class="align-end tabular @FormatoUi.ClaseDeltaResumen(deltaVentaTot)">@FormatoUi.DeltaPorcentaje(deltaVentaTot)</td>
+                    <td class="align-end tabular">@FormatoUi.Numero(Raiz.Anual.Viajes)</td>
+                    <td class="align-end tabular">@FormatoUi.Numero(Raiz.Anual.Kms)</td>
+                    <td class="align-end tabular">@FormatoUi.Dinero(Raiz.Anual.Venta)</td>
                 </tr>
             </tfoot>
         </table>
@@ -104,11 +104,11 @@
                             }
                             @fila.Label
                         </td>
-                        <td class="align-end tabular">@FormatoNumero(fila.Asignacion.Comodato)</td>
-                        <td class="align-end tabular">@FormatoNumero(fila.Asignacion.Full)</td>
-                        <td class="align-end tabular">@FormatoNumero(fila.Asignacion.Sencillo)</td>
-                        <td class="align-end tabular">@FormatoNumero(fila.Asignacion.Total)</td>
-                        <td class="align-end tabular">@FormatoPct(fila.Asignacion.PctComodato)</td>
+                        <td class="align-end tabular">@FormatoUi.Numero(fila.Asignacion.Comodato)</td>
+                        <td class="align-end tabular">@FormatoUi.Numero(fila.Asignacion.Full)</td>
+                        <td class="align-end tabular">@FormatoUi.Numero(fila.Asignacion.Sencillo)</td>
+                        <td class="align-end tabular">@FormatoUi.Numero(fila.Asignacion.Total)</td>
+                        <td class="align-end tabular">@FormatoUi.DeltaPorcentaje(fila.Asignacion.PctComodato)</td>
                         <td class="align-end tabular @(fila.Asignacion.DeltaPuntosPorcentuales is null ? "re-neutro" : fila.Asignacion.DeltaPuntosPorcentuales >= 0 ? "re-pos" : "re-neg")">
                             @(fila.Asignacion.DeltaPuntosPorcentuales is null ? "—" : $"{ResumenEjecutivoCalculator.FormatoPorcentaje(fila.Asignacion.DeltaPuntosPorcentuales.Value)} pp")
                         </td>
@@ -119,11 +119,11 @@
                 @{ var totalAsig = ResumenEjecutivoCalculator.CalcularAsignacion(Raiz); }
                 <tr class="re-total">
                     <td>TOTAL</td>
-                    <td class="align-end tabular">@FormatoNumero(totalAsig.Comodato)</td>
-                    <td class="align-end tabular">@FormatoNumero(totalAsig.Full)</td>
-                    <td class="align-end tabular">@FormatoNumero(totalAsig.Sencillo)</td>
-                    <td class="align-end tabular">@FormatoNumero(totalAsig.Total)</td>
-                    <td class="align-end tabular">@FormatoPct(totalAsig.PctComodato)</td>
+                    <td class="align-end tabular">@FormatoUi.Numero(totalAsig.Comodato)</td>
+                    <td class="align-end tabular">@FormatoUi.Numero(totalAsig.Full)</td>
+                    <td class="align-end tabular">@FormatoUi.Numero(totalAsig.Sencillo)</td>
+                    <td class="align-end tabular">@FormatoUi.Numero(totalAsig.Total)</td>
+                    <td class="align-end tabular">@FormatoUi.DeltaPorcentaje(totalAsig.PctComodato)</td>
                     <td class="align-end tabular @(totalAsig.DeltaPuntosPorcentuales is null ? "re-neutro" : totalAsig.DeltaPuntosPorcentuales >= 0 ? "re-pos" : "re-neg")">
                         @(totalAsig.DeltaPuntosPorcentuales is null ? "—" : $"{ResumenEjecutivoCalculator.FormatoPorcentaje(totalAsig.DeltaPuntosPorcentuales.Value)} pp")
                     </td>
@@ -135,8 +135,8 @@
     @if (ArmadosDesconocidos.Count > 0)
     {
         <p class="re-nota" style="color:var(--vz-later,var(--vz-acc));">
-            Se detectaron @FormatoNumero(ArmadosDesconocidos.Sum(a => a.Viajes)) viaje(s) con Ejes no reconocidos (ni 5, 6 ni 9):
-            @string.Join(", ", ArmadosDesconocidos.Select(a => $"{a.Valor} ({FormatoNumero(a.Viajes)})")).
+            Se detectaron @FormatoUi.Numero(ArmadosDesconocidos.Sum(a => a.Viajes)) viaje(s) con Ejes no reconocidos (ni 5, 6 ni 9):
+            @string.Join(", ", ArmadosDesconocidos.Select(a => $"{a.Valor} ({FormatoUi.Numero(a.Viajes)})")).
             No se clasifican como Comodato, Full ni Sencillo -- quedan excluidos del Total hasta confirmar su categoría real.
         </p>
     }
@@ -163,11 +163,11 @@
                 {
                     <tr class="@(f.Alerta ? "re-fila-alerta" : "")">
                         <td class="re-th-dim" style="padding-left:@(8 + f.Nivel * 14)px;">@f.Label</td>
-                        <td class="align-end tabular">@FormatoNumero(f.ViajesAnterior)</td>
-                        <td class="align-end tabular">@FormatoNumero(f.ViajesUltimo)</td>
-                        <td class="align-end tabular @ClaseDelta(f.DeltaPorcentaje)">@FormatoDeltaAbs(f.ViajesUltimo - f.ViajesAnterior)</td>
-                        <td class="align-end tabular @ClaseDelta(f.DeltaPorcentaje)">@FormatoPct(f.DeltaPorcentaje)</td>
-                        <td class="align-end tabular">@FormatoDinero(f.VentaUltimo)</td>
+                        <td class="align-end tabular">@FormatoUi.Numero(f.ViajesAnterior)</td>
+                        <td class="align-end tabular">@FormatoUi.Numero(f.ViajesUltimo)</td>
+                        <td class="align-end tabular @FormatoUi.ClaseDeltaResumen(f.DeltaPorcentaje)">@FormatoDeltaAbs(f.ViajesUltimo - f.ViajesAnterior)</td>
+                        <td class="align-end tabular @FormatoUi.ClaseDeltaResumen(f.DeltaPorcentaje)">@FormatoUi.DeltaPorcentaje(f.DeltaPorcentaje)</td>
+                        <td class="align-end tabular">@FormatoUi.Dinero(f.VentaUltimo)</td>
                         <td class="@(f.Alerta ? "re-neg" : "re-neutro")">@(f.Alerta ? "⚠ Revisar" : "")</td>
                     </tr>
                 }
@@ -179,11 +179,11 @@
                 }
                 <tr class="re-total">
                     <td>TOTAL</td>
-                    <td class="align-end tabular">@FormatoNumero(Raiz.Anterior.Viajes)</td>
-                    <td class="align-end tabular">@FormatoNumero(Raiz.Ultimo.Viajes)</td>
-                    <td class="align-end tabular @ClaseDelta(pctFrecTot)">@FormatoDeltaAbs(deltaViajesFrecTot)</td>
-                    <td class="align-end tabular @ClaseDelta(pctFrecTot)">@FormatoPct(pctFrecTot)</td>
-                    <td class="align-end tabular">@FormatoDinero(Raiz.Ultimo.Venta)</td>
+                    <td class="align-end tabular">@FormatoUi.Numero(Raiz.Anterior.Viajes)</td>
+                    <td class="align-end tabular">@FormatoUi.Numero(Raiz.Ultimo.Viajes)</td>
+                    <td class="align-end tabular @FormatoUi.ClaseDeltaResumen(pctFrecTot)">@FormatoDeltaAbs(deltaViajesFrecTot)</td>
+                    <td class="align-end tabular @FormatoUi.ClaseDeltaResumen(pctFrecTot)">@FormatoUi.DeltaPorcentaje(pctFrecTot)</td>
+                    <td class="align-end tabular">@FormatoUi.Dinero(Raiz.Ultimo.Venta)</td>
                     <td></td>
                 </tr>
             </tfoot>
@@ -208,8 +208,6 @@
     private bool ordenFrecDescendente; // false = ascendente = mayores caídas primero (RE_jerFrec, idx=4 dir=-1)
 
     private List<FilaFrecuenciaDto> tablaFrecuencia = [];
-
-    private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-MX");
 
     private sealed record FilaComparativa(int Nivel, string Label, NodoComparativo Nodo, NodoComparativo NodoOriginal, bool EsHoja);
     private sealed record FilaAsignacion(int Nivel, string Label, NodoComparativo NodoOriginal, bool EsHoja, AsignacionExpedicionDto Asignacion);
@@ -359,12 +357,5 @@
 
     private static decimal? Delta(decimal anterior, decimal ultimo) => anterior > 0 ? (ultimo - anterior) / anterior * 100 : null;
 
-    private static string ClaseDelta(decimal? v) => v switch { null => "re-neutro", > 0 => "re-pos", < 0 => "re-neg", _ => "re-neutro" };
-
-    private static string FormatoPct(decimal? v) => v is null ? "—" : ResumenEjecutivoCalculator.FormatoPorcentaje(v.Value);
-
-    private static string FormatoDeltaAbs(decimal delta) => (delta >= 0 ? "+" : "") + FormatoNumero(delta);
-
-    private static string FormatoNumero(decimal v) => Math.Round(v).ToString("N0", Cultura);
-    private static string FormatoDinero(decimal v) => v.ToString("C0", Cultura);
+    private static string FormatoDeltaAbs(decimal delta) => (delta >= 0 ? "+" : "") + FormatoUi.Numero(delta);
 }

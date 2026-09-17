@@ -12,7 +12,7 @@
     {
         <p class="re-nota re-nota-superior">
             <b>@Agencias.TotalDesaparecidas</b> agencia(s)/destino(s) con viajes en el año ya no aparecen en @MesUltimo
-            · representaban <span class="re-neg">@FormatoDinero(Agencias.VentaAcumuladaTotal)</span> acumulados
+            · representaban <span class="re-neg">@FormatoUi.Dinero(Agencias.VentaAcumuladaTotal)</span> acumulados
             · se listan las @Agencias.Top30.Count de mayor venta (el TOTAL de la tabla corresponde solo a esas @Agencias.Top30.Count)
         </p>
         <div class="re-tbl-wrap">
@@ -34,16 +34,16 @@
                             <td>@a.Destino</td>
                             <td>@a.Matriz</td>
                             <td>@a.UltimoMesActivo.Etiqueta</td>
-                            <td class="align-end tabular">@FormatoNumero(a.MesesActiva)</td>
-                            <td class="align-end tabular re-neg">@FormatoDinero(a.VentaAcumulada)</td>
-                            <td class="align-end tabular">@FormatoDinero(a.VentaPromedio)</td>
+                            <td class="align-end tabular">@FormatoUi.Numero(a.MesesActiva)</td>
+                            <td class="align-end tabular re-neg">@FormatoUi.Dinero(a.VentaAcumulada)</td>
+                            <td class="align-end tabular">@FormatoUi.Dinero(a.VentaPromedio)</td>
                         </tr>
                     }
                 </tbody>
                 <tfoot>
                     <tr class="re-total">
                         <td colspan="4">TOTAL (Top @Agencias.Top30.Count)</td>
-                        <td class="align-end tabular re-neg">@FormatoDinero(Agencias.Top30.Sum(a => a.VentaAcumulada))</td>
+                        <td class="align-end tabular re-neg">@FormatoUi.Dinero(Agencias.Top30.Sum(a => a.VentaAcumulada))</td>
                         <td></td>
                     </tr>
                 </tfoot>
@@ -58,8 +58,6 @@
 
     private string ordenClave = "ventaAcumulada";
     private bool ordenDescendente = true;
-
-    private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-MX");
 
     private void OrdenarPor(string clave)
     {
@@ -85,7 +83,4 @@
 
         return (ordenDescendente ? query.Reverse() : query).ToList();
     }
-
-    private static string FormatoNumero(int v) => v.ToString("N0", Cultura);
-    private static string FormatoDinero(decimal v) => v.ToString("C0", Cultura);
 }

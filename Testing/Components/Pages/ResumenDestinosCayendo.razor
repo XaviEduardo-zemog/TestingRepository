@@ -12,7 +12,7 @@
     {
         <p class="re-nota re-nota-superior">
             <b>@Datos.TotalConCaida</b> destino(s) con caída de venta en @MesUltimo vs @MesAnterior
-            · impacto total <span class="re-neg">@FormatoDinero(Datos.ImpactoTotal)</span>
+            · impacto total <span class="re-neg">@FormatoUi.Dinero(Datos.ImpactoTotal)</span>
             · se listan las @Datos.Top25.Count mayores caídas (el TOTAL de la tabla corresponde solo a esas @Datos.Top25.Count)
         </p>
         <div class="re-tbl-wrap">
@@ -35,11 +35,11 @@
                         <tr>
                             <td>@d.Destino</td>
                             <td>@d.Matriz</td>
-                            <td class="align-end tabular">@FormatoNumero(d.ViajesAnterior)</td>
-                            <td class="align-end tabular">@FormatoNumero(d.ViajesActual)</td>
-                            <td class="align-end tabular">@FormatoDinero(d.VentaAnterior)</td>
-                            <td class="align-end tabular">@FormatoDinero(d.VentaActual)</td>
-                            <td class="align-end tabular re-neg">@FormatoDinero(d.DeltaVenta)</td>
+                            <td class="align-end tabular">@FormatoUi.Numero(d.ViajesAnterior)</td>
+                            <td class="align-end tabular">@FormatoUi.Numero(d.ViajesActual)</td>
+                            <td class="align-end tabular">@FormatoUi.Dinero(d.VentaAnterior)</td>
+                            <td class="align-end tabular">@FormatoUi.Dinero(d.VentaActual)</td>
+                            <td class="align-end tabular re-neg">@FormatoUi.Dinero(d.DeltaVenta)</td>
                             <td class="@(d.SeDejoDeDar ? "re-neg" : "re-neutro")">@(d.SeDejoDeDar ? "Sí" : "—")</td>
                         </tr>
                     }
@@ -47,7 +47,7 @@
                 <tfoot>
                     <tr class="re-total">
                         <td colspan="6">TOTAL (Top @Datos.Top25.Count)</td>
-                        <td class="align-end tabular re-neg">@FormatoDinero(Datos.TotalTop25)</td>
+                        <td class="align-end tabular re-neg">@FormatoUi.Dinero(Datos.TotalTop25)</td>
                         <td></td>
                     </tr>
                 </tfoot>
@@ -63,8 +63,6 @@
 
     private string ordenClave = "delta";
     private bool ordenDescendente; // "delta" ascendente por defecto = mayor pérdida primero (DeltaVenta más negativo)
-
-    private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-MX");
 
     private void OrdenarPor(string clave)
     {
@@ -94,7 +92,4 @@
 
         return (ordenDescendente ? query.Reverse() : query).ToList();
     }
-
-    private static string FormatoNumero(decimal v) => Math.Round(v).ToString("N0", Cultura);
-    private static string FormatoDinero(decimal v) => v.ToString("C0", Cultura);
 }

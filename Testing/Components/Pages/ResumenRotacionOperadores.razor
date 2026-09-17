@@ -32,9 +32,9 @@
                             <td class="align-end tabular">@f.Activos</td>
                             <td class="align-end tabular">@f.Altas</td>
                             <td class="align-end tabular">@f.Bajas</td>
-                            <td class="align-end tabular">@FormatoNumero(f.ViajesAnterior)</td>
-                            <td class="align-end tabular">@FormatoNumero(f.ViajesActual)</td>
-                            <td class="align-end tabular @ClaseDelta(f.DeltaViajesPorcentaje)">@FormatoDeltaPct(f.DeltaViajesPorcentaje)</td>
+                            <td class="align-end tabular">@FormatoUi.Numero(f.ViajesAnterior)</td>
+                            <td class="align-end tabular">@FormatoUi.Numero(f.ViajesActual)</td>
+                            <td class="align-end tabular @FormatoUi.ClaseDeltaResumen(f.DeltaViajesPorcentaje)">@FormatoUi.DeltaPorcentaje(f.DeltaViajesPorcentaje)</td>
                             <td class="@ClaseLectura(f.Lectura)">@f.Lectura</td>
                         </tr>
                     }
@@ -45,9 +45,9 @@
                         <td class="align-end tabular">@Rotacion.Total.Activos</td>
                         <td class="align-end tabular">@Rotacion.Total.Altas</td>
                         <td class="align-end tabular">@Rotacion.Total.Bajas</td>
-                        <td class="align-end tabular">@FormatoNumero(Rotacion.Total.ViajesAnterior)</td>
-                        <td class="align-end tabular">@FormatoNumero(Rotacion.Total.ViajesActual)</td>
-                        <td class="align-end tabular @ClaseDelta(Rotacion.Total.DeltaViajesPorcentaje)">@FormatoDeltaPct(Rotacion.Total.DeltaViajesPorcentaje)</td>
+                        <td class="align-end tabular">@FormatoUi.Numero(Rotacion.Total.ViajesAnterior)</td>
+                        <td class="align-end tabular">@FormatoUi.Numero(Rotacion.Total.ViajesActual)</td>
+                        <td class="align-end tabular @FormatoUi.ClaseDeltaResumen(Rotacion.Total.DeltaViajesPorcentaje)">@FormatoUi.DeltaPorcentaje(Rotacion.Total.DeltaViajesPorcentaje)</td>
                         <td></td>
                     </tr>
                 </tfoot>
@@ -64,8 +64,6 @@
 
     private string ordenClave = "bajas";
     private bool ordenDescendente = true;
-
-    private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-MX");
 
     private void OrdenarPor(string clave)
     {
@@ -93,18 +91,6 @@
 
         return (ordenDescendente ? query.Reverse() : query).ToList();
     }
-
-    private static string FormatoNumero(decimal v) => Math.Round(v).ToString("N0", Cultura);
-
-    private static string FormatoDeltaPct(decimal? v) => v is null ? "—" : ResumenEjecutivoCalculator.FormatoPorcentaje(v.Value);
-
-    private static string ClaseDelta(decimal? v) => v switch
-    {
-        null => "re-neutro",
-        > 0 => "re-pos",
-        < 0 => "re-neg",
-        _ => "re-neutro",
-    };
 
     private static string ClaseLectura(string lectura) => lectura switch
     {

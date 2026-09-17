@@ -30,16 +30,16 @@
             {
                 <h2>La operación en 3 cifras · @slides.TresCifras.Periodo</h2>
                 <div class="pres-rev @Clase(0)">
-                    <div class="pres-kpi"><p class="pres-kpi-label">VENTA ACUMULADA</p><p class="pres-kpi-valor">@FormatoDinero(slides.TresCifras.VentaYtd)</p></div>
+                    <div class="pres-kpi"><p class="pres-kpi-label">VENTA ACUMULADA</p><p class="pres-kpi-valor">@FormatoUi.Dinero(slides.TresCifras.VentaYtd)</p></div>
                 </div>
                 <div class="pres-rev @Clase(1)">
-                    <div class="pres-kpi"><p class="pres-kpi-label">VIAJES</p><p class="pres-kpi-valor">@FormatoN0(slides.TresCifras.ViajesYtd)</p></div>
+                    <div class="pres-kpi"><p class="pres-kpi-label">VIAJES</p><p class="pres-kpi-valor">@FormatoUi.Numero(slides.TresCifras.ViajesYtd)</p></div>
                 </div>
                 <div class="pres-rev @Clase(2)">
-                    <div class="pres-kpi"><p class="pres-kpi-label">KILÓMETROS</p><p class="pres-kpi-valor">@FormatoN0(slides.TresCifras.KmsYtd)</p></div>
+                    <div class="pres-kpi"><p class="pres-kpi-label">KILÓMETROS</p><p class="pres-kpi-valor">@FormatoUi.Numero(slides.TresCifras.KmsYtd)</p></div>
                     @if (slides.TresCifras.MejorMes is not null && slides.TresCifras.PeorMes is not null)
                     {
-                        <p class="pres-smaller">Mejor mes: <b class="pres-acc">@slides.TresCifras.MejorMes.Value.MesEtiqueta</b> (@FormatoDinero(slides.TresCifras.MejorMes.Value.Venta)) · Peor mes: <b class="pres-acc">@slides.TresCifras.PeorMes.Value.MesEtiqueta</b> (@FormatoDinero(slides.TresCifras.PeorMes.Value.Venta))</p>
+                        <p class="pres-smaller">Mejor mes: <b class="pres-acc">@slides.TresCifras.MejorMes.Value.MesEtiqueta</b> (@FormatoUi.Dinero(slides.TresCifras.MejorMes.Value.Venta)) · Peor mes: <b class="pres-acc">@slides.TresCifras.PeorMes.Value.MesEtiqueta</b> (@FormatoUi.Dinero(slides.TresCifras.PeorMes.Value.Venta))</p>
                     }
                 </div>
             }
@@ -57,13 +57,13 @@
             {
                 <h2>@slides.ComparativoMensual.MesActual contra @slides.ComparativoMensual.MesAnterior</h2>
                 <div class="pres-rev @Clase(0)">
-                    <p class="pres-row">VENTA: <b class="pres-acc">@FormatoDinero(slides.ComparativoMensual.VentaActual)</b> (@slides.ComparativoMensual.MesAnterior: @FormatoDinero(slides.ComparativoMensual.VentaAnterior)) @FormatoDelta(slides.ComparativoMensual.DeltaVentaPorcentaje)</p>
+                    <p class="pres-row">VENTA: <b class="pres-acc">@FormatoUi.Dinero(slides.ComparativoMensual.VentaActual)</b> (@slides.ComparativoMensual.MesAnterior: @FormatoUi.Dinero(slides.ComparativoMensual.VentaAnterior)) @FormatoDelta(slides.ComparativoMensual.DeltaVentaPorcentaje)</p>
                 </div>
                 <div class="pres-rev @Clase(1)">
-                    <p class="pres-row">VIAJES: <b class="pres-acc">@FormatoN0(slides.ComparativoMensual.ViajesActual)</b> (@slides.ComparativoMensual.MesAnterior: @FormatoN0(slides.ComparativoMensual.ViajesAnterior)) @FormatoDelta(slides.ComparativoMensual.DeltaViajesPorcentaje)</p>
+                    <p class="pres-row">VIAJES: <b class="pres-acc">@FormatoUi.Numero(slides.ComparativoMensual.ViajesActual)</b> (@slides.ComparativoMensual.MesAnterior: @FormatoUi.Numero(slides.ComparativoMensual.ViajesAnterior)) @FormatoDelta(slides.ComparativoMensual.DeltaViajesPorcentaje)</p>
                 </div>
                 <div class="pres-rev @Clase(2)">
-                    <p class="pres-row">KM: <b class="pres-acc">@FormatoN0(slides.ComparativoMensual.KmsActual)</b> (@slides.ComparativoMensual.MesAnterior: @FormatoN0(slides.ComparativoMensual.KmsAnterior)) @FormatoDelta(slides.ComparativoMensual.DeltaKmsPorcentaje)</p>
+                    <p class="pres-row">KM: <b class="pres-acc">@FormatoUi.Numero(slides.ComparativoMensual.KmsActual)</b> (@slides.ComparativoMensual.MesAnterior: @FormatoUi.Numero(slides.ComparativoMensual.KmsAnterior)) @FormatoDelta(slides.ComparativoMensual.DeltaKmsPorcentaje)</p>
                 </div>
             }
             else if (slideActual == 4)
@@ -73,7 +73,7 @@
                 {
                     var f = slides.PorCliente.Filas[i];
                     <div class="pres-rev @Clase(i)">
-                        <p class="pres-row">@f.Cliente — VENTA: <b class="pres-acc">@FormatoDinero(f.Venta)</b> @FormatoDelta(f.DeltaVentaPorcentaje) · VIAJES: <b class="pres-acc">@FormatoN0(f.Viajes)</b> @FormatoDelta(f.DeltaViajesPorcentaje)</p>
+                        <p class="pres-row">@f.Cliente — VENTA: <b class="pres-acc">@FormatoUi.Dinero(f.Venta)</b> @FormatoDelta(f.DeltaVentaPorcentaje) · VIAJES: <b class="pres-acc">@FormatoUi.Numero(f.Viajes)</b> @FormatoDelta(f.DeltaViajesPorcentaje)</p>
                     </div>
                 }
                 <div class="pres-rev @Clase(slides.PorCliente.Filas.Count)">
@@ -84,14 +84,14 @@
             {
                 <h2>Primera fuga: la mezcla de expedición</h2>
                 <div class="pres-rev @Clase(0)">
-                    <p class="pres-row">Comodato <b class="pres-acc">@FormatoPct(slides.MezclaExpedicion.PctComodato)</b> · Full @FormatoN0(slides.MezclaExpedicion.Full) · Sencillo @FormatoN0(slides.MezclaExpedicion.Sencillo) · Total @FormatoN0(slides.MezclaExpedicion.Total)</p>
+                    <p class="pres-row">Comodato <b class="pres-acc">@FormatoUi.DeltaPorcentaje(slides.MezclaExpedicion.PctComodato)</b> · Full @FormatoUi.Numero(slides.MezclaExpedicion.Full) · Sencillo @FormatoUi.Numero(slides.MezclaExpedicion.Sencillo) · Total @FormatoUi.Numero(slides.MezclaExpedicion.Total)</p>
                     @if (slides.MezclaExpedicion.DeltaPuntosPorcentuales is not null)
                     {
-                        <p class="pres-smaller">Δ @FormatoPct(slides.MezclaExpedicion.DeltaPuntosPorcentuales.Value) pp vs mes anterior</p>
+                        <p class="pres-smaller">Δ @FormatoUi.DeltaPorcentaje(slides.MezclaExpedicion.DeltaPuntosPorcentuales.Value) pp vs mes anterior</p>
                     }
                 </div>
                 <div class="pres-rev @Clase(1)">
-                    <p class="pres-note">Cada punto que Full cede a Sencillo cuesta ≈ @FormatoDinero(slides.MezclaExpedicion.VentaPorViajeFull - slides.MezclaExpedicion.VentaPorViajeSencillo) por viaje. La conversación es con el cliente: recuperar full o repreciar sencillo.</p>
+                    <p class="pres-note">Cada punto que Full cede a Sencillo cuesta ≈ @FormatoUi.Dinero(slides.MezclaExpedicion.VentaPorViajeFull - slides.MezclaExpedicion.VentaPorViajeSencillo) por viaje. La conversación es con el cliente: recuperar full o repreciar sencillo.</p>
                 </div>
             }
             else if (slideActual == 6)
@@ -100,7 +100,7 @@
                 <div class="pres-rev @Clase(0)">
                     @if (slides.Fugas.PeorDestinoCayendo is not null)
                     {
-                        <p class="pres-row">Mayor caída de destino: <b class="pres-acc">@slides.Fugas.PeorDestinoCayendo.Value.Destino</b> (-@FormatoDinero(slides.Fugas.PeorDestinoCayendo.Value.VentaPerdida))</p>
+                        <p class="pres-row">Mayor caída de destino: <b class="pres-acc">@slides.Fugas.PeorDestinoCayendo.Value.Destino</b> (-@FormatoUi.Dinero(slides.Fugas.PeorDestinoCayendo.Value.VentaPerdida))</p>
                     }
                     else
                     {
@@ -108,8 +108,8 @@
                     }
                 </div>
                 <div class="pres-rev @Clase(1)">
-                    <p class="pres-row"><b class="pres-acc">@FormatoN0(slides.Fugas.AgenciasDesaparecidas)</b> agencias ya no aparecen en el último mes</p>
-                    <p class="pres-smaller">Venta acumulada perdida: <b class="pres-acc">@FormatoDinero(slides.Fugas.VentaAcumuladaPerdida)</b></p>
+                    <p class="pres-row"><b class="pres-acc">@FormatoUi.Numero(slides.Fugas.AgenciasDesaparecidas)</b> agencias ya no aparecen en el último mes</p>
+                    <p class="pres-smaller">Venta acumulada perdida: <b class="pres-acc">@FormatoUi.Dinero(slides.Fugas.VentaAcumuladaPerdida)</b></p>
                 </div>
                 <div class="pres-rev @Clase(2)">
                     <p class="pres-note">@SlideFugasDto.NotaFija</p>
@@ -241,10 +241,6 @@
 
     private string Clase(int paso) => paso <= pasoActual ? "pres-rev-on" : "";
 
-    private static readonly System.Globalization.CultureInfo Cultura = System.Globalization.CultureInfo.GetCultureInfo("es-MX");
-    private static string FormatoN0(decimal v) => Math.Round(v).ToString("N0", Cultura);
-    private static string FormatoDinero(decimal v) => v.ToString("C0", Cultura);
-    private static string FormatoPct(decimal? v) => v is null ? "—" : ResumenEjecutivoCalculator.FormatoPorcentaje(v.Value);
     private static string FormatoDelta(decimal? v) => v is null ? "" : $"({ResumenEjecutivoCalculator.FormatoPorcentaje(v.Value)})";
 
     public async ValueTask DisposeAsync()
