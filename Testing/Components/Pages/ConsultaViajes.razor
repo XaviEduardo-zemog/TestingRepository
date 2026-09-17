@@ -147,10 +147,10 @@
             }
         </div>
 
-        @if (CalcularSegmentosEjes() is { Count: > 0 } segmentosEjes)
+        @if (SegmentosEjesCalculator.Calcular(viajesFiltrados, corte) is { Count: > 0 } segmentosEjes)
         {
             <div class="vz-ejes-bloque">
-                <div class="vz-ejes-barra" role="img" aria-label="@TextoAccesibleEjes(segmentosEjes)">
+                <div class="vz-ejes-barra" role="img" aria-label="@SegmentosEjesCalculator.TextoAccesible(segmentosEjes)">
                     @foreach (var seg in segmentosEjes)
                     {
                         <div class="vz-ejes-segmento @seg.Clase"
@@ -267,11 +267,11 @@
     private string? errorMessage;
     private string agruparPor = "jerarquia";
 
-    private List<FiltroZemog> filtros = [];
+    private readonly FiltrosZemogState filtrosState = new();
     private FiltroZemog? filtroAbierto;
 
-    private IEnumerable<FiltroZemog> FiltrosPrimarios => filtros.Take(5);
-    private IEnumerable<FiltroZemog> FiltrosSecundarios => filtros.Skip(5);
+    private IEnumerable<FiltroZemog> FiltrosPrimarios => filtrosState.Filtros.Take(5);
+    private IEnumerable<FiltroZemog> FiltrosSecundarios => filtrosState.Filtros.Skip(5);
 
     private CorteMensual? corte;
     private List<KpiComparativo> kpisComparativa = [];
@@ -337,39 +337,6 @@
 
     private string EtiquetaAgrupacionActual => EtiquetasAgrupacion.GetValueOrDefault(agruparPor, "Dimensión");
 
-    private sealed class FiltroZemog
-    {
-        public required string Clave { get; init; }
-        public required string Etiqueta { get; init; }
-        public required Func<ViajesDto, string?> Selector { get; init; }
-        public bool Disponible { get; init; } = true;
-        public string? MotivoPendiente { get; init; }
-        public bool ConBuscador { get; init; }
-        public HashSet<string> Seleccionados { get; set; } = [];
-        public List<string> OpcionesDisponibles { get; set; } = [];
-    }
-
-    protected override void OnInitialized()
-    {
-        filtros =
-        [
-            new() { Clave = "cliente", Etiqueta = "Cliente", Selector = CamposDerivadosViajes.ObtenerCliente, ConBuscador = true },
-            new() { Clave = "sucursal", Etiqueta = "Sucursal", Selector = CamposDerivadosViajes.ObtenerSucursal },
-            new() { Clave = "mes", Etiqueta = "Mes", Selector = CamposDerivadosViajes.ObtenerMesEtiqueta },
-            new() { Clave = "destino", Etiqueta = "Destino", Selector = CamposDerivadosViajes.ObtenerDestino, ConBuscador = true },
-            new() { Clave = "expedicion", Etiqueta = "Expedición", Selector = CamposDerivadosViajes.ObtenerExpedicion },
-            new() { Clave = "zona", Etiqueta = "Zona", Selector = CamposDerivadosViajes.ObtenerZona, ConBuscador = true },
-            new() { Clave = "matriz", Etiqueta = "Matriz", Selector = CamposDerivadosViajes.ObtenerMatriz },
-            new() { Clave = "anio", Etiqueta = "Año", Selector = CamposDerivadosViajes.ObtenerAnio },
-            new() { Clave = "semana", Etiqueta = "Semana", Selector = CamposDerivadosViajes.ObtenerSemana },
-            new() { Clave = "edestino", Etiqueta = "Estado Destino", Selector = CamposDerivadosViajes.ObtenerEstadoDestino },
-            new() { Clave = "operador", Etiqueta = "Operador", Selector = v => v.operador1, ConBuscador = true },
-            new() { Clave = "unidad", Etiqueta = "Unidad", Selector = v => v.id_unidad, ConBuscador = true },
-            new() { Clave = "ejes", Etiqueta = "Ejes", Selector = CamposDerivadosViajes.ObtenerEjes },
-            new() { Clave = "tarifa", Etiqueta = "Tipo de tarifa", Selector = CamposDerivadosViajes.ObtenerTarifa },
-            new() { Clave = "movimiento", Etiqueta = "Movimiento", Selector = CamposDerivadosViajes.ObtenerMovimiento },
-        ];
-    }
 
     // Lee el tema persistido (localStorage, misma clave "viajesTema" que viajes_v14.html) tras
     // el primer render -- JS interop no está disponible antes de eso en Blazor Server.
@@ -402,8 +369,8 @@
     private Task OnFiltroCambiadoAsync(FiltroZemog f, HashSet<string> nuevaSeleccion)
     {
         f.Seleccionados = nuevaSeleccion;
-        RecalcularCascada(f.Clave);
-        viajesFiltrados = ObtenerViajesFiltrados();
+        filtrosState.RecalcularCascada(viajesCargados, f.Clave);
+        viajesFiltrados = filtrosState.ObtenerViajesFiltrados(viajesCargados);
         CalcularKpis();
         RecalcularPivote();
         return Task.CompletedTask;
@@ -411,69 +378,12 @@
 
     private void LimpiarTodosLosFiltros()
     {
-        foreach (var f in filtros)
-            f.Seleccionados.Clear();
+        filtrosState.LimpiarTodo();
 
-        RecalcularCascada(null);
-        viajesFiltrados = ObtenerViajesFiltrados();
+        filtrosState.RecalcularCascada(viajesCargados, null);
+        viajesFiltrados = filtrosState.ObtenerViajesFiltrados(viajesCargados);
         CalcularKpis();
         RecalcularPivote();
-    }
-
-    // TEMPORAL MVP: cascada calculada en memoria sobre viajesCargados (el resultado
-    // ya traído por GetViajesQuery). FINAL: si el volumen de datos crece, mover el
-    // cálculo de opciones disponibles a Application/SQL (ver §54.27).
-    private void RecalcularCascada(string? claveModificada)
-    {
-        if (claveModificada is null)
-        {
-            foreach (var f in filtros.Where(f => f.Disponible))
-            {
-                f.OpcionesDisponibles = CalcularOpciones(viajesCargados, f);
-                f.Seleccionados.IntersectWith(f.OpcionesDisponibles);
-            }
-            return;
-        }
-
-        var pasoElCambio = false;
-        var filtrado = viajesCargados;
-
-        foreach (var f in filtros)
-        {
-            if (f.Disponible && f.Seleccionados.Count > 0)
-                filtrado = filtrado.Where(v => f.Selector(v) is { } val && f.Seleccionados.Contains(val)).ToList();
-
-            if (f.Clave == claveModificada)
-                pasoElCambio = true;
-
-            if (pasoElCambio && f.Clave != claveModificada && f.Disponible)
-            {
-                f.OpcionesDisponibles = CalcularOpciones(filtrado, f);
-                f.Seleccionados.IntersectWith(f.OpcionesDisponibles);
-            }
-        }
-    }
-
-    private static List<string> CalcularOpciones(IEnumerable<ViajesDto> datos, FiltroZemog f)
-    {
-        var valores = datos.Select(f.Selector)
-             .Where(v => !string.IsNullOrWhiteSpace(v))
-             .Select(v => v!)
-             .Distinct();
-
-        return f.Clave == "cliente"
-            ? valores.OrderBy(CamposDerivadosViajes.PrioridadCliente).ThenBy(v => v, StringComparer.CurrentCultureIgnoreCase).ToList()
-            : valores.OrderBy(v => v, StringComparer.CurrentCultureIgnoreCase).ToList();
-    }
-
-    private List<ViajesDto> ObtenerViajesFiltrados()
-    {
-        IEnumerable<ViajesDto> resultado = viajesCargados;
-
-        foreach (var f in filtros.Where(f => f.Disponible && f.Seleccionados.Count > 0))
-            resultado = resultado.Where(v => f.Selector(v) is { } val && f.Seleccionados.Contains(val));
-
-        return resultado.ToList();
     }
 
     private string? ObtenerValorAgrupacion(ViajesDto v) => agruparPor switch
@@ -683,66 +593,14 @@
             isLoading = false;
             seConsulto = true;
             corte = CorteMensual.Calcular(viajesCargados);
-            RecalcularCascada(null);
-            viajesFiltrados = ObtenerViajesFiltrados();
+            filtrosState.RecalcularCascada(viajesCargados, null);
+            viajesFiltrados = filtrosState.ObtenerViajesFiltrados(viajesCargados);
             CalcularKpis();
             RecalcularPivote();
         }
     }
 
     private void CalcularKpis() => kpisComparativa = KpisComparativaCalculator.Calcular(viajesFiltrados, corte).ToList();
-
-    // ---------- Barra Ejes/Asignación debajo de los KPIs (docs/BARRA_EJES_KPI.md) ----------
-    // Reutiliza CamposDerivadosViajes.ClasificarArmado (5=Sencillo/6=Comodato/9=Full) y
-    // ContribucionViajeProyectada.Viajes (que ya aplica Ida=1/Regreso=0 vía ObtenerMovimiento,
-    // más el mismo factor de corte que usa el KPI "Viajes") -- ninguna regla de negocio se
-    // duplica aquí. Se calcula sobre viajesFiltrados, no viajesCargados, para responder a los
-    // filtros activos (Cliente, Matriz, Mes, Expedición, Ejes, etc.).
-
-    private sealed record SegmentoEjes(string Etiqueta, decimal Viajes, decimal Porcentaje, string Clase, string Tooltip);
-
-    private static readonly string[] OrdenEjes = ["Sencillo", "Comodato", "Full", "Sin clasificar"];
-
-    private static readonly Dictionary<string, string> ClasesEjes = new()
-    {
-        ["Sencillo"] = "vz-ejes-sencillo",
-        ["Comodato"] = "vz-ejes-comodato",
-        ["Full"] = "vz-ejes-full",
-        ["Sin clasificar"] = "vz-ejes-sinclasificar",
-    };
-
-    private List<SegmentoEjes> CalcularSegmentosEjes()
-    {
-        var acumulado = new Dictionary<string, decimal>();
-
-        foreach (var v in viajesFiltrados)
-        {
-            var contribucion = ContribucionViajeProyectada.Viajes(v, corte);
-            if (contribucion == 0)
-                continue; // tramos de Regreso (u otros sin contribución analítica) no aportan a la barra
-
-            var etiqueta = CamposDerivadosViajes.ClasificarArmado(v) ?? "Sin clasificar";
-            acumulado[etiqueta] = acumulado.GetValueOrDefault(etiqueta) + contribucion;
-        }
-
-        var total = acumulado.Values.Sum();
-        if (total <= 0)
-            return []; // sin viajes analíticos clasificables -- no se muestra la barra
-
-        return OrdenEjes
-            .Where(acumulado.ContainsKey)
-            .Select(etiqueta =>
-            {
-                var viajes = acumulado[etiqueta];
-                var porcentaje = viajes / total * 100;
-                var tooltip = $"{etiqueta}: {FormatoUi.Numero(viajes)} viajes ({FormatoUi.Porcentaje(porcentaje)})";
-                return new SegmentoEjes(etiqueta, viajes, porcentaje, ClasesEjes[etiqueta], tooltip);
-            })
-            .ToList();
-    }
-
-    private static string TextoAccesibleEjes(IReadOnlyList<SegmentoEjes> segmentos) =>
-        "Distribución de viajes por Ejes/Asignación: " + string.Join(" · ", segmentos.Select(s => s.Tooltip));
 
     private static string TituloKpi(KpiComparativo kpi) =>
         kpi.EtiquetaMesActual is null
