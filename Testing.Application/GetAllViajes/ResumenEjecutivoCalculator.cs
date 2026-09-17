@@ -139,8 +139,8 @@ public static class ResumenEjecutivoCalculator
             var mes = meses.First(m => m.Anio == claveMes.Anio && m.Mes == claveMes.Mes);
             var esIda = CamposDerivadosViajes.ObtenerMovimiento(v) == "Ida";
             var contribucion = TotalesPeriodo.De(v, corte);
-            // AJUSTE — Correcciones puntuales finales: Asignación se clasifica desde "armado"
-            // (fuente real de nuestro SP), NO desde "expedicion" -- ver CamposDerivadosViajes.ClasificarArmado.
+            // Asignacion se clasifica desde EjesEquipos en la fuente CIS directa
+            // (5=Sencillo, 6=Comodato, 9=Full); "armado" queda solo como fallback historico.
             var armado = CamposDerivadosViajes.ClasificarArmado(v);
 
             AcumularComparativo(raiz, mes, ultimo, anterior, contribucion, armado, esIda);
@@ -193,19 +193,17 @@ public static class ResumenEjecutivoCalculator
 
     public static AsignacionExpedicionDto CalcularAsignacion(NodoComparativo nodo)
     {
-        const bool comodatoConfirmado = false;
-
         var co = nodo.ArmadoUltimo.GetValueOrDefault("Comodato");
         var fu = nodo.ArmadoUltimo.GetValueOrDefault("Full");
         var se = nodo.ArmadoUltimo.GetValueOrDefault("Sencillo");
         var tt = co + fu + se;
-        var pc = comodatoConfirmado && tt > 0 ? (decimal?)(co / tt * 100) : null;
+        var pc = tt > 0 ? (decimal?)(co / tt * 100) : null;
 
         var ca = nodo.ArmadoAnterior.GetValueOrDefault("Comodato");
         var fa = nodo.ArmadoAnterior.GetValueOrDefault("Full");
         var sa = nodo.ArmadoAnterior.GetValueOrDefault("Sencillo");
         var ta = ca + fa + sa;
-        var pa = comodatoConfirmado && ta > 0 ? (decimal?)(ca / ta * 100) : null;
+        var pa = ta > 0 ? (decimal?)(ca / ta * 100) : null;
 
         var vCo = nodo.ArmadoVentaUltimo.GetValueOrDefault("Comodato");
         var vFu = nodo.ArmadoVentaUltimo.GetValueOrDefault("Full");

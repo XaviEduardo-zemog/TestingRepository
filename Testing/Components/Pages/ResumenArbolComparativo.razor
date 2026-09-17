@@ -81,11 +81,11 @@
             <thead>
                 <tr>
                     <th class="re-th-dim @ClaseOrdenAsig("label")" @onclick='() => OrdenarAsigPor("label")'>Nivel @FlechaAsig("label")</th>
-                    <th title="Pendiente fuente de Comodato -- no ordenable mientras esta columna siempre muestre &quot;—&quot;">Comodato</th>
+                    <th>Comodato</th>
                     <th class="@ClaseOrdenAsig("full")" @onclick='() => OrdenarAsigPor("full")'>Full @FlechaAsig("full")</th>
                     <th class="@ClaseOrdenAsig("sencillo")" @onclick='() => OrdenarAsigPor("sencillo")'>Sencillo @FlechaAsig("sencillo")</th>
                     <th class="@ClaseOrdenAsig("total")" @onclick='() => OrdenarAsigPor("total")'>Total viajes @FlechaAsig("total")</th>
-                    <th title="Pendiente fuente de Comodato -- no ordenable mientras esta columna siempre muestre &quot;—&quot;">% Comodato</th>
+                    <th>% Comodato</th>
                     <th>Δ pp vs @MesAnterior</th>
                 </tr>
             </thead>
@@ -104,7 +104,7 @@
                             }
                             @fila.Label
                         </td>
-                        <td class="align-end tabular re-neutro" title="Pendiente fuente de Comodato">—</td>
+                        <td class="align-end tabular">@FormatoNumero(fila.Asignacion.Comodato)</td>
                         <td class="align-end tabular">@FormatoNumero(fila.Asignacion.Full)</td>
                         <td class="align-end tabular">@FormatoNumero(fila.Asignacion.Sencillo)</td>
                         <td class="align-end tabular">@FormatoNumero(fila.Asignacion.Total)</td>
@@ -119,7 +119,7 @@
                 @{ var totalAsig = ResumenEjecutivoCalculator.CalcularAsignacion(Raiz); }
                 <tr class="re-total">
                     <td>TOTAL</td>
-                    <td class="align-end tabular re-neutro" title="Pendiente fuente de Comodato">—</td>
+                    <td class="align-end tabular">@FormatoNumero(totalAsig.Comodato)</td>
                     <td class="align-end tabular">@FormatoNumero(totalAsig.Full)</td>
                     <td class="align-end tabular">@FormatoNumero(totalAsig.Sencillo)</td>
                     <td class="align-end tabular">@FormatoNumero(totalAsig.Total)</td>
@@ -131,13 +131,13 @@
             </tfoot>
         </table>
     </div>
-    <p class="re-nota">Comodato: <b>pendiente de fuente de datos</b> -- "armado" (columna real de nuestro SP) por ahora solo distingue Full/Sencillo; Comodato no se inventa desde ningún otro campo. %Comodato y Δ pp se muestran como "—" mientras eso siga así, y sus columnas no son ordenables (ordenar por un valor siempre igual no aporta nada). Si sube la participación de Comodato el día que se confirme su fuente, se mueve más producto por viaje y bajan los viajes sencillos. Δ pp es diferencia de puntos porcentuales (no variación relativa) -- el TOTAL se recalcula desde la raíz, nunca promediando los % de cada fila.</p>
+    <p class="re-nota">Asignación se clasifica desde EjesEquipos: 5 = Sencillo, 6 = Comodato, 9 = Full. Δ pp es diferencia de puntos porcentuales (no variación relativa); el TOTAL se recalcula desde la raíz, nunca promediando los % de cada fila.</p>
     @if (ArmadosDesconocidos.Count > 0)
     {
         <p class="re-nota" style="color:var(--vz-later,var(--vz-acc));">
-            Se detectaron @FormatoNumero(ArmadosDesconocidos.Sum(a => a.Viajes)) viaje(s) con "armado" no reconocido (ni Full ni Sencillo):
+            Se detectaron @FormatoNumero(ArmadosDesconocidos.Sum(a => a.Viajes)) viaje(s) con Ejes no reconocidos (ni 5, 6 ni 9):
             @string.Join(", ", ArmadosDesconocidos.Select(a => $"{a.Valor} ({FormatoNumero(a.Viajes)})")).
-            No se clasifican como Full ni Sencillo -- quedan excluidos del Total hasta confirmar su categoría real.
+            No se clasifican como Comodato, Full ni Sencillo -- quedan excluidos del Total hasta confirmar su categoría real.
         </p>
     }
 </section>

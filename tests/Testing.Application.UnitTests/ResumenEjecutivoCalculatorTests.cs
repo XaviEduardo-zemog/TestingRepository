@@ -2,17 +2,11 @@ using Testing.Application.GetAllViajes;
 
 namespace Testing.Application.UnitTests;
 
-/// <summary>
-/// Prompt 5 -- cierra un hueco de cobertura: la jerarquía Cliente → Zona → Matriz (3 niveles, sin
-/// Sucursal como 4º nivel) se había validado por inspección de código, no con una prueba
-/// automatizada que construya el árbol real vía la API pública de ResumenEjecutivoCalculator.
-/// </summary>
 public sealed class ResumenEjecutivoCalculatorTests
 {
     [Fact]
     public void ArbolComparativo_no_supera_3_niveles_ClienteZonaMatriz()
     {
-        // 2 meses distintos para que hayComparativos sea true y se construya el árbol.
         var viajes = new List<ViajesDto>
         {
             new() { cis_cliente = "ME", cis_zona = "Occidente", cis_matriz = "CCZ CTO", cis_trayecto = "Ida", cis_total_venta = 100m, fecha_ingreso = "1/7/2026 12:00 AM" },
@@ -22,7 +16,29 @@ public sealed class ResumenEjecutivoCalculatorTests
         var resumen = ResumenEjecutivoCalculator.Calcular(viajes, corte: null);
 
         Assert.NotNull(resumen.ArbolComparativo);
-        Assert.Equal(2, MaxNivel(resumen.ArbolComparativo!)); // Cliente=0, Zona=1, Matriz=2 -- nunca llega a un 4º nivel (Sucursal)
+        Assert.Equal(2, MaxNivel(resumen.ArbolComparativo!));
+    }
+
+    [Fact]
+    public void CalcularAsignacion_clasifica_desde_EjesEquipos_y_PctComodato_no_es_null_con_datos()
+    {
+        var viajes = new List<ViajesDto>
+        {
+            new() { cis_cliente = "Arca", cis_zona = "Norte", cis_matriz = "MTY", cis_trayecto = "Ida", cis_total_venta = 100m, cis_ejes_equipos = 5, fecha_ingreso = "1/7/2026 12:00 AM" },
+            new() { cis_cliente = "Arca", cis_zona = "Norte", cis_matriz = "MTY", cis_trayecto = "Ida", cis_total_venta = 100m, cis_ejes_equipos = 5, fecha_ingreso = "2/8/2026 12:00 AM" },
+            new() { cis_cliente = "Arca", cis_zona = "Norte", cis_matriz = "MTY", cis_trayecto = "Ida", cis_total_venta = 200m, cis_ejes_equipos = 6, fecha_ingreso = "3/8/2026 12:00 AM" },
+            new() { cis_cliente = "Arca", cis_zona = "Norte", cis_matriz = "MTY", cis_trayecto = "Ida", cis_total_venta = 300m, cis_ejes_equipos = 9, fecha_ingreso = "4/8/2026 12:00 AM" },
+        };
+
+        var resumen = ResumenEjecutivoCalculator.Calcular(viajes, corte: null);
+        var asignacion = ResumenEjecutivoCalculator.CalcularAsignacion(resumen.ArbolComparativo!);
+
+        Assert.Equal(1m, asignacion.Sencillo);
+        Assert.Equal(1m, asignacion.Comodato);
+        Assert.Equal(1m, asignacion.Full);
+        Assert.Equal(3m, asignacion.Total);
+        Assert.NotNull(asignacion.PctComodato);
+        Assert.NotNull(asignacion.DeltaPuntosPorcentuales);
     }
 
     private static int MaxNivel(NodoComparativo nodo) =>

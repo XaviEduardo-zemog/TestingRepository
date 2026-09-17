@@ -147,6 +147,34 @@
             }
         </div>
 
+        @if (CalcularSegmentosEjes() is { Count: > 0 } segmentosEjes)
+        {
+            <div class="vz-ejes-bloque">
+                <div class="vz-ejes-barra" role="img" aria-label="@TextoAccesibleEjes(segmentosEjes)">
+                    @foreach (var seg in segmentosEjes)
+                    {
+                        <div class="vz-ejes-segmento @seg.Clase"
+                             style="width:@(seg.Porcentaje.ToString("0.###", CultureInfo.InvariantCulture))%"
+                             title="@seg.Tooltip"
+                             aria-hidden="true">
+                            @if (seg.Porcentaje >= 8)
+                            {
+                                <span>@seg.Etiqueta @FormatoPct(seg.Porcentaje)</span>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="vz-ejes-leyenda">
+                    @foreach (var seg in segmentosEjes)
+                    {
+                        <span class="vz-ejes-leyenda-item" title="@seg.Tooltip">
+                            <span class="vz-ejes-dot @seg.Clase" aria-hidden="true"></span>@seg.Etiqueta · @FormatoNumero(seg.Viajes) (@FormatoPct(seg.Porcentaje))
+                        </span>
+                    }
+                </div>
+            </div>
+        }
+
         @if (errorMessage is not null)
         {
             <DataStateBanner Title="No fue posible consultar los viajes." Variant="Variant.Danger">
@@ -337,6 +365,7 @@
             new() { Clave = "edestino", Etiqueta = "Estado Destino", Selector = CamposDerivadosViajes.ObtenerEstadoDestino },
             new() { Clave = "operador", Etiqueta = "Operador", Selector = v => v.operador1, ConBuscador = true },
             new() { Clave = "unidad", Etiqueta = "Unidad", Selector = v => v.id_unidad, ConBuscador = true },
+            new() { Clave = "ejes", Etiqueta = "Ejes", Selector = CamposDerivadosViajes.ObtenerEjes },
             new() { Clave = "tarifa", Etiqueta = "Tipo de tarifa", Selector = CamposDerivadosViajes.ObtenerTarifa },
             new() { Clave = "movimiento", Etiqueta = "Movimiento", Selector = CamposDerivadosViajes.ObtenerMovimiento },
         ];
@@ -662,6 +691,60 @@
     }
 
     private void CalcularKpis() => kpisComparativa = KpisComparativaCalculator.Calcular(viajesFiltrados, corte).ToList();
+
+    // ---------- Barra Ejes/Asignación debajo de los KPIs (docs/BARRA_EJES_KPI.md) ----------
+    // Reutiliza CamposDerivadosViajes.ClasificarArmado (5=Sencillo/6=Comodato/9=Full) y
+    // ContribucionViajeProyectada.Viajes (que ya aplica Ida=1/Regreso=0 vía ObtenerMovimiento,
+    // más el mismo factor de corte que usa el KPI "Viajes") -- ninguna regla de negocio se
+    // duplica aquí. Se calcula sobre viajesFiltrados, no viajesCargados, para responder a los
+    // filtros activos (Cliente, Matriz, Mes, Expedición, Ejes, etc.).
+
+    private sealed record SegmentoEjes(string Etiqueta, decimal Viajes, decimal Porcentaje, string Clase, string Tooltip);
+
+    private static readonly string[] OrdenEjes = ["Sencillo", "Comodato", "Full", "Sin clasificar"];
+
+    private static readonly Dictionary<string, string> ClasesEjes = new()
+    {
+        ["Sencillo"] = "vz-ejes-sencillo",
+        ["Comodato"] = "vz-ejes-comodato",
+        ["Full"] = "vz-ejes-full",
+        ["Sin clasificar"] = "vz-ejes-sinclasificar",
+    };
+
+    private List<SegmentoEjes> CalcularSegmentosEjes()
+    {
+        var acumulado = new Dictionary<string, decimal>();
+
+        foreach (var v in viajesFiltrados)
+        {
+            var contribucion = ContribucionViajeProyectada.Viajes(v, corte);
+            if (contribucion == 0)
+                continue; // tramos de Regreso (u otros sin contribución analítica) no aportan a la barra
+
+            var etiqueta = CamposDerivadosViajes.ClasificarArmado(v) ?? "Sin clasificar";
+            acumulado[etiqueta] = acumulado.GetValueOrDefault(etiqueta) + contribucion;
+        }
+
+        var total = acumulado.Values.Sum();
+        if (total <= 0)
+            return []; // sin viajes analíticos clasificables -- no se muestra la barra
+
+        return OrdenEjes
+            .Where(acumulado.ContainsKey)
+            .Select(etiqueta =>
+            {
+                var viajes = acumulado[etiqueta];
+                var porcentaje = viajes / total * 100;
+                var tooltip = $"{etiqueta}: {FormatoNumero(viajes)} viajes ({FormatoPct(porcentaje)})";
+                return new SegmentoEjes(etiqueta, viajes, porcentaje, ClasesEjes[etiqueta], tooltip);
+            })
+            .ToList();
+    }
+
+    private static string TextoAccesibleEjes(IReadOnlyList<SegmentoEjes> segmentos) =>
+        "Distribución de viajes por Ejes/Asignación: " + string.Join(" · ", segmentos.Select(s => s.Tooltip));
+
+    private static string FormatoPct(decimal v) => v.ToString("0.0", Cultura) + "%";
 
     private static string TituloKpi(KpiComparativo kpi) =>
         kpi.EtiquetaMesActual is null

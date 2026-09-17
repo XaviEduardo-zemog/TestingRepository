@@ -155,16 +155,13 @@ public static class ResumenEjecutivoWordExporter
     {
         var a = ResumenEjecutivoCalculator.CalcularAsignacion(raiz);
         sb.Append($"<h2 style=\"color:{ColorAcento};font-size:13pt;\">Asignación Comodato / Full / Sencillo (total, último mes)</h2>");
-        sb.Append(AbrirTabla("Expedición", "Viajes", "% del total", "$/viaje"));
+        sb.Append(AbrirTabla("Asignación", "Viajes", "% del total", "$/viaje"));
         sb.Append(FilaTabla("Comodato", FormatoN0(a.Comodato), FormatoPct(a.PctComodato), FormatoDinero(a.VentaPorViajeComodato)));
         sb.Append(FilaTabla("Full", FormatoN0(a.Full), "", FormatoDinero(a.VentaPorViajeFull)));
         sb.Append(FilaTabla("Sencillo", FormatoN0(a.Sencillo), "", FormatoDinero(a.VentaPorViajeSencillo)));
         sb.Append(FilaTabla("Total", FormatoN0(a.Total), a.DeltaPuntosPorcentuales is null ? "" : $"Δ {FormatoPct(a.DeltaPuntosPorcentuales)} pp vs mes anterior", ""));
         sb.Append(CerrarTabla());
-        // Nota: sigue siendo solo el total a nivel raíz -- el desglose de Asignación por
-        // Cliente/Zona/Matriz (la otra tabla de ResumenArbolComparativo.razor) queda fuera de
-        // esta etapa; Comodato en sí sigue PENDIENTE DE FUENTE DE NEGOCIO (P0/P1, sin cambio aquí).
-        sb.Append("<p style=\"font-size:9pt;color:#75787E;\">Total a nivel raíz. El desglose por Cliente/Zona/Matriz está disponible en pantalla. Comodato sigue pendiente de fuente de negocio confirmada.</p>");
+        sb.Append("<p style=\"font-size:9pt;color:#75787E;\">Total a nivel raíz. El desglose por Cliente/Zona/Matriz está disponible en pantalla. Asignación se clasifica desde EjesEquipos: 5 = Sencillo, 6 = Comodato, 9 = Full.</p>");
     }
 
     private static void EscribirFrecuencia(StringBuilder sb, NodoComparativo raiz)

@@ -4,13 +4,6 @@ namespace Testing.Application.GetAllViajes;
 
 public static class CamposDerivadosViajes
 {
-    /// <summary>
-    /// Valor de ViajesDto.cis_llave_utilizada que identifica una fila construida por
-    /// ViajesDirectosMapper (Fuente B: CIS_DB directo, prototipo paralelo -- ver
-    /// docs/PROTOTIPO_FUENTE_CIS.md), a diferencia de "Directo"/"LimpiarFolio"/"Slash" que usa la
-    /// Fuente A (SP + matching de Folio). Se define aquí para que ObtenerFechaNegocio pueda usarla
-    /// sin crear una dependencia cíclica con ViajesDirectosMapper.
-    /// </summary>
     public const string LlaveCisDirecto = "CisDirecto";
 
     public static string? NormalizarCliente(string? nombreCorto)
@@ -71,21 +64,17 @@ public static class CamposDerivadosViajes
         };
     }
 
+    /// <summary>ZemogViajesEnZamAnual.EjesEquipos, como texto para filtro UI. Null si no tiene valor -- no se inventa.</summary>
+    public static string? ObtenerEjes(ViajesDto viaje) => viaje.cis_ejes_equipos?.ToString(CultureInfo.InvariantCulture);
+
     private static readonly string[] FormatosFecha = ["d/M/yyyy h:mm tt"];
     private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-MX");
 
     public static DateTime? ObtenerFechaNegocio(ViajesDto viaje)
     {
-        // Fuente B (prototipo CIS directo): usa FechaCalendario como fecha de negocio -- decisión
-        // de negocio explícita (docs/DISENO_CONSULTA_DIRECTA_CIS.md §3), NO un intento de
-        // reproducir fecha_ingreso del SP. Se distingue por cis_llave_utilizada y no por la mera
-        // presencia de cis_fecha_calendario, porque ese campo TAMBIÉN viene poblado hoy en la
-        // Fuente A (SP + enriquecimiento CIS por Folio) -- ramificar solo por presencia habría
-        // cambiado silenciosamente el comportamiento de fecha de TODA la Fuente A existente.
         if (viaje.cis_llave_utilizada == LlaveCisDirecto && viaje.cis_fecha_calendario is { } fechaCalendario)
             return fechaCalendario.ToDateTime(TimeOnly.MinValue);
 
-        // Fuente A (SP): comportamiento sin cambios respecto al existente antes de este prototipo.
         if (string.IsNullOrWhiteSpace(viaje.fecha_ingreso))
             return null;
 
@@ -98,38 +87,10 @@ public static class CamposDerivadosViajes
         return null;
     }
 
-    /// <summary>
-    /// Expedición reutilizable para ambas fuentes (Fuente A: SP; Fuente B: CIS directo, ver
-    /// docs/PROTOTIPO_FUENTE_CIS.md). Regla: 1) si viaje.expedicion tiene valor tras Trim(),
-    /// devolverlo tal cual; 2) si es null/vacío/"-", analizar viaje.ruta con la MISMA posición que
-    /// ObtenerTarifa (primer espacio, 2 caracteres siguientes) pero mapeado a Comodato/Propio; 3)
-    /// en cualquier otro caso, null -- nunca "Viaje" (a diferencia de ObtenerTarifa, que sí usa
-    /// "Viaje" como default). Expedición y Tipo de tarifa son conceptos distintos aunque compartan
-    /// la misma fuente de fallback (Ruta) -- no fusionar esta lógica con ObtenerTarifa.
-    /// </summary>
     public static string? ObtenerExpedicion(ViajesDto viaje)
     {
-        var directo = viaje.expedicion?.Trim();
-        if (!string.IsNullOrEmpty(directo) && directo != "-")
-            return directo;
-
-        var s = viaje.ruta?.Trim();
-        if (string.IsNullOrEmpty(s))
-            return null;
-
-        var i = s.IndexOf(' ');
-        if (i < 0)
-            return null;
-
-        var restante = s.Length - (i + 1);
-        var token = restante <= 0 ? "" : s.Substring(i + 1, Math.Min(2, restante));
-
-        return token switch
-        {
-            "C." => "Comodato",
-            "P." => "Propio",
-            _ => null,
-        };
+        var valor = viaje.expedicion?.Trim();
+        return string.IsNullOrEmpty(valor) || valor == "-" ? null : valor;
     }
 
     public static string? ObtenerAnio(ViajesDto viaje) => ObtenerFechaNegocio(viaje)?.Year.ToString();
@@ -152,7 +113,7 @@ public static class CamposDerivadosViajes
     {
         var s = viaje.ruta?.Trim();
         if (string.IsNullOrEmpty(s))
-            return "(sin tarifa)";
+            return "Viaje";
 
         var i = s.IndexOf(' ');
         if (i < 0)
@@ -171,6 +132,17 @@ public static class CamposDerivadosViajes
 
     public static string? ClasificarArmado(ViajesDto viaje)
     {
+        if (viaje.cis_ejes_equipos is { } ejes)
+        {
+            return ejes switch
+            {
+                5 => "Sencillo",
+                6 => "Comodato",
+                9 => "Full",
+                _ => null,
+            };
+        }
+
         if (string.IsNullOrWhiteSpace(viaje.armado))
             return null;
 
@@ -182,6 +154,11 @@ public static class CamposDerivadosViajes
         };
     }
 
-    public static string? NormalizarArmadoCrudo(ViajesDto viaje) =>
-        string.IsNullOrWhiteSpace(viaje.armado) ? null : viaje.armado.Trim().ToUpperInvariant();
+    public static string? NormalizarArmadoCrudo(ViajesDto viaje)
+    {
+        if (viaje.cis_ejes_equipos is { } ejes)
+            return ejes.ToString(CultureInfo.InvariantCulture);
+
+        return string.IsNullOrWhiteSpace(viaje.armado) ? null : viaje.armado.Trim().ToUpperInvariant();
+    }
 }

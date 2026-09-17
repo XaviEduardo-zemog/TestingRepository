@@ -7,6 +7,9 @@ namespace Testing.Application.UnitTests;
 /// ViajesDirectosMapper.Mapear, que construye ViajesDto directamente desde
 /// DatosCisViajeDirecto sin pasar por el SP ni por el matching de Folio de la Fuente A. Ver
 /// docs/PROTOTIPO_FUENTE_CIS.md y docs/ETAPA_D_PROTOTIPO_CIS_CAMBIOS.md.
+/// docs/FILTRO_EJES_ASIGNACION.md: EjesEquipos ya se mapeaba a cis_ejes_equipos desde Etapa D;
+/// aquí se agrega la prueba dedicada y se corrige la aserción de ClasificarArmado, que ahora
+/// clasifica desde ejes (la fila por defecto de FilaCisDirecta trae ejesEquipos=5="Sencillo").
 /// </summary>
 public sealed class ViajesDirectosMapperTests
 {
@@ -155,12 +158,24 @@ public sealed class ViajesDirectosMapperTests
     }
 
     [Fact]
-    public void Mapear_Armado_siempre_null()
+    public void Mapear_Armado_siempre_null_pero_ClasificarArmado_usa_EjesEquipos()
     {
+        // docs/FILTRO_EJES_ASIGNACION.md: armado crudo sigue sin poblarse desde CIS directo, pero
+        // ClasificarArmado ya no depende de armado -- usa cis_ejes_equipos (5="Sencillo" por
+        // defecto en FilaCisDirecta). Reemplaza la aserción anterior (Assert.Null en ambos).
         var viaje = ViajesDirectosMapper.Mapear(FilaCisDirecta());
 
         Assert.Null(viaje.armado);
-        Assert.Null(CamposDerivadosViajes.ClasificarArmado(viaje));
+        Assert.Equal("Sencillo", CamposDerivadosViajes.ClasificarArmado(viaje));
+    }
+
+    [Fact]
+    public void Mapear_EjesEquipos_viene_de_EjesEquipos()
+    {
+        var viaje = ViajesDirectosMapper.Mapear(FilaCisDirecta(ejesEquipos: 9));
+
+        Assert.Equal(9, viaje.cis_ejes_equipos);
+        Assert.Equal("Full", CamposDerivadosViajes.ClasificarArmado(viaje));
     }
 
     [Fact]
@@ -195,18 +210,16 @@ public sealed class ViajesDirectosMapperTests
     {
         var viaje = ViajesDirectosMapper.Mapear(FilaCisDirecta(montoPeajeIave: 120m, montoPeajeEfectivo: 30m));
 
-        // Documentado como NO reconciliado contra el SP (docs/VALIDACION_SP_VS_CIS.md §14) -- esta
-        // prueba solo confirma el mapeo mecánico, no una equivalencia de negocio.
         Assert.Equal(120m, viaje.peaje_electronico);
         Assert.Equal(30m, viaje.peaje_efectivo);
     }
 
     [Fact]
-    public void Mapear_Expedicion_es_passthrough_crudo_el_fallback_se_resuelve_on_demand()
+    public void Mapear_Expedicion_es_passthrough_crudo_sin_transformacion()
     {
         var viaje = ViajesDirectosMapper.Mapear(FilaCisDirecta(expedicion: "-"));
 
-        Assert.Equal("-", viaje.expedicion); // el mapper NO resuelve el fallback -- eso lo hace ObtenerExpedicion(v) on-demand
+        Assert.Equal("-", viaje.expedicion);
     }
 
     [Fact]
