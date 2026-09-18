@@ -124,6 +124,8 @@
                 <label><input type="checkbox" @bind="mostrarPvj" /> $/Viaje</label>
                 <label class="vz-metric-sep"><input type="checkbox" @bind="mostrarParticipacion" /> % Part.</label>
                 <label><input type="checkbox" @bind="soloComparativa" /> Solo comparativa</label>
+                <button type="button" class="vz-btn" @onclick="() => arbolRef?.ExpandirTodo()">Expandir todo</button>
+                <button type="button" class="vz-btn" @onclick="() => arbolRef?.ColapsarTodo()">Colapsar todo</button>
             </div>
         }
 

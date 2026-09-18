@@ -90,6 +90,11 @@
     cursor: pointer;
 }
 
+.aj-mes-colapsado-cell {
+    width: 6px;
+    padding: 0 !important;
+}
+
 /* Inicio de cada bloque de mes -- mismo criterio que TablaPivoteViajes.razor.css. */
 th.aj-mes0,
 td.aj-mes0 {

@@ -78,6 +78,11 @@
     border-right: 1px solid var(--vz-line, #1a1a1a);
 }
 
+.tp-mes-colapsado-cell {
+    width: 6px;
+    padding: 0 !important;
+}
+
 th.tp-mes0,
 td.tp-mes0 {
     border-left: 2px solid var(--vz-line3, #2a2a2a);

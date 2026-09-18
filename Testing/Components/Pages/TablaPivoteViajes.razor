@@ -98,13 +98,14 @@ else
                                 @for (var mi = 0; mi < Meses.Count; mi++)
                                 {
                                     var mes = Meses[mi];
-                                    @if (!MesColapsado(mes.Clave))
+                                    @if (MesColapsado(mes.Clave))
+                                    {
+                                        <td class="align-end tabular tp-mes0 tp-mes-colapsado-cell"></td>
+                                    }
+                                    else
                                     {
                                         var metricasMes = fila.ObtenerMes(mes.Clave);
                                         var totalMesActual = totalesPorMes[mes.Clave];
-                                        // Celdas mensuales: compara SIEMPRE contra el mismo dato del mes
-                                        // inmediatamente anterior en Meses (por posición, no por columna
-                                        // visible) -- igual que pintarTabla() en viajes_v14.html.
                                         var metricasMesAnterior = mi > 0 ? fila.ObtenerMes(Meses[mi - 1].Clave) : null;
                                         var esPrimerMes = mi == 0;
                                         @for (var ci = 0; ci < columnas.Count; ci++)
@@ -158,7 +159,11 @@ else
                         {
                             @foreach (var mes in Meses)
                             {
-                                @if (!MesColapsado(mes.Clave))
+                                @if (MesColapsado(mes.Clave))
+                                {
+                                    <td class="align-end tabular tp-mes0 tp-mes-colapsado-cell"></td>
+                                }
+                                else
                                 {
                                     var totalMes = totalesPorMes[mes.Clave];
                                     @for (var ci = 0; ci < columnas.Count; ci++)

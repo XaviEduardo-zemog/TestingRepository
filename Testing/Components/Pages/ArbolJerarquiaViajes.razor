@@ -82,7 +82,11 @@ else
                             @for (var mi = 0; mi < Meses.Count; mi++)
                             {
                                 var mes = Meses[mi];
-                                @if (!MesColapsado(mes.Clave))
+                                @if (MesColapsado(mes.Clave))
+                                {
+                                    <td class="align-end tabular aj-lvl-@fila.Nivel aj-mes0 aj-mes-colapsado-cell"></td>
+                                }
+                                else
                                 {
                                     var metricasMes = fila.Nodo.ObtenerMes(mes.Clave);
                                     var metricasMesAnterior = mi > 0 ? fila.Nodo.ObtenerMes(Meses[mi - 1].Clave) : null;
@@ -126,7 +130,11 @@ else
                     {
                         @foreach (var mes in Meses)
                         {
-                            @if (!MesColapsado(mes.Clave))
+                            @if (MesColapsado(mes.Clave))
+                            {
+                                <td class="align-end tabular aj-mes0 aj-mes-colapsado-cell"></td>
+                            }
+                            else
                             {
                                 var totalMes = Raiz.ObtenerMes(mes.Clave);
                                 @for (var ci = 0; ci < columnas.Count; ci++)
