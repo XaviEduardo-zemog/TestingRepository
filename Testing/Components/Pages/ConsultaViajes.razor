@@ -19,12 +19,9 @@
             <h1>Estado de la Operación</h1>
             <p class="vz-header-sub">@TextoCorte()</p>
         </div>
-        <button type="button" class="vz-btn vz-btn-secondary" @onclick="AlternarTema" title="Cambiar tema">
-            @(esTemaClaro ? "🌙 Oscuro" : "☀ Claro")
-        </button>
-        <button type="button" class="vz-btn vz-btn-secondary" @onclick="() => mostrarResumen = !mostrarResumen">
-            @(mostrarResumen ? "← Volver a la consulta" : "Resumen Ejecutivo")
-        </button>
+        <div class="vz-header-logo">
+            <img src="img/zemog-logo.png" alt="Zemog" />
+        </div>
     </header>
 
     @if (mostrarResumen)
@@ -90,6 +87,13 @@
                         <span class="vz-spinner" aria-hidden="true"></span>
                     }
                     <span>@(isLoading ? "Consultando" : "Consultar")</span>
+                </button>
+
+                <button type="button" class="vz-btn vz-btn-secondary" @onclick="AlternarTema" title="Cambiar tema">
+                    @(esTemaClaro ? "🌙 Oscuro" : "☀ Claro")
+                </button>
+                <button type="button" class="vz-btn vz-btn-secondary" @onclick="() => mostrarResumen = !mostrarResumen">
+                    @(mostrarResumen ? "← Volver a la consulta" : "Resumen Ejecutivo")
                 </button>
             </div>
 
@@ -207,11 +211,11 @@
             </DataStateBanner>
         }
         else if (viajesFiltrados.Count > 0 && agruparPor is "jerarquia" or "jerarquia_tarifa" && raizJerarquia is not null)
-        {
+        {@* 
             <div class="vz-arbol-controles">
                 <button type="button" class="vz-btn" @onclick="() => arbolRef?.ExpandirTodo()">Expandir todo</button>
                 <button type="button" class="vz-btn" @onclick="() => arbolRef?.ColapsarTodo()">Colapsar todo</button>
-            </div>
+            </div> *@
             <ArbolJerarquiaViajes @ref="arbolRef"
                                   Raiz="raizJerarquia"
                                   Meses="mesesPivote"

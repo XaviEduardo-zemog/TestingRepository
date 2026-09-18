@@ -64,6 +64,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-wrap: wrap;
     gap: 16px;
     background: var(--vz-head);
     border-bottom: 2px solid var(--vz-acc);
@@ -76,9 +77,20 @@
     text-align: center;
 }
 
-.vz-header .vz-btn-secondary {
+/* Logo Zemog, alineado a la derecha del encabezado -- mismo criterio que #logoW en
+   viajes_v14.html (L81-83: margin-left:auto, height:56px, mismo drop-shadow doble). */
+.vz-header-logo {
     flex-shrink: 0;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
 }
+
+    .vz-header-logo img {
+        height: 56px;
+        width: auto;
+        filter: drop-shadow(4px 4px 6px rgba(0, 0, 0, .8)) drop-shadow(3px 3px 0 rgba(80, 80, 80, .4));
+    }
 
 .vz-header h1 {
     margin: 0;
