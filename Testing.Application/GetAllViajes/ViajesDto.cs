@@ -150,6 +150,13 @@ public sealed class ViajesDto
 
     public DateOnly? cis_fecha_calendario { get; set; }
 
+    /// <summary>ZemogViajesEnZamAnual.CitaCarga -- fecha/hora de cita de carga, usada únicamente
+    /// para el reemparejamiento Ida→Regreso de "viaje redondo" (ver
+    /// CamposDerivadosViajes.AplicarViajeRedondo, docs/BUG_DESTINO_VIAJE_REDONDO.md). NO es la
+    /// fecha de negocio -- esa sigue siendo cis_fecha_calendario/fecha_ingreso vía
+    /// ObtenerFechaNegocio, sin cambios.</summary>
+    public DateTime? cis_cita_carga { get; set; }
+
     public string? cis_trayecto { get; set; }
 
     /// <summary>ZemogViajesEnZamAnual.Operacion.</summary>

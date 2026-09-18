@@ -63,6 +63,7 @@ internal sealed class CisViajesDirectosRepository(IDbContextFactory<CisContext> 
                 v.MontoPeajeIave,
                 v.MontoPeajeEfectivo,
                 v.EstatusAsignacion,
+                v.CitaCarga,
                 NombreCorto = sucursal != null ? sucursal.NombreCorto : null,
                 Region = sucursal != null ? sucursal.Region : null,
                 Nomenclatura = sucursal != null ? sucursal.Nomenclatura : null,
@@ -104,7 +105,8 @@ internal sealed class CisViajesDirectosRepository(IDbContextFactory<CisContext> 
             f.EjesEquipos,
             f.MontoPeajeIave,
             f.MontoPeajeEfectivo,
-            f.EstatusAsignacion))
+            f.EstatusAsignacion,
+            f.CitaCarga))
             .ToList();
     }
 }

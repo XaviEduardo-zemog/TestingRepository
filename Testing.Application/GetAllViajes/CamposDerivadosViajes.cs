@@ -161,4 +161,42 @@ public static class CamposDerivadosViajes
 
         return string.IsNullOrWhiteSpace(viaje.armado) ? null : viaje.armado.Trim().ToUpperInvariant();
     }
+
+    /// <summary>
+    /// Replica el bloque "VIAJE REDONDO" de viajes_v14.html (procesarArchivo, comentario original:
+    /// "cada regreso hereda Destino/Edo.Destino de la ida previa de la MISMA unidad, orden por
+    /// CitaCarga. Los regresos sin ida previa conservan su destino. Totales intactos."). Ordena
+    /// todos los viajes por (id_unidad, cis_cita_carga) y, para cada tramo que NO es Ida, si existe
+    /// un tramo Ida previo con la misma clave Unidad+Sucursal, le copia cis_destino/cis_estado_destino
+    /// de ese Ida. Un Regreso sin Ida previa en el rango conserva su propio destino -- igual que el
+    /// HTML. Muta la lista recibida in-place; no cambia Viajes/KM/Venta/Peaje/Movimiento ni ningún
+    /// otro campo. Debe llamarse UNA vez, justo después de mapear los datos de CIS y antes de
+    /// cualquier filtro/agrupación/UI. Ver docs/BUG_DESTINO_VIAJE_REDONDO.md.
+    /// </summary>
+    public static void AplicarViajeRedondo(IReadOnlyList<ViajesDto> viajes)
+    {
+        var ordenados = viajes
+            .Select((viaje, indice) => (Viaje: viaje, Indice: indice))
+            .OrderBy(x => x.Viaje.id_unidad, StringComparer.Ordinal)
+            .ThenBy(x => x.Viaje.cis_cita_carga)
+            .ThenBy(x => x.Indice) // desempate estable si CitaCarga coincide o falta en ambos
+            .ToList();
+
+        var ultimoIdaPorClave = new Dictionary<string, ViajesDto>();
+
+        foreach (var (viaje, _) in ordenados)
+        {
+            var clave = $"{viaje.id_unidad}|{viaje.cis_sucursal}";
+
+            if (ObtenerMovimiento(viaje) == "Ida")
+            {
+                ultimoIdaPorClave[clave] = viaje;
+            }
+            else if (ultimoIdaPorClave.TryGetValue(clave, out var idaPrevia))
+            {
+                viaje.cis_destino = idaPrevia.cis_destino;
+                viaje.cis_estado_destino = idaPrevia.cis_estado_destino;
+            }
+        }
+    }
 }

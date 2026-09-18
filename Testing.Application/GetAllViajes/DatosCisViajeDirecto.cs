@@ -35,4 +35,5 @@ public sealed record DatosCisViajeDirecto(
     int? EjesEquipos,
     decimal MontoPeajeIave,
     decimal MontoPeajeEfectivo,
-    string EstatusAsignacion);
+    string EstatusAsignacion,
+    DateTime CitaCarga = default);

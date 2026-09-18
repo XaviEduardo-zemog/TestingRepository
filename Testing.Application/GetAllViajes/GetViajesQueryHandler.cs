@@ -16,6 +16,8 @@ public sealed class GetViajesQueryHandler(ICisViajesDirectosRepository cisDirect
 
         var viajes = filasCis.Select(ViajesDirectosMapper.Mapear).ToList();
 
+        CamposDerivadosViajes.AplicarViajeRedondo(viajes);
+
         return Result.Success<IReadOnlyList<ViajesDto>>(viajes);
     }
 }

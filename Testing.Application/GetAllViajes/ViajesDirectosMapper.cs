@@ -47,6 +47,7 @@ public static class ViajesDirectosMapper
         cis_total_venta = cis.TotalVenta,
         cis_ejes_equipos = cis.EjesEquipos,
         cis_fecha_calendario = cis.FechaCalendario,
+        cis_cita_carga = cis.CitaCarga,
         cis_trayecto = cis.Trayecto,
 
         kms_viaje = cis.Kms,
