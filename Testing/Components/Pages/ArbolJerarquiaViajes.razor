@@ -64,7 +64,7 @@ else
                 @foreach (var fila in Aplanar())
                 {
                     <tr>
-                        <td class="aj-lvl-@fila.Nivel" style="padding-left:@(8 + fila.Nivel * 16)px;">
+                        <td class="aj-lvl-@fila.Nivel @(!fila.EsHoja ? "aj-lvl-expandible" : "")" style="padding-left:@(8 + fila.Nivel * 16)px;" @onclick="@(() => { if (!fila.EsHoja) Alternar(fila.Nodo); })">
                             @if (!fila.EsHoja)
                             {
                                 <span class="aj-flecha" @onclick="@(() => Alternar(fila.Nodo))">@(fila.Nodo.IsExpanded ? "▾" : "▸")</span>
@@ -224,7 +224,7 @@ else
         }
     }
 
-    private string ClaseOrden(string clave) => ClaveOrdenEfectiva() == clave ? "is-active" : "";
+    private string ClaseOrden(string clave) => ClaveOrdenEfectiva() == clave ? (ordenDescendente ? "is-active is-desc" : "is-active is-asc") : "";
 
     public void ExpandirTodo()
     {

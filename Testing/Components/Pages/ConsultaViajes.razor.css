@@ -22,6 +22,8 @@
     --vz-lv2: #101317;
     --vz-lv4: #0c0c0c;
     --vz-gris8: #748095;
+    --vz-sthumb: #3a3a3a;
+    --vz-sthumb2: #505050;
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -56,6 +58,8 @@
         --vz-lv2: #F7F5F0;
         --vz-lv4: #FCFBF8;
         --vz-gris8: #75787E;
+        --vz-sthumb: #C9C7C1;
+        --vz-sthumb2: #B0AEA8;
         color-scheme: light;
     }
 
@@ -67,7 +71,7 @@
     flex-wrap: wrap;
     gap: 16px;
     background: var(--vz-head);
-    border-bottom: 2px solid var(--vz-acc);
+    border-bottom: 1px solid var(--vz-line3);
     padding: 20px 24px 14px;
     margin: 0 -24px;
 }
@@ -109,7 +113,7 @@
 }
 
 .vz-page.claro .vz-header {
-    border-bottom-color: #DEA60A;
+    border-bottom: 2px solid #DEA60A;
 }
 
     .vz-page.claro .vz-header h1 {
@@ -137,6 +141,7 @@
 .vz-page.claro .vz-toolbar {
     background: #141519;
     border-bottom-color: #8A6604;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, .25);
 }
 
 .vz-toolbar-primary {
@@ -330,6 +335,15 @@
     .vz-metrics-bar input[type="checkbox"] {
         accent-color: var(--vz-acc);
     }
+
+.vz-titulo-tabla {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--vz-gris2);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    white-space: nowrap;
+}
 
 .vz-metric-disabled {
     opacity: .4;
@@ -578,3 +592,11 @@
     border-radius: 50%;
     flex-shrink: 0;
 }
+
+.vz-resultados-header { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+.vz-switch { display: inline-flex; gap: 4px; padding: 3px; background: var(--vz-panel); border: 1px solid var(--vz-line3); border-radius: 8px; }
+.vz-switch-btn { padding: 5px 14px; background: transparent; border: 1px solid transparent; border-radius: 6px; color: var(--vz-gris); font-size: 11px; font-weight: 600; cursor: pointer; transition: background .15s ease, color .15s ease, border-color .15s ease; }
+.vz-switch-btn:hover:not(:disabled):not(.vz-switch-btn--activo) { color: var(--vz-txt); }
+.vz-switch-btn:disabled { opacity: .45; cursor: not-allowed; }
+.vz-switch-btn:focus-visible { outline: 2px solid var(--vz-acc); outline-offset: 1px; }
+.vz-switch-btn--activo { background: var(--vz-line); border-color: var(--vz-acc); color: var(--vz-acc); }

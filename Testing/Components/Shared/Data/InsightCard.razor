@@ -1,0 +1,20 @@
+<div class="insight-card">
+    <p class="insight-pregunta">@Pregunta</p>
+    <p class="insight-valor insight-valor--@VarianteClase">@Valor</p>
+    <p class="insight-texto">@TextoExplicativo</p>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Pregunta { get; set; } = "";
+    [Parameter, EditorRequired] public string Valor { get; set; } = "";
+    [Parameter] public Variant Variante { get; set; } = Variant.Neutral;
+    [Parameter] public MarkupString TextoExplicativo { get; set; }
+
+    private string VarianteClase => Variante switch
+    {
+        Variant.Success => "success",
+        Variant.Danger => "danger",
+        Variant.Warning => "warning",
+        _ => "neutral",
+    };
+}

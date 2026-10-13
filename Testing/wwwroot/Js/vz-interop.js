@@ -26,6 +26,26 @@
         }
     },
 
+    // Cierra el panel de filtro abierto (MultiSelectFiltro.razor, clase "ms-filtro") al hacer clic
+    // fuera de él -- mismo comportamiento que el listener global de viajes_v14.html (L839-845).
+    // Un solo listener global, reemplazado en cada registro (igual criterio que iniciarTeclado).
+    iniciarClickFuera: function (dotNetRef) {
+        if (window.vzClickFueraListener) document.removeEventListener("click", window.vzClickFueraListener);
+
+        window.vzClickFueraListener = function (e) {
+            if (e.target.closest(".ms-filtro")) return;
+            dotNetRef.invokeMethodAsync("CerrarFiltroPorClickFuera");
+        };
+        document.addEventListener("click", window.vzClickFueraListener);
+    },
+
+    removerClickFuera: function () {
+        if (window.vzClickFueraListener) {
+            document.removeEventListener("click", window.vzClickFueraListener);
+            window.vzClickFueraListener = null;
+        }
+    },
+
     // Blob + <a download> -- el mismo truco que RE_exportWord (L1564-1604 de viajes_v14.html),
     // reutilizado tal cual porque es el mecanismo más simple para bajar un archivo generado en
     // el servidor sin un endpoint HTTP nuevo. contenidoBase64 llega ya codificado desde C#
@@ -61,5 +81,54 @@
     // replicar del original más allá de esto (#up en viajes_v14.html hace exactamente lo mismo).
     scrollArriba: function () {
         window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+
+    // Tarjetas KPI arrastrables (viajes_v14.html L1902-1941): Drag and Drop API nativa de HTML5,
+    // sin librería. El orden reordenado vive solo en el DOM de la sesión -- nunca se persiste en
+    // localStorage (el original es explícito: "orden solo de la sesión"), así que al recargar la
+    // página vuelve al orden original que produce el @foreach de Blazor.
+    // Idempotente: se invoca tras cada render (OnAfterRenderAsync corre en cada render, no solo en
+    // firstRender, porque .vz-kpis se repinta cuando cambia kpisComparativa), así que cada hijo ya
+    // activado se marca con dataset.dnd="1" para no volver a asignarle listeners duplicados.
+    activarKpisArrastrables: function () {
+        const contenedor = document.querySelector(".vz-kpis");
+        if (!contenedor) return;
+
+        // window.vzKpiArrastrado (no una variable local a esta llamada): activarKpisArrastrables
+        // es idempotente y se invoca una vez por cada hijo nuevo (dataset.dnd), así que si las
+        // tarjetas llegaran a activarse en invocaciones distintas, cada una necesita ver el mismo
+        // estado "qué se está arrastrando ahora mismo" -- igual criterio que vzClickFueraListener.
+        Array.from(contenedor.children).forEach(function (hijo) {
+            if (hijo.dataset.dnd === "1") return;
+            hijo.dataset.dnd = "1";
+
+            hijo.draggable = true;
+            hijo.style.cursor = "grab";
+            hijo.title = "Arrastra para reordenar";
+
+            hijo.addEventListener("dragstart", function () {
+                window.vzKpiArrastrado = hijo;
+                hijo.style.opacity = ".35";
+            });
+
+            hijo.addEventListener("dragend", function () {
+                hijo.style.opacity = "";
+                window.vzKpiArrastrado = null;
+            });
+
+            hijo.addEventListener("dragover", function (e) {
+                e.preventDefault();
+            });
+
+            hijo.addEventListener("drop", function (e) {
+                e.preventDefault();
+                const arrastrado = window.vzKpiArrastrado;
+                if (!arrastrado || arrastrado === hijo) return;
+
+                const rect = hijo.getBoundingClientRect();
+                const antes = (e.clientX - rect.left) < (rect.width / 2);
+                contenedor.insertBefore(arrastrado, antes ? hijo : hijo.nextSibling);
+            });
+        });
     },
 };

@@ -1,6 +1,7 @@
 @page "/"
 @layout ViajesZemogLayout
 @rendermode InteractiveServer
+@implements IAsyncDisposable
 @using System.Globalization
 @using MediatR
 @using Testing.Application.GetAllViajes
@@ -26,7 +27,7 @@
 
     @if (mostrarResumen)
     {
-        <ResumenEjecutivo Viajes="viajesCargados" Corte="corte" />
+        <ResumenEjecutivo Viajes="viajesCargados" Corte="corte" OnVolver="@(() => mostrarResumen = false)" />
     }
     else
     {
@@ -89,11 +90,11 @@
                     <span>@(isLoading ? "Consultando" : "Consultar")</span>
                 </button>
 
-                <button type="button" class="vz-btn vz-btn-secondary" @onclick="AlternarTema" title="Cambiar tema">
-                    @(esTemaClaro ? "🌙 Oscuro" : "☀ Claro")
-                </button>
                 <button type="button" class="vz-btn vz-btn-secondary" @onclick="() => mostrarResumen = !mostrarResumen">
                     @(mostrarResumen ? "← Volver a la consulta" : "Resumen Ejecutivo")
+                </button>
+                <button type="button" class="vz-btn vz-btn-secondary" @onclick="AlternarTema" title="Cambiar tema">
+                    @(esTemaClaro ? "🌙" : "☀")
                 </button>
             </div>
 
@@ -117,22 +118,6 @@
             }
         </section>
 
-        @if (agruparPor != "jerarquia_tarifa")
-        {
-            <div class="vz-metrics-bar">
-                <label><input type="checkbox" @bind="mostrarViajes" /> Viajes</label>
-                <label><input type="checkbox" @bind="mostrarKms" /> KMS</label>
-                <label><input type="checkbox" @bind="mostrarVenta" /> Venta</label>
-                <label><input type="checkbox" @bind="mostrarPkm" /> $/km</label>
-                <label><input type="checkbox" @bind="mostrarKmPorViaje" /> km/Viaje</label>
-                <label><input type="checkbox" @bind="mostrarPvj" /> $/Viaje</label>
-                <label class="vz-metric-sep"><input type="checkbox" @bind="mostrarParticipacion" /> % Part.</label>
-                <label><input type="checkbox" @bind="soloComparativa" /> Solo comparativa</label>
-                <button type="button" class="vz-btn" @onclick="() => arbolRef?.ExpandirTodo()">Expandir todo</button>
-                <button type="button" class="vz-btn" @onclick="() => arbolRef?.ColapsarTodo()">Colapsar todo</button>
-            </div>
-        }
-
         <div class="vz-kpis">
             @foreach (var kpi in kpisComparativa)
             {
@@ -150,6 +135,26 @@
                         <p class="vz-kpi-pending-note">@kpi.MotivoPendiente</p>
                     </div>
                 }
+            }
+        </div>
+
+        <div class="vz-metrics-bar">
+            <span class="vz-titulo-tabla">@EtiquetaTablaActual</span>
+            @if (agruparPor != "jerarquia_tarifa")
+            {
+                <label><input type="checkbox" @bind="mostrarViajes" /> Viajes</label>
+                <label><input type="checkbox" @bind="mostrarKms" /> KMS</label>
+                <label><input type="checkbox" @bind="mostrarVenta" /> Venta</label>
+                <label><input type="checkbox" @bind="mostrarPkm" /> $/km</label>
+                <label><input type="checkbox" @bind="mostrarKmPorViaje" /> km/Viaje</label>
+                <label><input type="checkbox" @bind="mostrarPvj" /> $/Viaje</label>
+                <label class="vz-metric-sep"><input type="checkbox" @bind="mostrarParticipacion" /> % Part.</label>
+                <label class="vz-metric-sep"><input type="checkbox" @bind="soloComparativa" /> Solo comparativa</label>
+            }
+            @if (agruparPor is "jerarquia" or "jerarquia_tarifa")
+            {
+                <button type="button" class="vz-btn" @onclick="() => arbolRef?.ExpandirTodo()">Expandir todo</button>
+                <button type="button" class="vz-btn" @onclick="() => arbolRef?.ColapsarTodo()">Colapsar todo</button>
             }
         </div>
 
@@ -210,46 +215,62 @@
                 </Actions>
             </DataStateBanner>
         }
-        else if (viajesFiltrados.Count > 0 && agruparPor is "jerarquia" or "jerarquia_tarifa" && raizJerarquia is not null)
-        {@* 
-            <div class="vz-arbol-controles">
-                <button type="button" class="vz-btn" @onclick="() => arbolRef?.ExpandirTodo()">Expandir todo</button>
-                <button type="button" class="vz-btn" @onclick="() => arbolRef?.ColapsarTodo()">Colapsar todo</button>
-            </div> *@
-            <ArbolJerarquiaViajes @ref="arbolRef"
-                                  Raiz="raizJerarquia"
-                                  Meses="mesesPivote"
-                                  EtiquetaJerarquia="@(agruparPor == "jerarquia_tarifa" ? "Cliente › Zona › Matriz › Tarifa" : "Cliente › Zona › Matriz")"
-                                  ProfundidadMaxima="@(agruparPor == "jerarquia_tarifa" ? 4 : 3)"
-                                  MostrarViajes="EfectivoMostrarViajes"
-                                  MostrarKms="EfectivoMostrarKms"
-                                  MostrarPeaje="EfectivoMostrarPeaje"
-                                  MostrarVenta="EfectivoMostrarVenta"
-                                  MostrarPkm="EfectivoMostrarPkm"
-                                  MostrarKmPorViaje="EfectivoMostrarKmPorViaje"
-                                  MostrarPvj="EfectivoMostrarPvj"
-                                  MostrarParticipacion="mostrarParticipacion"
-                                  SoloComparativa="soloComparativa" />
-        }
         else if (viajesFiltrados.Count > 0)
         {
-            <TablaPivoteViajes Filas="filasPivote"
-                               Meses="mesesPivote"
-                               EtiquetaDimension="@EtiquetaAgrupacionActual"
-                               EsDimensionTemporal="@(agruparPor is "dia" or "semana")"
-                               OrdenLabelNumerico="@(agruparPor == "semana")"
-                               EsCliente="@(agruparPor == "cliente")"
-                               MostrarViajes="mostrarViajes"
-                               MostrarKms="mostrarKms"
-                               MostrarPeaje="false"
-                               MostrarVenta="mostrarVenta"
-                               MostrarPkm="mostrarPkm"
-                               MostrarKmPorViaje="mostrarKmPorViaje"
-                               MostrarPvj="mostrarPvj"
-                               MostrarParticipacion="mostrarParticipacion"
-                               SoloComparativa="soloComparativa" />
-        }
+            <div class="vz-resultados-header">
+                <div class="vz-switch" role="group" aria-label="Forma de ver los resultados">
+                    <button type="button" class="vz-switch-btn @(vistaResultados == "tabla" ? "vz-switch-btn--activo" : null)" aria-pressed="@(vistaResultados == "tabla")" @onclick='() => vistaResultados = "tabla"'>Tabla</button>
+                    <button type="button" class="vz-switch-btn @(vistaResultados == "grafica" ? "vz-switch-btn--activo" : null)" aria-pressed="@(vistaResultados == "grafica")" @onclick='() => vistaResultados = "grafica"' disabled="@(comparativaMensual is null)">Gráfica</button>
+                </div>
+            </div>
 
+            @if (vistaResultados == "tabla")
+            {
+                @if (agruparPor is "jerarquia" or "jerarquia_tarifa" && raizJerarquia is not null)
+                {@*
+                    <div class="vz-arbol-controles">
+                        <button type="button" class="vz-btn" @onclick="() => arbolRef?.ExpandirTodo()">Expandir todo</button>
+                        <button type="button" class="vz-btn" @onclick="() => arbolRef?.ColapsarTodo()">Colapsar todo</button>
+                    </div> *@
+                    <ArbolJerarquiaViajes @ref="arbolRef"
+                                          Raiz="raizJerarquia"
+                                          Meses="mesesPivote"
+                                          EtiquetaJerarquia="@(agruparPor == "jerarquia_tarifa" ? "Cliente › Zona › Matriz › Tarifa" : "Cliente › Zona › Matriz")"
+                                          ProfundidadMaxima="@(agruparPor == "jerarquia_tarifa" ? 4 : 3)"
+                                          MostrarViajes="EfectivoMostrarViajes"
+                                          MostrarKms="EfectivoMostrarKms"
+                                          MostrarPeaje="EfectivoMostrarPeaje"
+                                          MostrarVenta="EfectivoMostrarVenta"
+                                          MostrarPkm="EfectivoMostrarPkm"
+                                          MostrarKmPorViaje="EfectivoMostrarKmPorViaje"
+                                          MostrarPvj="EfectivoMostrarPvj"
+                                          MostrarParticipacion="mostrarParticipacion"
+                                          SoloComparativa="soloComparativa" />
+                }
+                else
+                {
+                    <TablaPivoteViajes Filas="filasPivote"
+                                       Meses="mesesPivote"
+                                       EtiquetaDimension="@EtiquetaAgrupacionActual"
+                                       EsDimensionTemporal="@(agruparPor is "dia" or "semana")"
+                                       OrdenLabelNumerico="@(agruparPor == "semana")"
+                                       EsCliente="@(agruparPor == "cliente")"
+                                       MostrarViajes="mostrarViajes"
+                                       MostrarKms="mostrarKms"
+                                       MostrarPeaje="false"
+                                       MostrarVenta="mostrarVenta"
+                                       MostrarPkm="mostrarPkm"
+                                       MostrarKmPorViaje="mostrarKmPorViaje"
+                                       MostrarPvj="mostrarPvj"
+                                       MostrarParticipacion="mostrarParticipacion"
+                                       SoloComparativa="soloComparativa" />
+                }
+            }
+            else if (comparativaMensual is not null)
+            {
+                <VistaComparativaViajes Datos="comparativaMensual" />
+            }
+        }
     }
 
     @if (seConsulto && viajesCargados.Count > 0)
@@ -286,8 +307,8 @@
     private bool mostrarKms = true;
     private bool mostrarVenta = true;
     private bool mostrarPkm = true;
-    private bool mostrarKmPorViaje = true;
-    private bool mostrarPvj = true;
+    private bool mostrarKmPorViaje;
+    private bool mostrarPvj;
     private bool mostrarParticipacion;
     private bool soloComparativa;
 
@@ -308,6 +329,8 @@
     private List<MesColumna> mesesPivote = [];
     private NodoJerarquia? raizJerarquia;
     private ArbolJerarquiaViajes? arbolRef;
+    private string vistaResultados = "tabla";
+    private ComparativaMensualDto? comparativaMensual;
 
     private static readonly Func<ViajesDto, string?>[] NivelesJerarquia =
     [
@@ -343,19 +366,78 @@
 
     private string EtiquetaAgrupacionActual => EtiquetasAgrupacion.GetValueOrDefault(agruparPor, "Dimensión");
 
+    // EtiquetaAgrupacionActual cae en "Dimensión" para los modos jerarquía (no están en el
+    // diccionario EtiquetasAgrupacion, que es plano). El header de resultados y el calculador de
+    // la vista Gráfica necesitan la etiqueta jerárquica real en esos dos modos.
+    private string EtiquetaResultadosActual => agruparPor switch
+    {
+        "jerarquia_tarifa" => "Cliente › Zona › Matriz › Tarifa",
+        "jerarquia" => "Cliente › Zona › Matriz",
+        _ => EtiquetaAgrupacionActual,
+    };
+
+    // Replica #ttlTabla (viajes_v14.html L2018-2024): etiqueta en mayúsculas + " × MES", salvo en
+    // las dimensiones temporales (día/semana), donde el original omite el sufijo porque ya son
+    // el propio eje de tiempo.
+    private string EtiquetaTablaActual => agruparPor is "dia" or "semana"
+        ? EtiquetaResultadosActual.ToUpperInvariant()
+        : $"{EtiquetaResultadosActual.ToUpperInvariant()} × MES";
+
+
+    private DotNetObjectReference<ConsultaViajes>? dotNetRef;
 
     // Lee el tema persistido (localStorage, misma clave "viajesTema" que viajes_v14.html) tras
-    // el primer render -- JS interop no está disponible antes de eso en Blazor Server.
+    // el primer render -- JS interop no está disponible antes de eso en Blazor Server. Aprovecha
+    // el mismo firstRender para registrar el listener global de "clic fuera" que cierra el panel
+    // de filtro abierto (viajes_v14.html L839-845).
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
-
-        var temaGuardado = await JS.InvokeAsync<string?>("vzInterop.leerTema");
-        if (temaGuardado == "claro")
+        if (firstRender)
         {
-            esTemaClaro = true;
-            StateHasChanged();
+            var temaGuardado = await JS.InvokeAsync<string?>("vzInterop.leerTema");
+            if (temaGuardado == "claro")
+            {
+                esTemaClaro = true;
+                StateHasChanged();
+            }
+
+            dotNetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("vzInterop.iniciarClickFuera", dotNetRef);
         }
+
+        // Reactiva el drag-and-drop de las tarjetas KPI tras cada render (no solo firstRender):
+        // .vz-kpis se repinta cuando cambia kpisComparativa (ej. al volver a consultar), y la
+        // función es idempotente (dataset.dnd evita duplicar listeners en hijos ya activados).
+        await JS.InvokeVoidAsync("vzInterop.activarKpisArrastrables");
+    }
+
+    [JSInvokable]
+    public void CerrarFiltroPorClickFuera()
+    {
+        if (filtroAbierto is null) return;
+
+        filtroAbierto = null;
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (dotNetRef is null) return;
+
+        try
+        {
+            await JS.InvokeVoidAsync("vzInterop.removerClickFuera");
+        }
+        catch (JSDisconnectedException)
+        {
+            // El circuito ya se desconectó (navegación/cierre de pestaña) -- nada que limpiar en el cliente.
+        }
+        catch (TaskCanceledException)
+        {
+            // Misma causa: la desconexión canceló la llamada JS en vuelo.
+        }
+
+        dotNetRef.Dispose();
     }
 
     private async Task AlternarTema()
@@ -421,6 +503,7 @@
         {
             RecalcularArbol();
             mesesPivote = PivoteViajesBuilder.CalcularMeses(viajesFiltrados);
+            RecalcularComparativa();
             return;
         }
 
@@ -429,6 +512,13 @@
         filasPivote = PivoteViajesBuilder.Construir(viajesFiltrados, agruparPor, ObtenerValorAgrupacion, corte);
 
         mesesPivote = esTemporal ? [] : PivoteViajesBuilder.CalcularMeses(viajesFiltrados);
+        RecalcularComparativa();
+    }
+
+    private void RecalcularComparativa()
+    {
+        comparativaMensual = ComparativaMensualCalculator.Calcular(agruparPor, EtiquetaResultadosActual, filasPivote, raizJerarquia, mesesPivote);
+        if (comparativaMensual is null) vistaResultados = "tabla";
     }
 
     // Replica la construcción del árbol de tablaJerarquia() en viajes_v14.html: cada viaje

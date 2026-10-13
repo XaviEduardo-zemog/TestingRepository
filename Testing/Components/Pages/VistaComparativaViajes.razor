@@ -1,0 +1,75 @@
+@using Testing.Features
+@using Testing.Components.Shared
+
+<div class="vz-comparativa">
+    <div class="vz-insights-grid">
+        <InsightCard Pregunta="¿QUÉ VIAJES DEJAMOS DE HACER?" Valor="@Datos.InsightPerdidos.ValorFormateado" Variante="@Datos.InsightPerdidos.Variante" TextoExplicativo="@Datos.InsightPerdidos.TextoExplicativo" />
+        <InsightCard Pregunta="¿DÓNDE EMPEZAMOS A HACER MÁS?" Valor="@Datos.InsightGanadores.ValorFormateado" Variante="@Datos.InsightGanadores.Variante" TextoExplicativo="@Datos.InsightGanadores.TextoExplicativo" />
+        <InsightCard Pregunta="¿QUÉ VIAJES SEGUIMOS HACIENDO IGUAL?" Valor="@Datos.InsightEstables.ValorFormateado" Variante="@Datos.InsightEstables.Variante" TextoExplicativo="@Datos.InsightEstables.TextoExplicativo" />
+    </div>
+
+    <div class="vz-ranking-card">
+        <p class="vz-ranking-comparando">
+            Comparando <strong>@Datos.MesActualLabel</strong> contra <strong>@Datos.MesAnteriorLabel</strong> ·
+            @Datos.TotalGrupos @Datos.EtiquetaAgrupacion.ToLowerInvariant() en total:
+            <span class="vz-chip vz-chip--danger">@Datos.GruposBajaron bajaron</span>
+            <span class="vz-chip vz-chip--success">@Datos.GruposSubieron subieron</span>
+            <span class="vz-chip vz-chip--neutral">@Datos.GruposEstables sin cambio relevante</span>
+        </p>
+        <div class="vz-ranking-leyenda">
+            <span class="vz-ejes-leyenda-item"><span class="vz-ejes-dot" style="background:var(--vz-rojo)"></span>Perdió viajes</span>
+            <span class="vz-ejes-leyenda-item"><span class="vz-ejes-dot" style="background:var(--vz-verde)"></span>Ganó viajes</span>
+        </div>
+        <p class="vz-ranking-explicacion">
+            Cada barra compara @Datos.MesActualLabel contra @Datos.MesAnteriorLabel: <strong>rojo</strong> = @Datos.EtiquetaAgrupacion.ToLowerInvariant() hizo <strong>menos</strong> viajes que el mes anterior, <strong>verde</strong> = hizo <strong>más</strong>. El largo de la barra es proporcional a qué tan grande fue ese cambio comparado contra el cambio más grande de toda la lista.
+        </p>
+        <div class="vz-ranking-escala" aria-hidden="true">
+            <span>−@FormatoUi.Numero(maxAbsDeltaViajes) viajes</span>
+            <span>0</span>
+            <span>+@FormatoUi.Numero(maxAbsDeltaViajes) viajes</span>
+        </div>
+        <div class="vz-ranking-lista">
+            @foreach (var g in Datos.Grupos)
+            {
+                <div class="vz-rank-fila" @key="g.Nombre">
+                    <div class="vz-rank-fila-head">
+                        <span class="vz-rank-nombre" title="@g.Nombre">@g.Nombre</span>
+                        <span class="vz-chip vz-chip--@ClaseBadge(g.BadgeVariant)">@g.Badge</span>
+                    </div>
+                    <div class="vz-rank-track" title="@TextoAccesible(g)">
+                        <div class="vz-rank-mitad vz-rank-mitad--izq">
+                            @if (g.DeltaViajes < 0) { <div class="vz-rank-barra vz-rank-barra--rojo" style="width:@Ancho(g.DeltaViajes)%"></div> }
+                        </div>
+                        <div class="vz-rank-eje"></div>
+                        <div class="vz-rank-mitad vz-rank-mitad--der">
+                            @if (g.DeltaViajes > 0) { <div class="vz-rank-barra vz-rank-barra--verde" style="width:@Ancho(g.DeltaViajes)%"></div> }
+                        </div>
+                    </div>
+                    <p class="vz-rank-detalle">
+                        <span>Viajes: <strong class="@ClaseDelta(g.DeltaViajes)">@FormatoDeltaViajes(g.DeltaViajes)</strong> (@FormatoUi.DeltaPorcentaje(g.DeltaViajesPct))</span>
+                        <span>Venta: <strong class="@ClaseDelta(g.DeltaVenta)">@FormatoDeltaVenta(g.DeltaVenta)</strong> (@FormatoUi.DeltaPorcentaje(g.DeltaVentaPct))</span>
+                    </p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ComparativaMensualDto Datos { get; set; } = null!;
+
+    private decimal maxAbsDeltaViajes => Datos.Grupos.Count == 0 ? 0 : Datos.Grupos.Max(g => Math.Abs(g.DeltaViajes));
+    private decimal Ancho(decimal delta) => maxAbsDeltaViajes == 0 ? 0 : Math.Abs(delta) * 100m / maxAbsDeltaViajes;
+
+    private string ClaseBadge(Variant v) => v switch
+    {
+        Variant.Success => "success", Variant.Danger => "danger", Variant.Warning => "alerta", _ => "neutral",
+    };
+    private string ClaseDelta(decimal valor) => valor switch { > 0 => "vz-rank-pos", < 0 => "vz-rank-neg", _ => "vz-rank-neutro" };
+    private string FormatoDeltaViajes(decimal delta) => (delta > 0 ? "+" : "") + FormatoUi.Numero(delta);
+    private string FormatoDeltaVenta(decimal delta) => (delta > 0 ? "+" : "") + FormatoUi.Dinero(delta);
+
+    private string TextoAccesible(GrupoComparativo g) =>
+        $"{g.Nombre}: {FormatoUi.Numero(g.ViajesMesActual)} viajes en {Datos.MesActualLabel} vs {FormatoUi.Numero(g.ViajesMesAnterior)} en {Datos.MesAnteriorLabel}, " +
+        $"{FormatoDeltaViajes(g.DeltaViajes)} viajes ({FormatoUi.DeltaPorcentaje(g.DeltaViajesPct)}), venta {FormatoDeltaVenta(g.DeltaVenta)} ({FormatoUi.DeltaPorcentaje(g.DeltaVentaPct)}).";
+}

@@ -11,7 +11,34 @@
     border-radius: 10px;
     border: 1px solid var(--vz-line2, #1e1e1e);
     max-height: 65vh;
+    scrollbar-color: var(--vz-sthumb, #3a3a3a) var(--vz-head, #0d0d0d);
+    scrollbar-width: thin;
 }
+
+    .aj-wrap::-webkit-scrollbar {
+        height: 12px;
+        width: 12px;
+        background: var(--vz-head, #0d0d0d);
+    }
+
+    .aj-wrap::-webkit-scrollbar-track {
+        background: var(--vz-head, #0d0d0d);
+        border-radius: 6px;
+    }
+
+    .aj-wrap::-webkit-scrollbar-thumb {
+        background: var(--vz-sthumb, #3a3a3a);
+        border-radius: 6px;
+        border: 2px solid var(--vz-head, #0d0d0d);
+    }
+
+        .aj-wrap::-webkit-scrollbar-thumb:hover {
+            background: var(--vz-sthumb2, #505050);
+        }
+
+    .aj-wrap::-webkit-scrollbar-corner {
+        background: var(--vz-head, #0d0d0d);
+    }
 
 .aj-table {
     width: 100%;
@@ -65,11 +92,13 @@
         color: var(--vz-txt, #e2e8f0);
     }
 
-    .aj-th-dim.is-desc::after {
+    .aj-th-dim.is-desc::after,
+    th.align-end.is-desc::after {
         content: " ▼";
     }
 
-    .aj-th-dim.is-asc::after {
+    .aj-th-dim.is-asc::after,
+    th.align-end.is-asc::after {
         content: " ▲";
     }
 
@@ -198,6 +227,10 @@ td.aj-cmp-end {
     display: inline-block;
     width: 12px;
     color: var(--vz-acc, #f59e0b);
+    cursor: pointer;
+}
+
+.aj-lvl-expandible {
     cursor: pointer;
 }
 

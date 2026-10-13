@@ -270,7 +270,7 @@ else
         }
     }
 
-    private string ClaseOrden(string clave) => ClaveOrdenEfectiva() == clave ? "is-active" : "";
+    private string ClaseOrden(string clave) => ClaveOrdenEfectiva() == clave ? (ordenDescendente ? "is-active is-desc" : "is-active is-asc") : "";
 
     private List<FilaPivote> FilasOrdenadas()
     {

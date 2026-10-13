@@ -7,13 +7,14 @@
             <h2>Resumen Ejecutivo</h2>
             <p class="re-subtitle">@Subtitulo()</p>
         </div>
-        @if (resumen?.NivelZemog is not null)
-        {
-            <div class="re-toolbar-acciones">
+        <div class="re-toolbar-acciones">
+            <button type="button" class="vz-btn vz-btn-secondary" @onclick="OnVolver">← Volver a la consulta</button>
+            @if (resumen?.NivelZemog is not null)
+            {
                 <button type="button" class="vz-btn vz-btn-primary" @onclick="AbrirPresentacionAsync">▶ Presentación</button>
                 <button type="button" class="vz-btn vz-btn-secondary" @onclick="ExportarWordAsync">⬇ Exportar Word</button>
-            </div>
-        }
+            }
+        </div>
     </div>
 
     @if (resumen is null)
@@ -58,6 +59,7 @@
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<ViajesDto> Viajes { get; set; } = [];
     [Parameter] public CorteMensual? Corte { get; set; }
+    [Parameter] public EventCallback OnVolver { get; set; }
 
     private ResumenEjecutivoDto? resumen;
     private ResumenPresentacion? presentacionRef;
