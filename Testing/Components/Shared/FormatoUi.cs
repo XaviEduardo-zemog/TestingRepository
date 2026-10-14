@@ -16,6 +16,9 @@ public static class FormatoUi
     /// <summary>"C0" -- igual que v.ToString("C0", Cultura) en cada componente.</summary>
     public static string Dinero(decimal valor) => valor.ToString("C0", Cultura);
 
+    /// <summary>"C2" -- usado solo por $/KM, que en viajes_v14.html siempre muestra 2 decimales (fC2), a diferencia de Venta/$/Viaje que redondean a entero (fC).</summary>
+    public static string DineroDecimal(decimal valor) => valor.ToString("C2", Cultura);
+
     /// <summary>
     /// "0.0" + "%", sin signo -- igual que el FormatoPct que usaba ConsultaViajes.razor para la
     /// barra Ejes. NO es el mismo formato que TablaPivoteViajes.razor/ArbolJerarquiaViajes.razor

@@ -585,6 +585,7 @@
     private string ValorKpi(KpiComparativo kpi) => kpi.Clave switch
     {
         "kms" or "kpv" or "viajes" => FormatoUi.Numero(kpi.ValorActual ?? 0),
+        "pkm" => FormatoUi.DineroDecimal(kpi.ValorActual ?? 0),
         _ => FormatoUi.Dinero(kpi.ValorActual ?? 0),
     };
 

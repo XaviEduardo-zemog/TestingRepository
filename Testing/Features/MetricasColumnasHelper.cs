@@ -43,7 +43,7 @@ public static class MetricasColumnasHelper
         if (mostrarKms) columnas.Add(new("kms", "KMS", m => m.Km, FormatoUi.Numero, true));
         if (mostrarPeaje) columnas.Add(new("peaje", "Peaje", m => m.Peaje, FormatoUi.Dinero, true));
         if (mostrarVenta) columnas.Add(new("venta", "Venta", m => m.Venta, FormatoUi.Dinero, true));
-        if (mostrarPkm) columnas.Add(new("pkm", "$/KM", m => m.VentaPorKm, FormatoUi.Dinero, false));
+        if (mostrarPkm) columnas.Add(new("pkm", "$/KM", m => m.VentaPorKm, FormatoUi.DineroDecimal, false));
         if (mostrarKmPorViaje) columnas.Add(new("kmv", "km/Viaje", m => m.KmPorViaje, FormatoUi.Numero, false));
         if (mostrarPvj) columnas.Add(new("pvj", "$/Viaje", m => m.VentaPorViaje, FormatoUi.Dinero, false));
         return columnas;
